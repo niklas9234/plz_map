@@ -20,8 +20,8 @@ function addGermanyPlzLayers(map) {
         source: "plz-de",
 
         paint: {
-            "fill-color": "#4caf50",
-            "fill-opacity": 0.25
+            "fill-color": MAP_SETTINGS.postalCodes.fillColor,
+            "fill-opacity": MAP_SETTINGS.postalCodes.fillOpacity
         }
     });
 
@@ -36,8 +36,8 @@ function addGermanyPlzLayers(map) {
         source: "plz-de",
 
         paint: {
-            "line-color": "#146b37",
-            "line-width": 2
+            "line-color": MAP_SETTINGS.postalCodes.borderColor,
+            "line-width": MAP_SETTINGS.postalCodes.borderWidth
         }
     });
 
@@ -51,23 +51,19 @@ function addGermanyPlzLayers(map) {
         type: "symbol",
         source: "plz-de",
         
-        minzoom: 6,
+        minzoom: MAP_SETTINGS.postalCodes.label.minZoom,
 
         layout: {
             "text-field": ["get", "plz"],
 
-            "text-font": [
-                "Noto Sans Regular"
-            ],
+            "text-font": MAP_SETTINGS.postalCodes.label.font,
 
             "text-size": [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
 
-                5, 8,
-                7, 12,
-                9, 16
+                ...MAP_SETTINGS.postalCodes.label.sizes
             ],
 
             "text-allow-overlap": true,
@@ -75,8 +71,8 @@ function addGermanyPlzLayers(map) {
         },
 
         paint: {
-            "text-color": "#111111",
-            "text-halo-width": 2
+            "text-color": MAP_SETTINGS.postalCodes.label.color,
+            "text-halo-width": MAP_SETTINGS.postalCodes.label.haloWidth
         }
     });
 
