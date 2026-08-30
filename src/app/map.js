@@ -4,18 +4,18 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
 const map = new maplibregl.Map({
     container: "map",
 
-    center: [10.5, 51.1],
-    zoom: 5.5,
+    center: MAP_SETTINGS.map.center,
+    zoom: MAP_SETTINGS.map.zoom,
 
     style: {
         version: 8,
 
-        glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
+        glyphs: MAP_SETTINGS.map.glyphsUrl,
 
         sources: {
             basemap: {
                 type: "vector",
-                url: "pmtiles://http://localhost:8000/germany.pmtiles"
+                url: MAP_SETTINGS.map.basemapUrl
             }
         },
 

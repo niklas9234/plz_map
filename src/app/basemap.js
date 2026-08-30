@@ -5,7 +5,7 @@ function addBaseMapLayers(map) {
         type: "background",
 
         paint: {
-            "background-color": "#f5f5f5"
+            "background-color": MAP_SETTINGS.basemap.backgroundColor
         }
     });
 
@@ -18,7 +18,7 @@ function addBaseMapLayers(map) {
         "source-layer": "earth",
 
         paint: {
-            "fill-color": "#f3f1ea"
+            "fill-color": MAP_SETTINGS.basemap.earthColor
         }
     });
 
@@ -31,7 +31,7 @@ function addBaseMapLayers(map) {
         "source-layer": "water",
 
         paint: {
-            "fill-color": "#cfe8f3"
+            "fill-color": MAP_SETTINGS.basemap.waterColor
         }
     });
 
@@ -44,8 +44,8 @@ function addBaseMapLayers(map) {
         "source-layer": "water",
 
         paint: {
-            "line-color": "#7dbbd3",
-            "line-width": 1
+            "line-color": MAP_SETTINGS.basemap.waterLineColor,
+            "line-width": MAP_SETTINGS.basemap.waterLineWidth
         }
     });
 
@@ -58,16 +58,14 @@ function addBaseMapLayers(map) {
         "source-layer": "roads",
 
         paint: {
-            "line-color": "#999999",
+            "line-color": MAP_SETTINGS.basemap.roadColor,
 
             "line-width": [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
 
-                5, 0.5,
-                8, 1,
-                12, 2
+                ...MAP_SETTINGS.basemap.roadWidths
             ]
         }
     });
@@ -83,25 +81,21 @@ function addBaseMapLayers(map) {
         layout: {
             "text-field": ["get", "name"],
 
-            "text-font": [
-                "Noto Sans Regular"
-            ],
+            "text-font": MAP_SETTINGS.basemap.placeLabel.font,
 
             "text-size": [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
 
-                5, 10,
-                8, 13,
-                12, 16
+                ...MAP_SETTINGS.basemap.placeLabel.sizes
             ]
         },
 
         paint: {
-            "text-color": "#222222",
-            "text-halo-color": "#ffffff",
-            "text-halo-width": 1.5
+            "text-color": MAP_SETTINGS.basemap.placeLabel.color,
+            "text-halo-color": MAP_SETTINGS.basemap.placeLabel.haloColor,
+            "text-halo-width": MAP_SETTINGS.basemap.placeLabel.haloWidth
         }
     });
 

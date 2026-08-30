@@ -10,8 +10,8 @@ function addLuxembourgLayers(map) {
         type: "fill",
         source: "plz-lux",
         paint: {
-            "fill-color": "#4caf50",
-            "fill-opacity": 0.25
+            "fill-color": MAP_SETTINGS.postalCodes.fillColor,
+            "fill-opacity": MAP_SETTINGS.postalCodes.fillOpacity
         }
     });
 
@@ -20,8 +20,8 @@ function addLuxembourgLayers(map) {
         type: "line",
         source: "plz-lux",
         paint: {
-            "line-color": "#146b37",
-            "line-width": 2
+            "line-color": MAP_SETTINGS.postalCodes.borderColor,
+            "line-width": MAP_SETTINGS.postalCodes.borderWidth
         }
     });
 
@@ -30,22 +30,18 @@ function addLuxembourgLayers(map) {
         type: "symbol",
         source: "plz-lux",
 
-        minzoom: 6,
+        minzoom: MAP_SETTINGS.postalCodes.label.minZoom,
 
         layout: {
             "text-field": "LUX",
 
-            "text-font": [
-                "Noto Sans Regular"
-            ],
+            "text-font": MAP_SETTINGS.postalCodes.label.font,
 
             "text-size": [
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                5, 12,
-                7, 20,
-                9, 22
+                ...MAP_SETTINGS.postalCodes.label.sizes
             ],
 
             "text-allow-overlap": true,
@@ -53,8 +49,8 @@ function addLuxembourgLayers(map) {
         },
 
         paint: {
-            "text-color": "#111111",
-            "text-halo-width": 2
+            "text-color": MAP_SETTINGS.postalCodes.label.color,
+            "text-halo-width": MAP_SETTINGS.postalCodes.label.haloWidth
         }
     });
 }
