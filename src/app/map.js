@@ -27,4 +27,5 @@ map.on("load", () => {
     addBaseMapLayers(map);
     addGermanyPlzLayers(map);
     addLuxembourgLayers(map);
+    initializeCompanySearch(map);
 });
