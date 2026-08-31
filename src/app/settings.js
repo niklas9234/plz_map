@@ -9,7 +9,10 @@ const MAP_SETTINGS = {
     map: {
         center: [10.5, 51.1],
         zoom: 5.5,
-        basemapUrl: "pmtiles://http://localhost:8000/germany.pmtiles",
+        // Das Archiv liegt im Wurzelverzeichnis des Webservers. Die aktuelle
+        // Origin statt eines fest codierten localhost zu verwenden, sorgt
+        // dafür, dass die Basiskarte auch nach dem Deployment geladen wird.
+        basemapUrl: `pmtiles://${window.location.origin}/germany-luxembourg.pmtiles`,
         glyphsUrl: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf"
     },
 
