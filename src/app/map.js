@@ -23,9 +23,9 @@ const map = new maplibregl.Map({
     }
 });
 
-map.on("load", () => {
+map.on("load", async () => {
     addBaseMapLayers(map);
-    addGermanyPlzLayers(map);
+    await addGermanyPlzLayers(map);
     addLuxembourgLayers(map);
     initializeCompanySearch(map);
 });
