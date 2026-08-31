@@ -38,6 +38,9 @@ const MAP_SETTINGS = {
         borderWidth: 2,
         label: {
             minZoom: 6,
+            // Kleine, getrennte Teilflächen (z. B. Inseln) nicht beschriften.
+            // Der Wert wird in Quadratkilometern angegeben; 0 zeigt alle Labels.
+            minAreaSquareKilometers: 50,
             font: ["Noto Sans Regular"],
             // Abwechselnd Zoomstufe und Schriftgröße in Pixeln.
             sizes: [5, 8, 7, 12, 9, 16],

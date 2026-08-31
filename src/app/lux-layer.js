@@ -32,6 +32,12 @@ function addLuxembourgLayers(map) {
 
         minzoom: MAP_SETTINGS.postalCodes.label.minZoom,
 
+        filter: [
+            ">=",
+            ["get", "qkm"],
+            MAP_SETTINGS.postalCodes.label.minAreaSquareKilometers
+        ],
+
         layout: {
             "text-field": "LUX",
 
