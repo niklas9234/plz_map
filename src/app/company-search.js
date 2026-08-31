@@ -21,6 +21,13 @@ function normalizeSearchValue(value) {
     return value.trim().toLocaleLowerCase("de-DE");
 }
 
+function createTradeBadge(trade) {
+    const badge = document.createElement("span");
+    badge.className = "company-search__trade-badge";
+    badge.textContent = trade;
+    return badge;
+}
+
 function findCompany(companies, searchValue) {
     const query = normalizeSearchValue(searchValue);
     if (!query) return null;
@@ -99,7 +106,13 @@ async function initializeCompanySearch(map) {
         const companyNumber = document.createElement("strong");
         companyNumber.textContent = company.ppsNumber;
 
-        companyDetails.append(companyName, " · ", companyNumber);
+        companyDetails.append(
+            companyName,
+            " · ",
+            companyNumber,
+            " · ",
+            createTradeBadge(company.trade)
+        );
 
         const postalCodeArea = document.createElement("div");
         postalCodeArea.className = "company-search__postal-codes";
@@ -129,7 +142,9 @@ async function initializeCompanySearch(map) {
                 button.dataset.ppsNumber = company.ppsNumber;
                 button.setAttribute("role", "option");
                 button.setAttribute("aria-selected", "false");
-                button.textContent = `${company.name} · ${company.ppsNumber}`;
+                const companyLabel = document.createElement("span");
+                companyLabel.textContent = `${company.name} · ${company.ppsNumber} · `;
+                button.append(companyLabel, createTradeBadge(company.trade));
                 button.addEventListener("click", () => selectCompany(company));
                 item.append(button);
                 suggestions.append(item);
