@@ -55,18 +55,42 @@ async function initializeCompanySearch(map) {
     const input = document.getElementById("company-search-input");
     const suggestions = document.getElementById("company-suggestions");
     const status = document.getElementById("company-search-status");
+    let activeSuggestionIndex = -1;
+
+    function suggestionButtons() {
+        return [...suggestions.querySelectorAll("button")];
+    }
+
+    function highlightSuggestion(index) {
+        const buttons = suggestionButtons();
+        if (!buttons.length) return;
+
+        activeSuggestionIndex = (index + buttons.length) % buttons.length;
+        buttons.forEach((button, buttonIndex) => {
+            const isActive = buttonIndex === activeSuggestionIndex;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-selected", String(isActive));
+        });
+
+        const activeButton = buttons[activeSuggestionIndex];
+        input.setAttribute("aria-activedescendant", activeButton.id);
+        activeButton.scrollIntoView({ block: "nearest" });
+    }
 
     function closeSuggestions() {
         suggestions.replaceChildren();
         suggestions.hidden = true;
+        activeSuggestionIndex = -1;
         input.setAttribute("aria-expanded", "false");
+        input.removeAttribute("aria-activedescendant");
     }
 
     function selectCompany(company) {
-        input.value = company.name;
+        input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, company.postalCodes);
         status.textContent = `${company.name} (${company.ppsNumber}): ${company.postalCodes.join(", ")}`;
+        input.focus();
     }
 
     try {
@@ -81,11 +105,14 @@ async function initializeCompanySearch(map) {
                 return;
             }
 
-            matches.forEach((company) => {
+            matches.forEach((company, index) => {
                 const item = document.createElement("li");
                 const button = document.createElement("button");
                 button.type = "button";
+                button.id = `company-suggestion-${index}`;
+                button.dataset.ppsNumber = company.ppsNumber;
                 button.setAttribute("role", "option");
+                button.setAttribute("aria-selected", "false");
                 button.textContent = `${company.name} · ${company.ppsNumber}`;
                 button.addEventListener("click", () => selectCompany(company));
                 item.append(button);
@@ -96,13 +123,26 @@ async function initializeCompanySearch(map) {
         });
 
         input.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                if (suggestions.hidden) return;
+                event.preventDefault();
+                const direction = event.key === "ArrowDown" ? 1 : -1;
+                const startIndex = activeSuggestionIndex === -1
+                    ? (direction === 1 ? 0 : suggestionButtons().length - 1)
+                    : activeSuggestionIndex + direction;
+                highlightSuggestion(startIndex);
+                return;
+            }
             if (event.key === "Escape") {
                 closeSuggestions();
                 return;
             }
             if (event.key !== "Enter") return;
 
-            const company = findCompany(companies, input.value);
+            const activeButton = suggestionButtons()[activeSuggestionIndex];
+            const company = activeButton
+                ? companies.find((item) => item.ppsNumber === activeButton.dataset.ppsNumber)
+                : findCompany(companies, input.value);
             if (company) {
                 event.preventDefault();
                 selectCompany(company);
@@ -112,6 +152,8 @@ async function initializeCompanySearch(map) {
         document.addEventListener("click", (event) => {
             if (!event.target.closest(".company-search__controls")) closeSuggestions();
         });
+
+        input.focus();
     } catch (error) {
         status.textContent = error.message;
         input.disabled = true;
