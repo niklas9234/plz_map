@@ -2,5 +2,5 @@
 # Large local data
 /germany.pmtiles
 /go-pmtiles_1.31.2_Linux_x86_64/
-germany-luxembourg.pmtiles
+/germany-luxembourg.pmtiles
 *.pmtiles
