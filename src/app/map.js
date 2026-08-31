@@ -28,3 +28,7 @@ map.on("load", () => {
     addGermanyPlzLayers(map);
     addLuxembourgLayers(map);
 });
+
+map.on("zoom", () => {
+    console.log("Zoom:", map.getZoom());
+});

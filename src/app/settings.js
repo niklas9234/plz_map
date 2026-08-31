@@ -43,7 +43,7 @@ const MAP_SETTINGS = {
             minZoom: 6,
             font: ["Noto Sans Regular"],
             // Abwechselnd Zoomstufe und Schriftgröße in Pixeln.
-            sizes: [5, 8, 7, 12, 9, 16],
+            sizes: [5, 18, 7, 20, 9, 18],
             color: "#111111",
             haloWidth: 2
         }
