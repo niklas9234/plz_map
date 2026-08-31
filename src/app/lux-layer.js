@@ -1,8 +1,16 @@
-function addLuxembourgLayers(map) {
+async function addLuxembourgLayers(map) {
+
+    const response = await fetch("./luxemburg.json");
+
+    if (!response.ok) {
+        throw new Error(`Luxemburg-Daten konnten nicht geladen werden (${response.status}).`);
+    }
+
+    const postalCodeData = await response.json();
 
     map.addSource("plz-lux", {
         type: "geojson",
-        data: "./luxemburg.json"
+        data: postalCodeData
     });
 
     map.addLayer({
@@ -56,4 +64,6 @@ function addLuxembourgLayers(map) {
         },
         filter: ["==", ["get", "plz"], ""]
     });
+
+    return postalCodeData;
 }

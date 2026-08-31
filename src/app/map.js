@@ -25,9 +25,9 @@ const map = new maplibregl.Map({
 
 map.on("load", async () => {
     addBaseMapLayers(map);
-    await addGermanyPlzLayers(map);
-    addLuxembourgLayers(map);
-    initializeCompanySearch(map);
+    const germanyPostalCodes = await addGermanyPlzLayers(map);
+    const luxembourgPostalCodes = await addLuxembourgLayers(map);
+    initializeCompanySearch(map, [germanyPostalCodes, luxembourgPostalCodes]);
 });
 
 map.on("zoom", () => {
