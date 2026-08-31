@@ -269,4 +269,6 @@ async function addGermanyPlzLayers(map) {
         },
         filter: ["==", ["get", "plz"], ""]
     });
+
+    return postalCodeData;
 }

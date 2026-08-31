@@ -17,6 +17,36 @@ function setVisiblePostalCodes(map, postalCodes) {
     POSTAL_CODE_LAYER_IDS.forEach((layerId) => map.setFilter(layerId, filter));
 }
 
+function extendBoundsWithCoordinates(bounds, coordinates) {
+    if (typeof coordinates[0] === "number") {
+        bounds.extend(coordinates);
+        return;
+    }
+
+    coordinates.forEach((coordinate) => extendBoundsWithCoordinates(bounds, coordinate));
+}
+
+function zoomToPostalCodes(map, postalCodes, postalCodeData) {
+    const selectedPostalCodes = new Set(postalCodes);
+    const bounds = new maplibregl.LngLatBounds();
+
+    postalCodeData.forEach((featureCollection) => {
+        featureCollection.features.forEach((feature) => {
+            if (selectedPostalCodes.has(feature.properties?.plz) && feature.geometry?.coordinates) {
+                extendBoundsWithCoordinates(bounds, feature.geometry.coordinates);
+            }
+        });
+    });
+
+    if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+            padding: 60,
+            maxZoom: 9,
+            duration: 900
+        });
+    }
+}
+
 function normalizeSearchValue(value) {
     return value.trim().toLocaleLowerCase("de-DE");
 }
@@ -58,7 +88,7 @@ async function loadCompanies() {
     return response.json();
 }
 
-async function initializeCompanySearch(map) {
+async function initializeCompanySearch(map, postalCodeData) {
     const input = document.getElementById("company-search-input");
     const suggestions = document.getElementById("company-suggestions");
     const status = document.getElementById("company-search-status");
@@ -96,6 +126,7 @@ async function initializeCompanySearch(map) {
         input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, company.postalCodes);
+        zoomToPostalCodes(map, company.postalCodes, postalCodeData);
 
         const companyDetails = document.createElement("div");
         companyDetails.className = "company-search__company-details";
