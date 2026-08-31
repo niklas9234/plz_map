@@ -74,7 +74,8 @@ body {
 }
 
 .company-search__suggestions button:hover,
-.company-search__suggestions button:focus-visible {
+.company-search__suggestions button:focus-visible,
+.company-search__suggestions button.is-active {
   background: #e7f3eb;
 }
 
