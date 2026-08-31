@@ -16,16 +16,12 @@
 
   <section class="company-search" aria-labelledby="company-search-title">
     <h1 id="company-search-title">Unternehmen suchen</h1>
-    <form id="company-search-form" role="search">
-      <label for="company-search-input">Name oder PPS-Nummer</label>
-      <div class="company-search__controls">
-        <input id="company-search-input" list="company-suggestions" autocomplete="off"
-          placeholder="z. B. Nordlicht Logistik oder PPS-1001" required>
-        <datalist id="company-suggestions"></datalist>
-        <button type="submit">Suchen</button>
-        <button id="company-search-reset" class="company-search__reset" type="button">Zurücksetzen</button>
-      </div>
-    </form>
+    <div class="company-search__controls" role="search">
+      <input id="company-search-input" type="text" autocomplete="off"
+        placeholder="Name oder PPS-Nummer" aria-label="Name oder PPS-Nummer"
+        aria-autocomplete="list" aria-controls="company-suggestions" aria-expanded="false">
+      <ul id="company-suggestions" class="company-search__suggestions" role="listbox" hidden></ul>
+    </div>
     <p id="company-search-status" class="company-search__status" aria-live="polite">
       Testunternehmen werden geladen …
     </p>
