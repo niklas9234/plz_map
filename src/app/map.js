@@ -29,3 +29,7 @@ map.on("load", () => {
     addLuxembourgLayers(map);
     initializeCompanySearch(map);
 });
+
+map.on("zoom", () => {
+    console.log("Zoom:", map.getZoom());
+});

@@ -33,16 +33,6 @@ function findCompany(companies, searchValue) {
     );
 }
 
-function findCompanySuggestions(companies, searchValue) {
-    const query = normalizeSearchValue(searchValue);
-    if (!query) return [];
-
-    return companies.filter((company) =>
-        normalizeSearchValue(company.name).includes(query) ||
-        normalizeSearchValue(company.ppsNumber).includes(query)
-    );
-}
-
 async function loadCompanies() {
     const response = await fetch(COMPANY_DATA_URL);
     if (!response.ok) {
@@ -52,68 +42,46 @@ async function loadCompanies() {
 }
 
 async function initializeCompanySearch(map) {
+    const form = document.getElementById("company-search-form");
     const input = document.getElementById("company-search-input");
+    const resetButton = document.getElementById("company-search-reset");
     const suggestions = document.getElementById("company-suggestions");
     const status = document.getElementById("company-search-status");
-
-    function closeSuggestions() {
-        suggestions.replaceChildren();
-        suggestions.hidden = true;
-        input.setAttribute("aria-expanded", "false");
-    }
-
-    function selectCompany(company) {
-        input.value = company.name;
-        closeSuggestions();
-        setVisiblePostalCodes(map, company.postalCodes);
-        status.textContent = `${company.name} (${company.ppsNumber}): ${company.postalCodes.join(", ")}`;
-    }
 
     try {
         const companies = await loadCompanies();
 
+        companies.forEach((company) => {
+            const option = document.createElement("option");
+            option.value = company.name;
+            option.label = company.ppsNumber;
+            suggestions.append(option);
+        });
         status.textContent = `${companies.length} Testunternehmen verfügbar.`;
 
-        input.addEventListener("input", () => {
-            closeSuggestions();
-            const matches = findCompanySuggestions(companies, input.value);
-            if (!matches.length) {
-                return;
-            }
-
-            matches.forEach((company) => {
-                const item = document.createElement("li");
-                const button = document.createElement("button");
-                button.type = "button";
-                button.setAttribute("role", "option");
-                button.textContent = `${company.name} · ${company.ppsNumber}`;
-                button.addEventListener("click", () => selectCompany(company));
-                item.append(button);
-                suggestions.append(item);
-            });
-            suggestions.hidden = false;
-            input.setAttribute("aria-expanded", "true");
-        });
-
-        input.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                closeSuggestions();
-                return;
-            }
-            if (event.key !== "Enter") return;
-
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
             const company = findCompany(companies, input.value);
-            if (company) {
-                event.preventDefault();
-                selectCompany(company);
+
+            if (!company) {
+                setVisiblePostalCodes(map, []);
+                status.textContent = "Kein Unternehmen mit diesem Namen oder dieser PPS-Nummer gefunden.";
+                return;
             }
+
+            setVisiblePostalCodes(map, company.postalCodes);
+            status.textContent = `${company.name} (${company.ppsNumber}): ${company.postalCodes.join(", ")}`;
         });
 
-        document.addEventListener("click", (event) => {
-            if (!event.target.closest(".company-search__controls")) closeSuggestions();
+        resetButton.addEventListener("click", () => {
+            form.reset();
+            setVisiblePostalCodes(map, []);
+            status.textContent = `${companies.length} Testunternehmen verfügbar.`;
+            input.focus();
         });
     } catch (error) {
         status.textContent = error.message;
         input.disabled = true;
+        form.querySelector("button[type='submit']").disabled = true;
     }
 }
