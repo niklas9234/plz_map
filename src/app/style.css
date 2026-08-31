@@ -9,3 +9,75 @@ body {
   height: 100vh;
 }
 
+.company-search {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  left: 16px;
+  width: min(430px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+.company-search h1 {
+  margin: 0 0 10px;
+  font-size: 19px;
+}
+
+.company-search__controls {
+  position: relative;
+}
+
+.company-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid #777;
+  border-radius: 5px;
+  font: inherit;
+}
+
+.company-search__suggestions {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 220px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+}
+
+.company-search__suggestions[hidden] {
+  display: none;
+}
+
+.company-search__suggestions button {
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 3px;
+  color: #222;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.company-search__suggestions button:hover,
+.company-search__suggestions button:focus-visible {
+  background: #e7f3eb;
+}
+
+.company-search__status {
+  margin: 10px 0 0;
+}

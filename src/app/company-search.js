@@ -1,0 +1,119 @@
+const COMPANY_DATA_URL = "./companies.json";
+const POSTAL_CODE_LAYER_IDS = [
+    "plz-de-fill",
+    "plz-de-border",
+    "plz-de-labels",
+    "plz-lux-fill",
+    "plz-lux-border",
+    "plz-lux-label"
+];
+
+function postalCodeFilter(postalCodes) {
+    return ["in", ["get", "plz"], ["literal", postalCodes]];
+}
+
+function setVisiblePostalCodes(map, postalCodes) {
+    const filter = postalCodeFilter(postalCodes);
+    POSTAL_CODE_LAYER_IDS.forEach((layerId) => map.setFilter(layerId, filter));
+}
+
+function normalizeSearchValue(value) {
+    return value.trim().toLocaleLowerCase("de-DE");
+}
+
+function findCompany(companies, searchValue) {
+    const query = normalizeSearchValue(searchValue);
+    if (!query) return null;
+
+    return companies.find((company) =>
+        normalizeSearchValue(company.name) === query ||
+        normalizeSearchValue(company.ppsNumber) === query
+    ) || companies.find((company) =>
+        normalizeSearchValue(company.name).includes(query)
+    );
+}
+
+function findCompanySuggestions(companies, searchValue) {
+    const query = normalizeSearchValue(searchValue);
+    if (!query) return [];
+
+    return companies.filter((company) =>
+        normalizeSearchValue(company.name).includes(query) ||
+        normalizeSearchValue(company.ppsNumber).includes(query)
+    );
+}
+
+async function loadCompanies() {
+    const response = await fetch(COMPANY_DATA_URL);
+    if (!response.ok) {
+        throw new Error(`Unternehmensdaten konnten nicht geladen werden (${response.status}).`);
+    }
+    return response.json();
+}
+
+async function initializeCompanySearch(map) {
+    const input = document.getElementById("company-search-input");
+    const suggestions = document.getElementById("company-suggestions");
+    const status = document.getElementById("company-search-status");
+
+    function closeSuggestions() {
+        suggestions.replaceChildren();
+        suggestions.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+    }
+
+    function selectCompany(company) {
+        input.value = company.name;
+        closeSuggestions();
+        setVisiblePostalCodes(map, company.postalCodes);
+        status.textContent = `${company.name} (${company.ppsNumber}): ${company.postalCodes.join(", ")}`;
+    }
+
+    try {
+        const companies = await loadCompanies();
+
+        status.textContent = `${companies.length} Testunternehmen verfügbar.`;
+
+        input.addEventListener("input", () => {
+            closeSuggestions();
+            const matches = findCompanySuggestions(companies, input.value);
+            if (!matches.length) {
+                return;
+            }
+
+            matches.forEach((company) => {
+                const item = document.createElement("li");
+                const button = document.createElement("button");
+                button.type = "button";
+                button.setAttribute("role", "option");
+                button.textContent = `${company.name} · ${company.ppsNumber}`;
+                button.addEventListener("click", () => selectCompany(company));
+                item.append(button);
+                suggestions.append(item);
+            });
+            suggestions.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+        });
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                closeSuggestions();
+                return;
+            }
+            if (event.key !== "Enter") return;
+
+            const company = findCompany(companies, input.value);
+            if (company) {
+                event.preventDefault();
+                selectCompany(company);
+            }
+        });
+
+        document.addEventListener("click", (event) => {
+            if (!event.target.closest(".company-search__controls")) closeSuggestions();
+        });
+    } catch (error) {
+        status.textContent = error.message;
+        input.disabled = true;
+    }
+}

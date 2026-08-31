@@ -14,6 +14,19 @@
 
 <body>
 
+  <section class="company-search" aria-labelledby="company-search-title">
+    <h1 id="company-search-title">Unternehmen suchen</h1>
+    <div class="company-search__controls" role="search">
+      <input id="company-search-input" type="text" autocomplete="off"
+        placeholder="Name oder PPS-Nummer" aria-label="Name oder PPS-Nummer"
+        aria-autocomplete="list" aria-controls="company-suggestions" aria-expanded="false">
+      <ul id="company-suggestions" class="company-search__suggestions" role="listbox" hidden></ul>
+    </div>
+    <p id="company-search-status" class="company-search__status" aria-live="polite">
+      Testunternehmen werden geladen …
+    </p>
+  </section>
+
   <div id="map"></div>
 
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
@@ -23,6 +36,7 @@
 <script src="basemap.js"></script>
 <script src="plz-layer.js"></script>
 <script src="lux-layer.js"></script>
+<script src="company-search.js"></script>
 <script src="map.js"></script>
 </body>
 

@@ -22,7 +22,8 @@ function addGermanyPlzLayers(map) {
         paint: {
             "fill-color": MAP_SETTINGS.postalCodes.fillColor,
             "fill-opacity": MAP_SETTINGS.postalCodes.fillOpacity
-        }
+        },
+        filter: ["==", ["get", "plz"], ""]
     });
 
 
@@ -38,7 +39,8 @@ function addGermanyPlzLayers(map) {
         paint: {
             "line-color": MAP_SETTINGS.postalCodes.borderColor,
             "line-width": MAP_SETTINGS.postalCodes.borderWidth
-        }
+        },
+        filter: ["==", ["get", "plz"], ""]
     });
 
 
@@ -73,7 +75,8 @@ function addGermanyPlzLayers(map) {
         paint: {
             "text-color": MAP_SETTINGS.postalCodes.label.color,
             "text-halo-width": MAP_SETTINGS.postalCodes.label.haloWidth
-        }
+        },
+        filter: ["==", ["get", "plz"], ""]
     });
 
 }
