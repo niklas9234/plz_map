@@ -89,7 +89,23 @@ async function initializeCompanySearch(map) {
         input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, company.postalCodes);
-        status.textContent = `${company.name} (${company.ppsNumber}): ${company.postalCodes.join(", ")}`;
+
+        const companyDetails = document.createElement("div");
+        companyDetails.className = "company-search__company-details";
+
+        const companyName = document.createElement("strong");
+        companyName.textContent = company.name;
+
+        const companyNumber = document.createElement("strong");
+        companyNumber.textContent = company.ppsNumber;
+
+        companyDetails.append(companyName, " · ", companyNumber);
+
+        const postalCodeArea = document.createElement("div");
+        postalCodeArea.className = "company-search__postal-codes";
+        postalCodeArea.textContent = `PLZ-Gebiete: ${company.postalCodes.join(", ")}`;
+
+        status.replaceChildren(companyDetails, postalCodeArea);
         input.focus();
     }
 

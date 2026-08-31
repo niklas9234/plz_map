@@ -82,3 +82,17 @@ body {
 .company-search__status {
   margin: 10px 0 0;
 }
+
+.company-search__company-details {
+  font-size: 15px;
+}
+
+.company-search__postal-codes {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid #c7d5cb;
+  border-radius: 4px;
+  background: #f2f7f4;
+  color: #34463a;
+  font-size: 13px;
+}
