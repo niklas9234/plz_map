@@ -35,6 +35,134 @@ function getPolygonAreaAndCentroid(polygon) {
     };
 }
 
+function getSquaredDistanceToSegment(point, start, end) {
+    let x = start[0];
+    let y = start[1];
+    let deltaX = end[0] - x;
+    let deltaY = end[1] - y;
+
+    if (deltaX !== 0 || deltaY !== 0) {
+        const position = Math.max(0, Math.min(1,
+            ((point[0] - x) * deltaX + (point[1] - y) * deltaY)
+            / (deltaX * deltaX + deltaY * deltaY)
+        ));
+        x += deltaX * position;
+        y += deltaY * position;
+    }
+
+    deltaX = point[0] - x;
+    deltaY = point[1] - y;
+    return deltaX * deltaX + deltaY * deltaY;
+}
+
+function getDistanceToPolygon(point, polygon) {
+    let inside = false;
+    let minimumSquaredDistance = Infinity;
+
+    polygon.forEach((ring) => {
+        for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index, index += 1) {
+            const currentPoint = ring[index];
+            const previousPoint = ring[previous];
+
+            if ((currentPoint[1] > point[1]) !== (previousPoint[1] > point[1])
+                && point[0] < (previousPoint[0] - currentPoint[0])
+                    * (point[1] - currentPoint[1])
+                    / (previousPoint[1] - currentPoint[1]) + currentPoint[0]) {
+                inside = !inside;
+            }
+
+            minimumSquaredDistance = Math.min(
+                minimumSquaredDistance,
+                getSquaredDistanceToSegment(point, currentPoint, previousPoint)
+            );
+        }
+    });
+
+    const distance = Math.sqrt(minimumSquaredDistance);
+    return inside ? distance : -distance;
+}
+
+function createLabelCell(x, y, halfSize, polygon) {
+    const distance = getDistanceToPolygon([x, y], polygon);
+    return {
+        x,
+        y,
+        halfSize,
+        distance,
+        maximumDistance: distance + halfSize * Math.SQRT2
+    };
+}
+
+// Sucht den "Pole of Inaccessibility": den Punkt innerhalb der Fläche mit dem
+// größtmöglichen Abstand zu jeder Außenkante und zu Löchern. Dadurch sitzen
+// Labels auch in konkaven PLZ-Flächen gut lesbar statt nahe an einer Grenze.
+function getVisualCenter(polygon, precision = 0.005) {
+    const outerRing = polygon[0];
+    const latitudes = outerRing.map((coordinate) => coordinate[1]);
+    const latitudeScale = Math.cos(
+        (latitudes.reduce((sum, latitude) => sum + latitude, 0) / latitudes.length)
+        * Math.PI / 180
+    );
+    const projectedPolygon = polygon.map((ring) => ring.map(([longitude, latitude]) => [
+        longitude * latitudeScale,
+        latitude
+    ]));
+    const projectedOuterRing = projectedPolygon[0];
+    const xCoordinates = projectedOuterRing.map((coordinate) => coordinate[0]);
+    const yCoordinates = projectedOuterRing.map((coordinate) => coordinate[1]);
+    const minimumX = Math.min(...xCoordinates);
+    const minimumY = Math.min(...yCoordinates);
+    const maximumX = Math.max(...xCoordinates);
+    const maximumY = Math.max(...yCoordinates);
+    const cellSize = Math.min(maximumX - minimumX, maximumY - minimumY);
+
+    if (cellSize === 0) {
+        return outerRing[0];
+    }
+
+    const cells = [];
+    const halfSize = cellSize / 2;
+    for (let x = minimumX; x < maximumX; x += cellSize) {
+        for (let y = minimumY; y < maximumY; y += cellSize) {
+            cells.push(createLabelCell(x + halfSize, y + halfSize, halfSize, projectedPolygon));
+        }
+    }
+
+    const centroid = getRingAreaAndCentroid(projectedOuterRing).centroid;
+    let bestCell = createLabelCell(centroid[0], centroid[1], 0, projectedPolygon);
+    const boundingBoxCell = createLabelCell(
+        (minimumX + maximumX) / 2,
+        (minimumY + maximumY) / 2,
+        0,
+        projectedPolygon
+    );
+    if (boundingBoxCell.distance > bestCell.distance) {
+        bestCell = boundingBoxCell;
+    }
+
+    while (cells.length > 0) {
+        cells.sort((first, second) => first.maximumDistance - second.maximumDistance);
+        const cell = cells.pop();
+
+        if (cell.distance > bestCell.distance) {
+            bestCell = cell;
+        }
+        if (cell.maximumDistance - bestCell.distance <= precision) {
+            continue;
+        }
+
+        const nextHalfSize = cell.halfSize / 2;
+        cells.push(
+            createLabelCell(cell.x - nextHalfSize, cell.y - nextHalfSize, nextHalfSize, projectedPolygon),
+            createLabelCell(cell.x + nextHalfSize, cell.y - nextHalfSize, nextHalfSize, projectedPolygon),
+            createLabelCell(cell.x - nextHalfSize, cell.y + nextHalfSize, nextHalfSize, projectedPolygon),
+            createLabelCell(cell.x + nextHalfSize, cell.y + nextHalfSize, nextHalfSize, projectedPolygon)
+        );
+    }
+
+    return [bestCell.x / latitudeScale, bestCell.y];
+}
+
 function createPlzLabelData(postalCodeData) {
     const largestPolygonByPostalCode = new Map();
 
@@ -51,7 +179,10 @@ function createPlzLabelData(postalCodeData) {
             : geometry.coordinates;
 
         polygons.forEach((polygon) => {
-            const candidate = getPolygonAreaAndCentroid(polygon);
+            const candidate = {
+                ...getPolygonAreaAndCentroid(polygon),
+                coordinates: polygon
+            };
             const current = largestPolygonByPostalCode.get(postalCode);
 
             if (!current || candidate.area > current.area) {
@@ -67,7 +198,7 @@ function createPlzLabelData(postalCodeData) {
             properties: { plz },
             geometry: {
                 type: "Point",
-                coordinates: polygon.centroid
+                coordinates: getVisualCenter(polygon.coordinates)
             }
         }))
     };
