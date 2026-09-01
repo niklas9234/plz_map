@@ -1,12 +1,12 @@
 const TRADE_STORAGE_KEY = "plz-map.trades.v1";
 
-// Bewusst helle, leicht entsättigte Farben: dunkler Text und die PLZ-Zahlen
-// bleiben sowohl in Badges als auch auf der Karte gut lesbar.
+// Gut unterscheidbare, etwas entsättigte Farben: kräftig genug für die Karte,
+// aber weiterhin hell genug für dunkle Beschriftungen.
 const TRADE_COLORS = [
-    "#b8d8c0", "#b9d7d9", "#b8cde0", "#c5c3df", "#d4bfda",
-    "#dfbfd0", "#e2c1bd", "#e3c9ad", "#e4d5aa", "#d9dcae",
-    "#c9dcb2", "#b9d9cb", "#b7d4df", "#c2cde2", "#cec4dc",
-    "#ddc3d9", "#e0c5c9", "#dfccb9", "#d8d4b7", "#c4d5bd"
+    "#72b788", "#63b5ad", "#68a9c7", "#7898ca", "#938bc5",
+    "#b180bd", "#c17fa6", "#ca8587", "#cf956e", "#c7a85f",
+    "#b3b65e", "#8eb969", "#69b99a", "#5fb3c3", "#758fc8",
+    "#9a82bd", "#ba7faf", "#ca8194", "#ce8d78", "#bfa36d"
 ];
 
 const tradeStore = (() => {
@@ -21,8 +21,12 @@ const tradeStore = (() => {
         const storedTrades = localStorage.getItem(TRADE_STORAGE_KEY);
         if (storedTrades) {
             trades = JSON.parse(storedTrades);
-            trades.forEach((trade, index) => {
-                if (!trade.color) trade.color = TRADE_COLORS[index % TRADE_COLORS.length];
+            const assignedColors = new Set();
+            trades.forEach((trade) => {
+                if (!TRADE_COLORS.includes(trade.color) || assignedColors.has(trade.color)) {
+                    trade.color = TRADE_COLORS.find((color) => !assignedColors.has(color));
+                }
+                if (trade.color) assignedColors.add(trade.color);
             });
             return;
         }
@@ -49,20 +53,28 @@ const tradeStore = (() => {
         if (trades.some((trade) => trade.name.localeCompare(normalizedName, "de", { sensitivity: "base" }) === 0)) {
             throw new Error("Dieses Gewerk ist bereits vorhanden.");
         }
-        trades.push({ name: normalizedName, active: true, color: normalizeColor(color) });
+        trades.push({ name: normalizedName, active: true, color: availableColor(color) });
         trades.sort((left, right) => left.name.localeCompare(right.name, "de"));
         persist();
     }
 
-    function normalizeColor(color) {
-        return TRADE_COLORS.includes(color) ? color : TRADE_COLORS[trades.length % TRADE_COLORS.length];
+    function availableColor(color, currentName = "") {
+        const usedColors = new Set(trades.filter((trade) => trade.name !== currentName).map((trade) => trade.color));
+        const selectedColor = TRADE_COLORS.includes(color) && !usedColors.has(color)
+            ? color
+            : TRADE_COLORS.find((candidate) => !usedColors.has(candidate));
+        if (!selectedColor) throw new Error("Alle 20 Gewerkfarben sind bereits vergeben.");
+        return selectedColor;
     }
 
     async function setColor(name, color) {
         await initialize();
         const trade = trades.find((item) => item.name === name);
         if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
-        trade.color = normalizeColor(color);
+        if (trades.some((item) => item.name !== name && item.color === color)) {
+            throw new Error("Diese Farbe wird bereits von einem anderen Gewerk verwendet.");
+        }
+        trade.color = availableColor(color, name);
         persist();
     }
 

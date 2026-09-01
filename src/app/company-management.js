@@ -298,41 +298,66 @@ function initializeTradeManagement() {
     const nameInput = document.getElementById("trade-name");
     const list = document.getElementById("trade-list");
     const error = document.getElementById("trade-error");
-    const newColors = document.getElementById("new-trade-colors");
+    const newColorPicker = document.getElementById("new-trade-color-picker");
+    let trades = [];
 
-    function colorOptions(selected, name) {
-        const fragment = document.createDocumentFragment();
+    function createColorPicker(selected, currentTrade = "") {
+        const picker = document.createElement("div");
+        picker.className = "color-picker__control";
+        picker.dataset.color = selected;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "color-picker__button";
+        button.innerHTML = '<span class="color-picker__swatch"></span> Farbe';
+        button.querySelector("span").style.backgroundColor = selected;
+        button.setAttribute("aria-expanded", "false");
+        const overlay = document.createElement("div");
+        overlay.className = "color-picker__overlay";
+        overlay.hidden = true;
+        const usedColors = new Set(trades.filter((trade) => trade.name !== currentTrade).map((trade) => trade.color));
         tradeStore.colors.forEach((color, index) => {
-            const label = document.createElement("label");
-            label.className = "color-option";
-            label.style.backgroundColor = color;
-            label.title = `Farbe ${index + 1}`;
-            const radio = document.createElement("input");
-            radio.type = "radio";
-            radio.name = name;
-            radio.value = color;
-            radio.checked = color === selected;
-            radio.setAttribute("aria-label", `Farbe ${index + 1}`);
-            label.append(radio);
-            fragment.append(label);
+            const option = document.createElement("button");
+            option.type = "button";
+            option.className = "color-option";
+            option.style.backgroundColor = color;
+            option.disabled = usedColors.has(color);
+            option.classList.toggle("is-selected", color === selected);
+            option.setAttribute("aria-label", option.disabled ? `Farbe ${index + 1}, bereits vergeben` : `Farbe ${index + 1}`);
+            option.addEventListener("click", () => {
+                picker.dataset.color = color;
+                button.querySelector("span").style.backgroundColor = color;
+                overlay.hidden = true;
+                button.setAttribute("aria-expanded", "false");
+                picker.dispatchEvent(new CustomEvent("colorchange", { bubbles: true, detail: { color } }));
+            });
+            overlay.append(option);
         });
-        return fragment;
+        button.addEventListener("click", () => {
+            document.querySelectorAll(".color-picker__overlay:not([hidden])").forEach((element) => {
+                if (element !== overlay) element.hidden = true;
+            });
+            overlay.hidden = !overlay.hidden;
+            button.setAttribute("aria-expanded", String(!overlay.hidden));
+        });
+        picker.append(button, overlay);
+        return picker;
     }
 
-    newColors.append(colorOptions(tradeStore.colors[0], "new-trade-color"));
-
     async function render() {
-        const trades = await tradeStore.list();
+        trades = await tradeStore.list();
+        const firstAvailableColor = tradeStore.colors.find((color) => !trades.some((trade) => trade.color === color));
+        newColorPicker.replaceChildren(createColorPicker(firstAvailableColor || tradeStore.colors[0]));
         list.replaceChildren();
         trades.forEach((trade) => {
             const item = document.createElement("li");
             item.classList.toggle("is-inactive", !trade.active);
             const name = document.createElement("strong");
             name.textContent = trade.name;
-            const colors = document.createElement("div");
-            colors.className = "color-options color-options--compact";
-            colors.append(colorOptions(trade.color, `trade-color-${trade.name}`));
-            colors.addEventListener("change", (event) => tradeStore.setColor(trade.name, event.target.value));
+            const colors = createColorPicker(trade.color, trade.name);
+            colors.addEventListener("colorchange", async (event) => {
+                await tradeStore.setColor(trade.name, event.detail.color);
+                await render();
+            });
             const activeLabel = document.createElement("label");
             activeLabel.className = "trade-active";
             const active = document.createElement("input");
@@ -361,7 +386,7 @@ function initializeTradeManagement() {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
         try {
-            const selectedColor = form.querySelector('input[name="new-trade-color"]:checked').value;
+            const selectedColor = newColorPicker.querySelector(".color-picker__control").dataset.color;
             await tradeStore.add(nameInput.value, selectedColor);
             nameInput.value = "";
             error.hidden = true;
@@ -377,6 +402,13 @@ function initializeTradeManagement() {
         nameInput.focus();
     });
     document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
+    document.addEventListener("click", (event) => {
+        if (event.target.closest(".color-picker__control")) return;
+        document.querySelectorAll(".color-picker__overlay:not([hidden])").forEach((overlay) => {
+            overlay.hidden = true;
+            overlay.previousElementSibling?.setAttribute("aria-expanded", "false");
+        });
+    });
 }
 
 document.addEventListener("DOMContentLoaded", initializeTradeManagement);
