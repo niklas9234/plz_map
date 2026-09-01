@@ -521,6 +521,12 @@ dialog::backdrop {
   padding: 28px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.company-detail__content::-webkit-scrollbar {
+  display: none;
 }
 
 .company-detail__master-data {
