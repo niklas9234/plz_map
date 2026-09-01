@@ -11,7 +11,7 @@ const MAP_SETTINGS = {
         zoom: 5.5,
         // Das große, nicht versionierte Archiv liegt zusammen mit den übrigen
         // Kartendaten im statischen Frontend-Verzeichnis.
-        basemapUrl: `pmtiles://${window.location.origin}/data/pmtiles/germany-luxembourg.pmtiles`,
+        basemapUrl: `pmtiles://${new URL("./data/pmtiles/germany-luxembourg.pmtiles", window.location.href).href}`,
         glyphsUrl: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf"
     },
 
