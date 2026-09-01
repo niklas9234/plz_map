@@ -27,13 +27,16 @@ keine Framework- oder Datenbankentscheidung.
 
 1. Die Datei `germany-luxembourg.pmtiles` nach
    `src/app/data/pmtiles/` kopieren.
-2. Einen statischen Webserver mit `src/app` als Dokumentenwurzel starten:
+2. Einen statischen Webserver im Projektverzeichnis starten:
 
    ```sh
-   python -m http.server 8000 --directory src/app
+   python -m http.server 8000
    ```
 
-3. `http://localhost:8000` im Browser öffnen.
+3. `http://localhost:8000` im Browser öffnen. Die Startseite im
+   Projektverzeichnis leitet automatisch zur Anwendung unter `src/app/`
+   weiter. Dadurch funktioniert der Einstieg auch bei statischen Hosts, die
+   das Repository-Verzeichnis als Dokumentenwurzel verwenden.
 
 Die PMTiles-Datei wird nicht in Git aufgenommen. Weitere Karteneinstellungen
 sind in `CONFIGURATION.md` beschrieben.
