@@ -97,21 +97,14 @@ function initializeCompanyManagement() {
             const row = tableBody.insertRow();
             row.classList.toggle("is-inactive", !company.active);
             const nameCell = row.insertCell();
-            nameCell.className = "company-table__name-cell";
-            const nameContent = document.createElement("div");
-            nameContent.className = "company-table__name-content";
-            const companyName = document.createElement("strong");
-            companyName.className = "company-table__name";
-            companyName.textContent = company.name;
-            companyName.title = company.name;
-            nameContent.append(companyName);
+            nameCell.innerHTML = `<strong></strong>`;
+            nameCell.querySelector("strong").textContent = company.name;
             if (!company.active) {
                 const status = document.createElement("span");
                 status.className = "status-badge";
                 status.textContent = "Inaktiv";
-                nameContent.append(status);
+                nameCell.append(" ", status);
             }
-            nameCell.append(nameContent);
             row.insertCell().append(createTradeBadge(company.trade));
             row.insertCell().textContent = company.ppsNumber;
             const postalCodes = row.insertCell();

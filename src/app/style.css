@@ -372,25 +372,6 @@ dialog::backdrop {
   font-weight: 700;
 }
 
-.company-table__name-content {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-}
-
-.company-table__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.company-table__name-content .status-badge {
-  flex: 0 0 auto;
-  margin-left: 0;
-}
-
 .company-table__postal-codes {
   max-width: 210px;
   color: #526158;
