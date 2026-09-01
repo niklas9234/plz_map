@@ -429,7 +429,7 @@ dialog::backdrop {
 
 .trade-form {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: end;
   gap: 12px;
   padding: 22px 28px;
@@ -453,6 +453,93 @@ dialog::backdrop {
   padding: 7px 10px 7px 14px;
   border: 1px solid #d8e0da;
   border-radius: 7px;
+}
+
+.management-dialog__header-actions,
+.trade-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.color-picker__control {
+  position: relative;
+}
+
+.color-picker__button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid #aab8ae;
+  border-radius: 7px;
+  background: #fff;
+  color: #24452f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.color-picker__swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(23, 36, 27, 0.35);
+  border-radius: 50%;
+}
+
+.color-picker__overlay {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 26px);
+  gap: 8px;
+  width: max-content;
+  padding: 12px;
+  border: 1px solid #aab8ae;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 36, 27, 0.2);
+}
+
+.trade-list li:nth-last-child(-n + 3) .color-picker__overlay {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.color-option {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(23, 36, 27, 0.28);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-option.is-selected {
+  outline: 3px solid #146b37;
+  outline-offset: 2px;
+}
+
+.color-option:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.22;
+}
+
+.trade-active {
+  white-space: nowrap;
+}
+
+.trade-error {
+  margin: 0 28px;
 }
 
 .company-table__empty {

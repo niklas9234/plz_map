@@ -30,7 +30,7 @@ function initializeCompanyManagement() {
     function populateTradeOptions() {
         const current = tradeFilter.value;
         tradeFilter.replaceChildren(new Option("Alle Gewerke", ""));
-        trades.forEach((trade) => tradeFilter.add(new Option(trade.name, trade.name)));
+        trades.filter((trade) => trade.active).forEach((trade) => tradeFilter.add(new Option(trade.name, trade.name)));
         if ([...tradeFilter.options].some((option) => option.value === current)) tradeFilter.value = current;
     }
 
@@ -148,7 +148,7 @@ function initializeCompanyManagement() {
         detailView.querySelector(".information-empty").hidden = !empty;
     }
 
-    function openCompany(company) {
+    function openCompany(company, isNew = false) {
         detailView?.remove();
         currentCompany = company;
         listElements.forEach((element) => { element.hidden = true; });
@@ -188,7 +188,7 @@ function initializeCompanyManagement() {
             </div>`;
         dialog.append(detailView);
         detailView.querySelector("#detail-name").value = company.name;
-        detailView.querySelector(".company-detail__company-name").textContent = company.name;
+        detailView.querySelector(".company-detail__company-name").textContent = isNew ? "Neues Unternehmen" : company.name;
         detailView.querySelector("#detail-pps").value = company.ppsNumber;
         const tradeSelect = detailView.querySelector("#detail-trade");
         trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
@@ -215,18 +215,39 @@ function initializeCompanyManagement() {
         initialState = formState();
         detailView.addEventListener("input", updateDirtyState);
         detailView.addEventListener("change", updateDirtyState);
-        detailView.querySelector("#detail-name").addEventListener("input", (event) => {
-            detailView.querySelector(".company-detail__company-name").textContent = event.target.value || "Unternehmen ohne Namen";
-        });
+        if (!isNew) {
+            detailView.querySelector("#detail-name").addEventListener("input", (event) => {
+                detailView.querySelector(".company-detail__company-name").textContent = event.target.value || "Unternehmen ohne Namen";
+            });
+        }
         detailView.addEventListener("submit", async (event) => { event.preventDefault(); await saveCompany(); });
         detailView.querySelector(".detail-back").addEventListener("click", () => leaveDetail("list"));
         detailView.querySelector(".detail-close").addEventListener("click", () => leaveDetail("map"));
         detailView.querySelector(".detail-cancel").addEventListener("click", () => {
+            if (isNew) {
+                showList();
+                return;
+            }
             const original = companies.find((item) => item.id === currentCompany.id) || currentCompany;
             openCompany(original);
         });
         detailView.querySelector(".information-add").addEventListener("click", () => { addInformationRow(); updateDirtyState(); });
         detailView.focus({ preventScroll: true });
+        if (isNew) detailView.querySelector("#detail-name").focus();
+    }
+
+    function openNewCompany() {
+        const firstActiveTrade = trades.find((trade) => trade.active)?.name || "";
+        openCompany({
+            name: "",
+            ppsNumber: "",
+            trade: firstActiveTrade,
+            postalCodes: [],
+            information: [],
+            active: true
+        }, true);
+        // Beim Anlegen muss die primäre Aktion von Anfang an sichtbar sein.
+        detailView.querySelector(".detail-actions").hidden = false;
     }
 
     async function saveCompany() {
@@ -267,8 +288,10 @@ function initializeCompanyManagement() {
         searchInput.focus();
     });
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
+    document.getElementById("create-company").addEventListener("click", openNewCompany);
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
+    window.addEventListener("trades:changed", refresh);
     dialog.addEventListener("pointerdown", (event) => {
         pointerStartedOnBackdrop = isOutsideDialog(event);
     });
@@ -290,3 +313,124 @@ function initializeCompanyManagement() {
 }
 
 document.addEventListener("DOMContentLoaded", initializeCompanyManagement);
+
+function initializeTradeManagement() {
+    const dialog = document.getElementById("trade-management");
+    const form = document.getElementById("trade-form");
+    const nameInput = document.getElementById("trade-name");
+    const list = document.getElementById("trade-list");
+    const error = document.getElementById("trade-error");
+    const newColorPicker = document.getElementById("new-trade-color-picker");
+    let trades = [];
+
+    function createColorPicker(selected, currentTrade = "") {
+        const picker = document.createElement("div");
+        picker.className = "color-picker__control";
+        picker.dataset.color = selected;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "color-picker__button";
+        button.innerHTML = '<span class="color-picker__swatch"></span> Farbe';
+        button.querySelector("span").style.backgroundColor = selected;
+        button.setAttribute("aria-expanded", "false");
+        const overlay = document.createElement("div");
+        overlay.className = "color-picker__overlay";
+        overlay.hidden = true;
+        const usedColors = new Set(trades.filter((trade) => trade.name !== currentTrade).map((trade) => trade.color));
+        tradeStore.colors.forEach((color, index) => {
+            const option = document.createElement("button");
+            option.type = "button";
+            option.className = "color-option";
+            option.style.backgroundColor = color;
+            option.disabled = usedColors.has(color);
+            option.classList.toggle("is-selected", color === selected);
+            option.setAttribute("aria-label", option.disabled ? `Farbe ${index + 1}, bereits vergeben` : `Farbe ${index + 1}`);
+            option.addEventListener("click", () => {
+                picker.dataset.color = color;
+                button.querySelector("span").style.backgroundColor = color;
+                overlay.hidden = true;
+                button.setAttribute("aria-expanded", "false");
+                picker.dispatchEvent(new CustomEvent("colorchange", { bubbles: true, detail: { color } }));
+            });
+            overlay.append(option);
+        });
+        button.addEventListener("click", () => {
+            document.querySelectorAll(".color-picker__overlay:not([hidden])").forEach((element) => {
+                if (element !== overlay) element.hidden = true;
+            });
+            overlay.hidden = !overlay.hidden;
+            button.setAttribute("aria-expanded", String(!overlay.hidden));
+        });
+        picker.append(button, overlay);
+        return picker;
+    }
+
+    async function render() {
+        trades = await tradeStore.list();
+        const firstAvailableColor = tradeStore.colors.find((color) => !trades.some((trade) => trade.color === color));
+        newColorPicker.replaceChildren(createColorPicker(firstAvailableColor || tradeStore.colors[0]));
+        list.replaceChildren();
+        trades.forEach((trade) => {
+            const item = document.createElement("li");
+            item.classList.toggle("is-inactive", !trade.active);
+            const name = document.createElement("strong");
+            name.textContent = trade.name;
+            const colors = createColorPicker(trade.color, trade.name);
+            colors.addEventListener("colorchange", async (event) => {
+                await tradeStore.setColor(trade.name, event.detail.color);
+                await render();
+            });
+            const activeLabel = document.createElement("label");
+            activeLabel.className = "trade-active";
+            const active = document.createElement("input");
+            active.type = "checkbox";
+            active.checked = trade.active;
+            active.addEventListener("change", () => tradeStore.setActive(trade.name, active.checked));
+            activeLabel.append(active, " Aktiv");
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "table-action table-action--delete";
+            remove.textContent = "×";
+            remove.setAttribute("aria-label", `${trade.name} löschen`);
+            remove.addEventListener("click", async () => {
+                if (!window.confirm(`Gewerk „${trade.name}“ wirklich löschen?`)) return;
+                await tradeStore.remove(trade.name);
+                await render();
+            });
+            const actions = document.createElement("div");
+            actions.className = "trade-list__actions";
+            actions.append(activeLabel, remove);
+            item.append(name, colors, actions);
+            list.append(item);
+        });
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+            const selectedColor = newColorPicker.querySelector(".color-picker__control").dataset.color;
+            await tradeStore.add(nameInput.value, selectedColor);
+            nameInput.value = "";
+            error.hidden = true;
+            await render();
+        } catch (addError) {
+            error.textContent = addError.message;
+            error.hidden = false;
+        }
+    });
+    document.getElementById("open-trade-management").addEventListener("click", async () => {
+        await render();
+        dialog.showModal();
+        nameInput.focus();
+    });
+    document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
+    document.addEventListener("click", (event) => {
+        if (event.target.closest(".color-picker__control")) return;
+        document.querySelectorAll(".color-picker__overlay:not([hidden])").forEach((overlay) => {
+            overlay.hidden = true;
+            overlay.previousElementSibling?.setAttribute("aria-expanded", "false");
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", initializeTradeManagement);

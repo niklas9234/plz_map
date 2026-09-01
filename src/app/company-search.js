@@ -16,6 +16,11 @@ function setVisiblePostalCodes(map, postalCodes) {
     POSTAL_CODE_LAYER_IDS.forEach((layerId) => map.setFilter(layerId, filter));
 }
 
+function setPostalCodeColor(map, color) {
+    ["plz-de-fill", "plz-lux-fill"].forEach((id) => map.setPaintProperty(id, "fill-color", color));
+    ["plz-de-border", "plz-lux-border"].forEach((id) => map.setPaintProperty(id, "line-color", color));
+}
+
 function extendBoundsWithCoordinates(bounds, coordinates) {
     if (typeof coordinates[0] === "number") {
         bounds.extend(coordinates);
@@ -54,6 +59,7 @@ function createTradeBadge(trade) {
     const badge = document.createElement("span");
     badge.className = "company-search__trade-badge";
     badge.textContent = trade;
+    tradeStore.colorFor(trade).then((color) => { badge.style.backgroundColor = color; });
     return badge;
 }
 
@@ -117,6 +123,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, company.postalCodes);
+        tradeStore.colorFor(company.trade).then((color) => setPostalCodeColor(map, color));
         zoomToPostalCodes(map, company.postalCodes, postalCodeData);
 
         const companyDetails = document.createElement("div");
@@ -145,7 +152,8 @@ async function initializeCompanySearch(map, postalCodeData) {
     }
 
     try {
-        let companies = (await companyStore.list()).filter((company) => company.active);
+        let activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
+        let companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
 
         status.textContent = `${companies.length} Unternehmen verfügbar.`;
 
@@ -207,7 +215,15 @@ async function initializeCompanySearch(map, postalCodeData) {
         });
 
         window.addEventListener("companies:changed", async () => {
-            companies = (await companyStore.list()).filter((company) => company.active);
+            activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
+            companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
+            status.textContent = `${companies.length} Unternehmen verfügbar.`;
+            closeSuggestions();
+        });
+
+        window.addEventListener("trades:changed", async () => {
+            activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
+            companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
             status.textContent = `${companies.length} Unternehmen verfügbar.`;
             closeSuggestions();
         });
