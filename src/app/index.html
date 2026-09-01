@@ -52,9 +52,6 @@
           <option value="">Alle Gewerke</option>
         </select>
       </label>
-      <button id="reset-management-filter" class="button button--secondary management-toolbar__reset" type="button">Filter zurücksetzen</button>
-      <button id="open-trade-management" class="button button--secondary" type="button">Gewerke verwalten</button>
-      <button id="add-company" class="button button--primary management-toolbar__add" type="button">+ Unternehmen anlegen</button>
     </div>
 
     <p id="management-result-status" class="management-result-status" role="status" aria-live="polite"></p>
@@ -65,7 +62,6 @@
           <col class="company-table__column--trade">
           <col class="company-table__column--pps">
           <col class="company-table__column--postal-codes">
-          <col class="company-table__column--actions">
         </colgroup>
         <thead>
           <tr>
@@ -73,77 +69,10 @@
             <th scope="col">Gewerk</th>
             <th scope="col">PPS-Nummer</th>
             <th scope="col">PLZ-Gebiete</th>
-            <th scope="col"><span class="visually-hidden">Aktionen</span></th>
           </tr>
         </thead>
         <tbody id="company-table-body"></tbody>
       </table>
-    </div>
-  </dialog>
-
-  <dialog id="trade-management" class="trade-dialog" aria-labelledby="trade-management-title">
-    <div class="management-dialog__header">
-      <div>
-        <p class="eyebrow">Stammdaten</p>
-        <h2 id="trade-management-title">Gewerke verwalten</h2>
-      </div>
-      <button id="close-trade-management" class="icon-button" type="button" aria-label="Gewerkverwaltung schließen">&times;</button>
-    </div>
-    <form id="trade-form" class="trade-form">
-      <label class="form-field">
-        <span>Neues Gewerk</span>
-        <input id="trade-name" maxlength="80" required placeholder="z. B. Dachdecker">
-      </label>
-      <button class="button button--primary" type="submit">Gewerk anlegen</button>
-    </form>
-    <p id="trade-form-error" class="form-error" role="alert" hidden></p>
-    <ul id="trade-list" class="trade-list"></ul>
-  </dialog>
-
-  <dialog id="company-editor" class="editor-dialog" aria-labelledby="company-editor-title">
-    <form id="company-form">
-      <div class="management-dialog__header">
-        <div>
-          <p class="eyebrow">Unternehmensdaten</p>
-          <h2 id="company-editor-title">Unternehmen anlegen</h2>
-        </div>
-        <button id="close-company-editor" class="icon-button" type="button" aria-label="Formular schließen">&times;</button>
-      </div>
-      <input id="company-id" type="hidden">
-      <div class="editor-fields">
-        <label class="form-field">
-          <span>Unternehmensname *</span>
-          <input id="company-name" name="name" required maxlength="120">
-        </label>
-        <label class="form-field">
-          <span>PPS-Nummer *</span>
-          <input id="company-pps-number" name="ppsNumber" required maxlength="40">
-        </label>
-        <label class="form-field">
-          <span>Gewerk *</span>
-          <select id="company-trade" name="trade" required></select>
-        </label>
-        <label class="form-field form-field--wide">
-          <span>PLZ-Gebiete *</span>
-          <input id="company-postal-codes" name="postalCodes" required placeholder="z. B. 20, 21, 22">
-          <small>Zweistellige Gebiete durch Kommas trennen.</small>
-        </label>
-      </div>
-      <p id="company-form-error" class="form-error" role="alert" hidden></p>
-      <div class="dialog-actions">
-        <button id="cancel-company-editor" class="button button--secondary" type="button">Abbrechen</button>
-        <button class="button button--primary" type="submit">Speichern</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="company-delete-dialog" class="confirm-dialog" aria-labelledby="company-delete-title">
-    <h2 id="company-delete-title">Unternehmen löschen?</h2>
-    <p id="company-delete-message"></p>
-    <p>Der Eintrag wird aus dieser lokalen Testversion entfernt.</p>
-    <div class="dialog-actions">
-      <button id="cancel-company-delete" class="button button--secondary" type="button">Abbrechen</button>
-      <button id="confirm-company-delete" class="button button--danger" type="button">Unternehmen löschen</button>
     </div>
   </dialog>
 
