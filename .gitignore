@@ -1,6 +1,11 @@
 
-# Large local data
+# Large local map data
+/src/app/data/pmtiles/*.pmtiles
 /germany.pmtiles
 /go-pmtiles_1.31.2_Linux_x86_64/
 /germany-luxembourg.pmtiles
 *.pmtiles
+
+# Python cache files
+__pycache__/
+*.py[cod]
