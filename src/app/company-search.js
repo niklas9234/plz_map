@@ -1,4 +1,3 @@
-const COMPANY_DATA_URL = "./companies.json";
 const POSTAL_CODE_LAYER_IDS = [
     "plz-de-fill",
     "plz-de-border",
@@ -80,14 +79,6 @@ function findCompanySuggestions(companies, searchValue) {
     );
 }
 
-async function loadCompanies() {
-    const response = await fetch(COMPANY_DATA_URL);
-    if (!response.ok) {
-        throw new Error(`Unternehmensdaten konnten nicht geladen werden (${response.status}).`);
-    }
-    return response.json();
-}
-
 async function initializeCompanySearch(map, postalCodeData) {
     const input = document.getElementById("company-search-input");
     const suggestions = document.getElementById("company-suggestions");
@@ -154,9 +145,9 @@ async function initializeCompanySearch(map, postalCodeData) {
     }
 
     try {
-        const companies = await loadCompanies();
+        let companies = await companyStore.list();
 
-        status.textContent = `${companies.length} Testunternehmen verfügbar.`;
+        status.textContent = `${companies.length} Unternehmen verfügbar.`;
 
         input.addEventListener("input", () => {
             closeSuggestions();
@@ -213,6 +204,12 @@ async function initializeCompanySearch(map, postalCodeData) {
 
         document.addEventListener("click", (event) => {
             if (!event.target.closest(".company-search__controls")) closeSuggestions();
+        });
+
+        window.addEventListener("companies:changed", async () => {
+            companies = await companyStore.list();
+            status.textContent = `${companies.length} Unternehmen verfügbar.`;
+            closeSuggestions();
         });
 
         input.focus();
