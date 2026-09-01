@@ -9,7 +9,12 @@ function initializeCompanyManagement() {
     const form = document.getElementById("company-form");
     const formError = document.getElementById("company-form-error");
     const resultStatus = document.getElementById("management-result-status");
+    const tradeDialog = document.getElementById("trade-management");
+    const tradeForm = document.getElementById("trade-form");
+    const tradeFormError = document.getElementById("trade-form-error");
+    const tradeList = document.getElementById("trade-list");
     let companies = [];
+    let trades = [];
     let pendingDeleteId = null;
 
     function closeDialog(dialog) {
@@ -28,22 +33,23 @@ function initializeCompanyManagement() {
 
     function populateTradeOptions() {
         const currentFilter = tradeFilter.value;
-        const trades = [...new Set(companies.map((company) => company.trade))]
-            .sort((left, right) => left.localeCompare(right, "de"));
+        const tradeNames = trades.map((trade) => trade.name);
         tradeFilter.replaceChildren(new Option("Alle Gewerke", ""));
         editorTrade.replaceChildren(new Option("Gewerk auswählen", ""));
         trades.forEach((trade) => {
-            tradeFilter.add(new Option(trade, trade));
-            editorTrade.add(new Option(trade, trade));
+            tradeFilter.add(new Option(trade.name, trade.name));
+            if (trade.active) editorTrade.add(new Option(trade.name, trade.name));
         });
-        if (trades.includes(currentFilter)) tradeFilter.value = currentFilter;
+        if (tradeNames.includes(currentFilter)) tradeFilter.value = currentFilter;
     }
 
-    function actionButton(label, className, handler) {
+    function actionButton(symbol, label, className, handler) {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = `button button--small ${className}`;
-        button.textContent = label;
+        button.className = `table-action ${className}`;
+        button.textContent = symbol;
+        button.title = label;
+        button.setAttribute("aria-label", label);
         button.addEventListener("click", handler);
         return button;
     }
@@ -57,6 +63,9 @@ function initializeCompanyManagement() {
         document.getElementById("company-id").value = company?.id || "";
         document.getElementById("company-name").value = company?.name || "";
         document.getElementById("company-pps-number").value = company?.ppsNumber || "";
+        if (company && ![...editorTrade.options].some((option) => option.value === company.trade)) {
+            editorTrade.add(new Option(`${company.trade} (inaktiv)`, company.trade));
+        }
         editorTrade.value = company?.trade || "";
         document.getElementById("company-postal-codes").value = company?.postalCodes.join(", ") || "";
         editorDialog.showModal();
@@ -86,9 +95,16 @@ function initializeCompanyManagement() {
 
         matches.forEach((company) => {
             const row = tableBody.insertRow();
+            row.classList.toggle("is-inactive", !company.active);
             const nameCell = row.insertCell();
             nameCell.innerHTML = `<strong></strong>`;
             nameCell.querySelector("strong").textContent = company.name;
+            if (!company.active) {
+                const status = document.createElement("span");
+                status.className = "status-badge";
+                status.textContent = "Inaktiv";
+                nameCell.append(" ", status);
+            }
             row.insertCell().append(createTradeBadge(company.trade));
             row.insertCell().textContent = company.ppsNumber;
             const postalCodes = row.insertCell();
@@ -97,14 +113,45 @@ function initializeCompanyManagement() {
             const actions = row.insertCell();
             actions.className = "company-table__actions";
             actions.append(
-                actionButton("Bearbeiten", "button--secondary", () => openEditor(company)),
-                actionButton("Löschen", "button--ghost-danger", () => requestDelete(company))
+                actionButton("✎", "Unternehmen bearbeiten", "table-action--edit", () => openEditor(company)),
+                actionButton(
+                    company.active ? "⏸" : "▶",
+                    company.active ? "Unternehmen deaktivieren" : "Unternehmen reaktivieren",
+                    "table-action--status",
+                    async () => {
+                        await companyStore.setActive(company.id, !company.active);
+                        await refresh();
+                    }
+                ),
+                actionButton("🗑", "Unternehmen endgültig löschen", "table-action--delete", () => requestDelete(company))
             );
         });
     }
 
+    function renderTrades() {
+        tradeList.replaceChildren();
+        trades.forEach((trade) => {
+            const item = document.createElement("li");
+            const name = document.createElement("span");
+            name.textContent = trade.name;
+            const button = actionButton(
+                trade.active ? "⏸" : "▶",
+                trade.active ? `Gewerk ${trade.name} deaktivieren` : `Gewerk ${trade.name} reaktivieren`,
+                "table-action--status",
+                async () => {
+                    await tradeStore.setActive(trade.name, !trade.active);
+                    await refresh();
+                    renderTrades();
+                }
+            );
+            if (!trade.active) item.classList.add("is-inactive");
+            item.append(name, button);
+            tradeList.append(item);
+        });
+    }
+
     async function refresh() {
-        companies = await companyStore.list();
+        [companies, trades] = await Promise.all([companyStore.list(), tradeStore.list()]);
         populateTradeOptions();
         renderCompanies();
     }
@@ -116,11 +163,31 @@ function initializeCompanyManagement() {
     });
     document.getElementById("close-company-management").addEventListener("click", () => closeDialog(managementDialog));
     document.getElementById("add-company").addEventListener("click", () => openEditor());
+    document.getElementById("open-trade-management").addEventListener("click", () => {
+        renderTrades();
+        tradeFormError.hidden = true;
+        tradeDialog.showModal();
+        document.getElementById("trade-name").focus();
+    });
+    document.getElementById("close-trade-management").addEventListener("click", () => closeDialog(tradeDialog));
     document.getElementById("close-company-editor").addEventListener("click", () => closeDialog(editorDialog));
     document.getElementById("cancel-company-editor").addEventListener("click", () => closeDialog(editorDialog));
     document.getElementById("cancel-company-delete").addEventListener("click", () => closeDialog(deleteDialog));
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
+    tradeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+            await tradeStore.add(document.getElementById("trade-name").value);
+            tradeForm.reset();
+            tradeFormError.hidden = true;
+            await refresh();
+            renderTrades();
+        } catch (error) {
+            tradeFormError.textContent = error.message;
+            tradeFormError.hidden = false;
+        }
+    });
     document.getElementById("reset-management-filter").addEventListener("click", () => {
         searchInput.value = "";
         tradeFilter.value = "";

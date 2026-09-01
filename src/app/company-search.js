@@ -145,7 +145,7 @@ async function initializeCompanySearch(map, postalCodeData) {
     }
 
     try {
-        let companies = await companyStore.list();
+        let companies = (await companyStore.list()).filter((company) => company.active);
 
         status.textContent = `${companies.length} Unternehmen verfügbar.`;
 
@@ -207,7 +207,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         });
 
         window.addEventListener("companies:changed", async () => {
-            companies = await companyStore.list();
+            companies = (await companyStore.list()).filter((company) => company.active);
             status.textContent = `${companies.length} Unternehmen verfügbar.`;
             closeSuggestions();
         });
