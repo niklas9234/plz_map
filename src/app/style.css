@@ -211,9 +211,15 @@ dialog::backdrop {
 
 .management-dialog {
   width: min(1120px, calc(100vw - 40px));
+  height: min(760px, calc(100vh - 40px));
   max-height: calc(100vh - 40px);
   padding: 0;
   overflow: hidden;
+}
+
+/* Author-level display rules must not override the view switching attribute. */
+.management-dialog [hidden] {
+  display: none !important;
 }
 
 .management-dialog__header {
@@ -242,7 +248,7 @@ dialog::backdrop {
 
 .management-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto auto auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px);
   align-items: end;
   gap: 12px;
   padding: 20px 28px;
@@ -319,10 +325,6 @@ dialog::backdrop {
   width: auto;
 }
 
-.company-table__column--actions {
-  width: 132px;
-}
-
 .company-table th,
 .company-table td {
   padding: 13px 14px;
@@ -353,6 +355,16 @@ dialog::backdrop {
 
 .company-table tbody tr:hover {
   background: #f8faf8;
+}
+
+.company-table tbody tr[role="button"] {
+  cursor: pointer;
+}
+
+.company-table tbody tr[role="button"]:focus-visible {
+  outline: 3px solid rgba(20, 107, 55, 0.3);
+  outline-offset: -3px;
+  background: #edf5ef;
 }
 
 .company-table tbody tr.is-inactive,
@@ -447,6 +459,180 @@ dialog::backdrop {
   padding: 32px !important;
   color: #68786d;
   text-align: center !important;
+}
+
+.company-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.company-detail:focus {
+  outline: none;
+}
+
+.company-detail__nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 28px;
+  border-bottom: 1px solid #dce5df;
+  background: #fff;
+}
+
+.company-detail__heading h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.company-detail__navigation-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-back {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #405247;
+  font: inherit;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.detail-back:hover,
+.detail-back:focus-visible {
+  color: #146b37;
+  outline: 2px solid rgba(20, 107, 55, 0.2);
+  outline-offset: -2px;
+}
+
+.company-detail__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.company-detail__master-data {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 18px;
+}
+
+.detail-section {
+  margin-top: 32px;
+}
+
+.detail-section h3 {
+  margin: 0 0 14px;
+  color: #34483a;
+  font-size: 15px;
+}
+
+.postal-code-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 8px;
+}
+
+.postal-code-tile {
+  min-height: 40px;
+  border: 1px solid #aab8ae;
+  border-radius: 6px;
+  background: #fff;
+  color: #34483a;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.postal-code-tile:hover,
+.postal-code-tile:focus-visible {
+  border-color: #146b37;
+  outline: 2px solid rgba(20, 107, 55, 0.16);
+}
+
+.postal-code-tile.is-selected {
+  border-color: #146b37;
+  background: #146b37;
+  color: #fff;
+}
+
+.information-empty {
+  margin: 0;
+  padding: 20px;
+  border: 1px dashed #b9c6bd;
+  border-radius: 7px;
+  color: #68786d;
+  text-align: center;
+}
+
+.information-list {
+  display: grid;
+  gap: 10px;
+}
+
+.information-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) 1fr 42px;
+  gap: 10px;
+}
+
+.information-row select,
+.information-row input {
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #9eaca2;
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+}
+
+.information-delete,
+.information-add {
+  border: 1px solid #b8c3bb;
+  border-radius: 7px;
+  background: #fff;
+  color: #405247;
+  font: inherit;
+  cursor: pointer;
+}
+
+.information-delete {
+  color: #8e2424;
+  font-size: 19px;
+}
+
+.information-add {
+  display: block;
+  width: 42px;
+  height: 42px;
+  margin: 14px auto 0;
+  border: 0;
+  font-size: 30px;
+}
+
+.detail-actions {
+  position: sticky;
+  bottom: -28px;
+  margin: 24px -28px -28px;
+  border-top: 1px solid #dce5df;
+  background: #fff;
+}
+
+.detail-actions[hidden] {
+  display: none;
 }
 
 .editor-dialog {
@@ -584,5 +770,27 @@ dialog::backdrop {
   .company-table__actions .table-action {
     width: 30px;
     height: 30px;
+  }
+}
+
+@media (max-width: 600px) {
+  .company-detail {
+    height: 100%;
+  }
+
+  .company-detail__nav,
+  .company-detail__content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .company-detail__master-data,
+  .information-row {
+    grid-template-columns: 1fr;
+  }
+
+  .information-delete {
+    width: 42px;
+    justify-self: end;
   }
 }

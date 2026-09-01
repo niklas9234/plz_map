@@ -1,104 +1,61 @@
 function initializeCompanyManagement() {
-    const managementDialog = document.getElementById("company-management");
-    const editorDialog = document.getElementById("company-editor");
-    const deleteDialog = document.getElementById("company-delete-dialog");
+    const dialog = document.getElementById("company-management");
     const tableBody = document.getElementById("company-table-body");
     const searchInput = document.getElementById("management-search");
     const tradeFilter = document.getElementById("management-trade-filter");
-    const editorTrade = document.getElementById("company-trade");
-    const form = document.getElementById("company-form");
-    const formError = document.getElementById("company-form-error");
     const resultStatus = document.getElementById("management-result-status");
-    const tradeDialog = document.getElementById("trade-management");
-    const tradeForm = document.getElementById("trade-form");
-    const tradeFormError = document.getElementById("trade-form-error");
-    const tradeList = document.getElementById("trade-list");
+    const header = dialog.querySelector(".management-dialog__header");
+    const listElements = [dialog.querySelector(".management-toolbar"), resultStatus, dialog.querySelector(".company-table-wrapper")];
     let companies = [];
     let trades = [];
-    let pendingDeleteId = null;
+    let currentCompany = null;
+    let initialState = "";
+    let detailView = null;
+    let pointerStartedOnBackdrop = false;
 
-    function closeDialog(dialog) {
-        if (dialog.open) dialog.close();
+    function isOutsideDialog(event) {
+        const bounds = dialog.getBoundingClientRect();
+        return event.clientX < bounds.left || event.clientX > bounds.right ||
+            event.clientY < bounds.top || event.clientY > bounds.bottom;
     }
 
     function filteredCompanies() {
         const query = normalizeSearchValue(searchInput.value);
-        return companies.filter((company) => {
-            const matchesQuery = !query ||
-                normalizeSearchValue(company.name).includes(query) ||
-                normalizeSearchValue(company.ppsNumber).includes(query);
-            return matchesQuery && (!tradeFilter.value || company.trade === tradeFilter.value);
-        });
+        return companies.filter((company) => (!query ||
+            normalizeSearchValue(company.name).includes(query) ||
+            normalizeSearchValue(company.ppsNumber).includes(query)) &&
+            (!tradeFilter.value || company.trade === tradeFilter.value));
     }
 
     function populateTradeOptions() {
-        const currentFilter = tradeFilter.value;
-        const tradeNames = trades.map((trade) => trade.name);
+        const current = tradeFilter.value;
         tradeFilter.replaceChildren(new Option("Alle Gewerke", ""));
-        editorTrade.replaceChildren(new Option("Gewerk auswählen", ""));
-        trades.forEach((trade) => {
-            tradeFilter.add(new Option(trade.name, trade.name));
-            if (trade.active) editorTrade.add(new Option(trade.name, trade.name));
-        });
-        if (tradeNames.includes(currentFilter)) tradeFilter.value = currentFilter;
-    }
-
-    function actionButton(symbol, label, className, handler) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `table-action ${className}`;
-        button.textContent = symbol;
-        button.title = label;
-        button.setAttribute("aria-label", label);
-        button.addEventListener("click", handler);
-        return button;
-    }
-
-    function openEditor(company = null) {
-        form.reset();
-        formError.hidden = true;
-        document.getElementById("company-editor-title").textContent = company
-            ? "Unternehmen bearbeiten"
-            : "Unternehmen anlegen";
-        document.getElementById("company-id").value = company?.id || "";
-        document.getElementById("company-name").value = company?.name || "";
-        document.getElementById("company-pps-number").value = company?.ppsNumber || "";
-        if (company && ![...editorTrade.options].some((option) => option.value === company.trade)) {
-            editorTrade.add(new Option(`${company.trade} (inaktiv)`, company.trade));
-        }
-        editorTrade.value = company?.trade || "";
-        document.getElementById("company-postal-codes").value = company?.postalCodes.join(", ") || "";
-        editorDialog.showModal();
-        document.getElementById("company-name").focus();
-    }
-
-    function requestDelete(company) {
-        pendingDeleteId = company.id;
-        document.getElementById("company-delete-message").textContent =
-            `„${company.name}“ (${company.ppsNumber}) wirklich löschen?`;
-        deleteDialog.showModal();
+        trades.forEach((trade) => tradeFilter.add(new Option(trade.name, trade.name)));
+        if ([...tradeFilter.options].some((option) => option.value === current)) tradeFilter.value = current;
     }
 
     function renderCompanies() {
         const matches = filteredCompanies();
         tableBody.replaceChildren();
         resultStatus.textContent = `${matches.length} von ${companies.length} Unternehmen`;
-
         if (!matches.length) {
-            const row = tableBody.insertRow();
-            const cell = row.insertCell();
-            cell.colSpan = 5;
+            const cell = tableBody.insertRow().insertCell();
+            cell.colSpan = 4;
             cell.className = "company-table__empty";
             cell.textContent = "Keine Unternehmen für diese Filter gefunden.";
             return;
         }
-
         matches.forEach((company) => {
             const row = tableBody.insertRow();
+            row.tabIndex = 0;
+            row.setAttribute("role", "button");
+            row.setAttribute("aria-label", `${company.name} öffnen`);
             row.classList.toggle("is-inactive", !company.active);
             const nameCell = row.insertCell();
-            nameCell.innerHTML = `<strong></strong>`;
-            nameCell.querySelector("strong").textContent = company.name;
+            nameCell.className = "company-table__name-cell";
+            const name = document.createElement("strong");
+            name.textContent = company.name;
+            nameCell.append(name);
             if (!company.active) {
                 const status = document.createElement("span");
                 status.className = "status-badge";
@@ -110,43 +67,13 @@ function initializeCompanyManagement() {
             const postalCodes = row.insertCell();
             postalCodes.className = "company-table__postal-codes";
             postalCodes.textContent = company.postalCodes.join(", ");
-            const actions = row.insertCell();
-            actions.className = "company-table__actions";
-            actions.append(
-                actionButton("✎", "Unternehmen bearbeiten", "table-action--edit", () => openEditor(company)),
-                actionButton(
-                    company.active ? "⏸" : "▶",
-                    company.active ? "Unternehmen deaktivieren" : "Unternehmen reaktivieren",
-                    "table-action--status",
-                    async () => {
-                        await companyStore.setActive(company.id, !company.active);
-                        await refresh();
-                    }
-                ),
-                actionButton("🗑", "Unternehmen endgültig löschen", "table-action--delete", () => requestDelete(company))
-            );
-        });
-    }
-
-    function renderTrades() {
-        tradeList.replaceChildren();
-        trades.forEach((trade) => {
-            const item = document.createElement("li");
-            const name = document.createElement("span");
-            name.textContent = trade.name;
-            const button = actionButton(
-                trade.active ? "⏸" : "▶",
-                trade.active ? `Gewerk ${trade.name} deaktivieren` : `Gewerk ${trade.name} reaktivieren`,
-                "table-action--status",
-                async () => {
-                    await tradeStore.setActive(trade.name, !trade.active);
-                    await refresh();
-                    renderTrades();
+            row.addEventListener("click", () => openCompany(company));
+            row.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openCompany(company);
                 }
-            );
-            if (!trade.active) item.classList.add("is-inactive");
-            item.append(name, button);
-            tradeList.append(item);
+            });
         });
     }
 
@@ -156,77 +83,209 @@ function initializeCompanyManagement() {
         renderCompanies();
     }
 
+    function formState() {
+        if (!detailView) return "";
+        const information = [...detailView.querySelectorAll(".information-row")].map((row) => ({
+            category: row.querySelector("select").value,
+            value: row.querySelector("input").value
+        }));
+        return JSON.stringify({
+            name: detailView.querySelector("#detail-name").value,
+            ppsNumber: detailView.querySelector("#detail-pps").value,
+            trade: detailView.querySelector("#detail-trade").value,
+            postalCodes: [...detailView.querySelectorAll(".postal-code-tile.is-selected")].map((tile) => tile.dataset.code),
+            information
+        });
+    }
+
+    function updateDirtyState() {
+        const dirty = formState() !== initialState;
+        detailView.querySelector(".detail-actions").hidden = !dirty;
+        return dirty;
+    }
+
+    async function leaveDetail(destination) {
+        if (updateDirtyState()) {
+            const shouldSave = window.confirm("Sollen die Änderungen gespeichert werden?");
+            if (shouldSave && !(await saveCompany())) return;
+        }
+        if (destination === "map") closeToMap();
+        else showList();
+    }
+
+    function closeToMap() {
+        currentCompany = null;
+        detailView?.remove();
+        detailView = null;
+        dialog.close();
+    }
+
+    function addInformationRow(information = { category: "Adresse", value: "" }) {
+        const row = document.createElement("div");
+        row.className = "information-row";
+        const select = document.createElement("select");
+        select.setAttribute("aria-label", "Informationskategorie");
+        ["Adresse", "Telefon", "Ansprechpartner", "Sonstiges"].forEach((category) => select.add(new Option(category, category)));
+        select.value = information.category;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = information.value;
+        input.placeholder = "Information eingeben";
+        input.setAttribute("aria-label", `Information für ${information.category}`);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "information-delete";
+        remove.innerHTML = "&#128465;";
+        remove.setAttribute("aria-label", "Information löschen");
+        remove.addEventListener("click", () => { row.remove(); updateInformationEmptyState(); updateDirtyState(); });
+        row.append(select, input, remove);
+        detailView.querySelector(".information-list").append(row);
+        updateInformationEmptyState();
+    }
+
+    function updateInformationEmptyState() {
+        const empty = !detailView.querySelector(".information-row");
+        detailView.querySelector(".information-empty").hidden = !empty;
+    }
+
+    function openCompany(company) {
+        detailView?.remove();
+        currentCompany = company;
+        listElements.forEach((element) => { element.hidden = true; });
+        header.hidden = true;
+        detailView = document.createElement("form");
+        detailView.className = "company-detail";
+        detailView.tabIndex = -1;
+        detailView.innerHTML = `
+            <div class="company-detail__nav">
+              <div class="company-detail__heading">
+                <p class="eyebrow">Unternehmensdaten</p>
+                <h2 class="company-detail__company-name"></h2>
+              </div>
+              <div class="company-detail__navigation-actions">
+                <button class="detail-back" type="button" aria-label="Zurück zu den Stammdaten">&#8592;</button>
+                <button class="icon-button detail-close" type="button" aria-label="Zurück zur Karte">&times;</button>
+              </div>
+            </div>
+            <div class="company-detail__content">
+              <div class="company-detail__master-data">
+                <label class="form-field"><span>Unternehmensname</span><input id="detail-name" required maxlength="120"></label>
+                <label class="form-field"><span>PPS-Nummer</span><input id="detail-pps" required maxlength="40"></label>
+                <label class="form-field"><span>Gewerk</span><select id="detail-trade" required></select></label>
+              </div>
+              <section class="detail-section"><h3>PLZ-Gebiete</h3><div class="postal-code-grid" aria-label="PLZ-Gebiete auswählen"></div></section>
+              <section class="detail-section information-section">
+                <h3>Informationen</h3>
+                <p class="information-empty">Fügen Sie hier weitere Informationen über das Unternehmen hinzu.</p>
+                <div class="information-list"></div>
+                <button class="information-add" type="button" aria-label="Information hinzufügen">+</button>
+              </section>
+              <p class="form-error detail-error" role="alert" hidden></p>
+              <div class="dialog-actions detail-actions" hidden>
+                <button class="button button--secondary detail-cancel" type="button">Abbrechen</button>
+                <button class="button button--primary" type="submit">Speichern</button>
+              </div>
+            </div>`;
+        dialog.append(detailView);
+        detailView.querySelector("#detail-name").value = company.name;
+        detailView.querySelector(".company-detail__company-name").textContent = company.name;
+        detailView.querySelector("#detail-pps").value = company.ppsNumber;
+        const tradeSelect = detailView.querySelector("#detail-trade");
+        trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
+        tradeSelect.value = company.trade;
+        const grid = detailView.querySelector(".postal-code-grid");
+        for (let number = 1; number <= 99; number += 1) {
+            const code = String(number).padStart(2, "0");
+            const tile = document.createElement("button");
+            tile.type = "button";
+            tile.className = "postal-code-tile";
+            tile.dataset.code = code;
+            tile.textContent = code;
+            tile.classList.toggle("is-selected", company.postalCodes.includes(code));
+            tile.setAttribute("aria-pressed", String(company.postalCodes.includes(code)));
+            tile.addEventListener("click", () => {
+                tile.classList.toggle("is-selected");
+                tile.setAttribute("aria-pressed", String(tile.classList.contains("is-selected")));
+                updateDirtyState();
+            });
+            grid.append(tile);
+        }
+        (company.information || []).forEach(addInformationRow);
+        updateInformationEmptyState();
+        initialState = formState();
+        detailView.addEventListener("input", updateDirtyState);
+        detailView.addEventListener("change", updateDirtyState);
+        detailView.querySelector("#detail-name").addEventListener("input", (event) => {
+            detailView.querySelector(".company-detail__company-name").textContent = event.target.value || "Unternehmen ohne Namen";
+        });
+        detailView.addEventListener("submit", async (event) => { event.preventDefault(); await saveCompany(); });
+        detailView.querySelector(".detail-back").addEventListener("click", () => leaveDetail("list"));
+        detailView.querySelector(".detail-close").addEventListener("click", () => leaveDetail("map"));
+        detailView.querySelector(".detail-cancel").addEventListener("click", () => {
+            const original = companies.find((item) => item.id === currentCompany.id) || currentCompany;
+            openCompany(original);
+        });
+        detailView.querySelector(".information-add").addEventListener("click", () => { addInformationRow(); updateDirtyState(); });
+        detailView.focus({ preventScroll: true });
+    }
+
+    async function saveCompany() {
+        const data = JSON.parse(formState());
+        const error = detailView.querySelector(".detail-error");
+        if (!data.postalCodes.length) {
+            error.textContent = "Bitte wählen Sie mindestens ein PLZ-Gebiet aus.";
+            error.hidden = false;
+            return false;
+        }
+        try {
+            currentCompany = await companyStore.save({ ...currentCompany, ...data });
+            error.hidden = true;
+            initialState = formState();
+            updateDirtyState();
+            await refresh();
+            return true;
+        } catch (saveError) {
+            error.textContent = saveError.message;
+            error.hidden = false;
+            return false;
+        }
+    }
+
+    function showList() {
+        currentCompany = null;
+        detailView?.remove();
+        detailView = null;
+        header.hidden = false;
+        listElements.forEach((element) => { element.hidden = false; });
+        renderCompanies();
+    }
+
     document.getElementById("open-company-management").addEventListener("click", async () => {
         await refresh();
-        managementDialog.showModal();
+        showList();
+        dialog.showModal();
         searchInput.focus();
     });
-    document.getElementById("close-company-management").addEventListener("click", () => closeDialog(managementDialog));
-    document.getElementById("add-company").addEventListener("click", () => openEditor());
-    document.getElementById("open-trade-management").addEventListener("click", () => {
-        renderTrades();
-        tradeFormError.hidden = true;
-        tradeDialog.showModal();
-        document.getElementById("trade-name").focus();
-    });
-    document.getElementById("close-trade-management").addEventListener("click", () => closeDialog(tradeDialog));
-    document.getElementById("close-company-editor").addEventListener("click", () => closeDialog(editorDialog));
-    document.getElementById("cancel-company-editor").addEventListener("click", () => closeDialog(editorDialog));
-    document.getElementById("cancel-company-delete").addEventListener("click", () => closeDialog(deleteDialog));
+    document.getElementById("close-company-management").addEventListener("click", closeToMap);
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
-    tradeForm.addEventListener("submit", async (event) => {
+    dialog.addEventListener("pointerdown", (event) => {
+        pointerStartedOnBackdrop = isOutsideDialog(event);
+    });
+    dialog.addEventListener("pointercancel", () => {
+        pointerStartedOnBackdrop = false;
+    });
+    dialog.addEventListener("click", (event) => {
+        const clickedBackdrop = pointerStartedOnBackdrop && isOutsideDialog(event);
+        pointerStartedOnBackdrop = false;
+        if (!clickedBackdrop) return;
+        if (detailView) leaveDetail("map");
+        else closeToMap();
+    });
+    dialog.addEventListener("cancel", (event) => {
+        if (!detailView) return;
         event.preventDefault();
-        try {
-            await tradeStore.add(document.getElementById("trade-name").value);
-            tradeForm.reset();
-            tradeFormError.hidden = true;
-            await refresh();
-            renderTrades();
-        } catch (error) {
-            tradeFormError.textContent = error.message;
-            tradeFormError.hidden = false;
-        }
-    });
-    document.getElementById("reset-management-filter").addEventListener("click", () => {
-        searchInput.value = "";
-        tradeFilter.value = "";
-        renderCompanies();
-    });
-
-    form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const postalCodes = document.getElementById("company-postal-codes").value
-            .split(",")
-            .map((postalCode) => postalCode.trim())
-            .filter(Boolean);
-        if (!postalCodes.length || postalCodes.some((postalCode) => !/^\d{2}$/.test(postalCode))) {
-            formError.textContent = "Bitte zweistellige PLZ-Gebiete durch Kommas getrennt eingeben.";
-            formError.hidden = false;
-            return;
-        }
-
-        try {
-            await companyStore.save({
-                id: document.getElementById("company-id").value,
-                name: document.getElementById("company-name").value,
-                ppsNumber: document.getElementById("company-pps-number").value,
-                trade: editorTrade.value,
-                postalCodes
-            });
-            closeDialog(editorDialog);
-            await refresh();
-        } catch (error) {
-            formError.textContent = error.message;
-            formError.hidden = false;
-        }
-    });
-
-    document.getElementById("confirm-company-delete").addEventListener("click", async () => {
-        await companyStore.remove(pendingDeleteId);
-        pendingDeleteId = null;
-        closeDialog(deleteDialog);
-        await refresh();
+        leaveDetail("map");
     });
 }
 
