@@ -155,6 +155,7 @@ function initializeCompanyManagement() {
         header.hidden = true;
         detailView = document.createElement("form");
         detailView.className = "company-detail";
+        detailView.tabIndex = -1;
         detailView.innerHTML = `
             <div class="company-detail__nav">
               <div class="company-detail__heading">
@@ -225,7 +226,7 @@ function initializeCompanyManagement() {
             openCompany(original);
         });
         detailView.querySelector(".information-add").addEventListener("click", () => { addInformationRow(); updateDirtyState(); });
-        detailView.querySelector("#detail-name").focus();
+        detailView.focus({ preventScroll: true });
     }
 
     async function saveCompany() {

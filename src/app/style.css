@@ -469,6 +469,10 @@ dialog::backdrop {
   overflow: hidden;
 }
 
+.company-detail:focus {
+  outline: none;
+}
+
 .company-detail__nav {
   display: flex;
   flex: 0 0 auto;
