@@ -15,7 +15,10 @@
 <body>
 
   <section class="company-search" aria-labelledby="company-search-title">
-    <h1 id="company-search-title">Unternehmen suchen</h1>
+    <div class="company-search__heading">
+      <h1 id="company-search-title">Unternehmen suchen</h1>
+      <button id="open-company-management" class="button button--secondary" type="button">Verwalten</button>
+    </div>
     <div class="company-search__controls" role="search">
       <input id="company-search-input" type="text" autocomplete="off" autofocus
         placeholder="Name oder PPS-Nummer" aria-label="Name oder PPS-Nummer"
@@ -29,6 +32,94 @@
 
   <div id="map"></div>
 
+  <dialog id="company-management" class="management-dialog" aria-labelledby="management-title">
+    <div class="management-dialog__header">
+      <div>
+        <p class="eyebrow">Stammdaten</p>
+        <h2 id="management-title">Unternehmen verwalten</h2>
+      </div>
+      <button id="close-company-management" class="icon-button" type="button" aria-label="Verwaltung schließen">&times;</button>
+    </div>
+
+    <div class="management-toolbar">
+      <label class="form-field management-toolbar__search">
+        <span>Unternehmen suchen</span>
+        <input id="management-search" type="search" placeholder="Name oder PPS-Nummer" autocomplete="off">
+      </label>
+      <label class="form-field">
+        <span>Gewerk</span>
+        <select id="management-trade-filter">
+          <option value="">Alle Gewerke</option>
+        </select>
+      </label>
+      <button id="reset-management-filter" class="button button--secondary management-toolbar__reset" type="button">Filter zurücksetzen</button>
+      <button id="add-company" class="button button--primary management-toolbar__add" type="button">+ Unternehmen anlegen</button>
+    </div>
+
+    <p id="management-result-status" class="management-result-status" role="status" aria-live="polite"></p>
+    <div class="company-table-wrapper">
+      <table class="company-table">
+        <thead>
+          <tr>
+            <th scope="col">Unternehmen</th>
+            <th scope="col">Gewerk</th>
+            <th scope="col">PPS-Nummer</th>
+            <th scope="col">PLZ-Gebiete</th>
+            <th scope="col"><span class="visually-hidden">Aktionen</span></th>
+          </tr>
+        </thead>
+        <tbody id="company-table-body"></tbody>
+      </table>
+    </div>
+  </dialog>
+
+  <dialog id="company-editor" class="editor-dialog" aria-labelledby="company-editor-title">
+    <form id="company-form">
+      <div class="management-dialog__header">
+        <div>
+          <p class="eyebrow">Unternehmensdaten</p>
+          <h2 id="company-editor-title">Unternehmen anlegen</h2>
+        </div>
+        <button id="close-company-editor" class="icon-button" type="button" aria-label="Formular schließen">&times;</button>
+      </div>
+      <input id="company-id" type="hidden">
+      <div class="editor-fields">
+        <label class="form-field">
+          <span>Unternehmensname *</span>
+          <input id="company-name" name="name" required maxlength="120">
+        </label>
+        <label class="form-field">
+          <span>PPS-Nummer *</span>
+          <input id="company-pps-number" name="ppsNumber" required maxlength="40">
+        </label>
+        <label class="form-field">
+          <span>Gewerk *</span>
+          <select id="company-trade" name="trade" required></select>
+        </label>
+        <label class="form-field form-field--wide">
+          <span>PLZ-Gebiete *</span>
+          <input id="company-postal-codes" name="postalCodes" required placeholder="z. B. 20, 21, 22">
+          <small>Zweistellige Gebiete durch Kommas trennen.</small>
+        </label>
+      </div>
+      <p id="company-form-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button id="cancel-company-editor" class="button button--secondary" type="button">Abbrechen</button>
+        <button class="button button--primary" type="submit">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="company-delete-dialog" class="confirm-dialog" aria-labelledby="company-delete-title">
+    <h2 id="company-delete-title">Unternehmen löschen?</h2>
+    <p id="company-delete-message"></p>
+    <p>Der Eintrag wird aus dieser lokalen Testversion entfernt.</p>
+    <div class="dialog-actions">
+      <button id="cancel-company-delete" class="button button--secondary" type="button">Abbrechen</button>
+      <button id="confirm-company-delete" class="button button--danger" type="button">Unternehmen löschen</button>
+    </div>
+  </dialog>
+
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
 
@@ -36,7 +127,9 @@
 <script src="basemap.js"></script>
 <script src="plz-layer.js"></script>
 <script src="lux-layer.js"></script>
+<script src="company-store.js"></script>
 <script src="company-search.js"></script>
+<script src="company-management.js"></script>
 <script src="map.js"></script>
 </body>
 

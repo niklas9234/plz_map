@@ -2,6 +2,8 @@ html,
 body {
   margin: 0;
   height: 100%;
+  color: #17241b;
+  font-family: system-ui, sans-serif;
 }
 
 #map {
@@ -24,8 +26,16 @@ body {
 }
 
 .company-search h1 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 19px;
+}
+
+.company-search__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .company-search__controls {
@@ -109,4 +119,331 @@ body {
   background: #f2f7f4;
   color: #34463a;
   font-size: 13px;
+}
+
+.button,
+.icon-button,
+input,
+select {
+  font: inherit;
+}
+
+.button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.button--primary {
+  border-color: #146b37;
+  background: #146b37;
+  color: #fff;
+}
+
+.button--primary:hover,
+.button--primary:focus-visible {
+  background: #0e542b;
+}
+
+.button--secondary {
+  border-color: #aab8ae;
+  background: #fff;
+  color: #24452f;
+}
+
+.button--secondary:hover,
+.button--secondary:focus-visible {
+  background: #edf5ef;
+}
+
+.button--danger {
+  border-color: #a32626;
+  background: #a32626;
+  color: #fff;
+}
+
+.button--ghost-danger {
+  border-color: #dfb6b6;
+  background: #fff;
+  color: #8e2424;
+}
+
+.button--small {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #405247;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  background: #edf2ee;
+}
+
+dialog {
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 14px;
+  color: #17241b;
+  background: #fff;
+  box-shadow: 0 20px 70px rgba(16, 32, 21, 0.3);
+}
+
+dialog::backdrop {
+  background: rgba(12, 24, 16, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.management-dialog {
+  width: min(1120px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.management-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid #dce5df;
+}
+
+.management-dialog__header h2,
+.confirm-dialog h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #39724e;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.management-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 240px) auto auto;
+  align-items: end;
+  gap: 12px;
+  padding: 20px 28px;
+  background: #f6f8f6;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+  color: #34483a;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.form-field input,
+.form-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #9eaca2;
+  border-radius: 7px;
+  color: #17241b;
+  background: #fff;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: #146b37;
+  outline: 3px solid rgba(20, 107, 55, 0.16);
+}
+
+.form-field small {
+  color: #68786d;
+  font-weight: 400;
+}
+
+.management-result-status {
+  margin: 0;
+  padding: 14px 28px 8px;
+  color: #5d6b61;
+  font-size: 13px;
+}
+
+.company-table-wrapper {
+  max-height: calc(100vh - 285px);
+  padding: 0 28px 28px;
+  overflow: auto;
+}
+
+.company-table {
+  width: 100%;
+  border-spacing: 0;
+  border: 1px solid #d8e0da;
+  border-radius: 9px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.company-table th,
+.company-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #e2e8e4;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.company-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #edf3ef;
+  color: #34483a;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.company-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.company-table tbody tr:hover {
+  background: #f8faf8;
+}
+
+.company-table__postal-codes {
+  max-width: 210px;
+  color: #526158;
+}
+
+.company-table__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.company-table__empty {
+  padding: 32px !important;
+  color: #68786d;
+  text-align: center !important;
+}
+
+.editor-dialog {
+  width: min(620px, calc(100vw - 32px));
+  padding: 0;
+}
+
+.editor-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 24px 28px;
+}
+
+.form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.form-error {
+  margin: 0 28px;
+  padding: 10px 12px;
+  border: 1px solid #e2adad;
+  border-radius: 6px;
+  background: #fff0f0;
+  color: #8e2424;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 28px 24px;
+}
+
+.confirm-dialog {
+  width: min(480px, calc(100vw - 32px));
+  padding: 26px 28px 8px;
+}
+
+.confirm-dialog .dialog-actions {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 840px) {
+  .management-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .management-toolbar__search,
+  .management-toolbar__add {
+    grid-column: 1 / -1;
+  }
+
+  .company-table th:nth-child(4),
+  .company-table td:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .management-dialog {
+    width: 100vw;
+    max-width: none;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .management-toolbar,
+  .editor-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .management-toolbar__search,
+  .management-toolbar__add,
+  .form-field--wide {
+    grid-column: auto;
+  }
+
+  .company-table th:nth-child(2),
+  .company-table td:nth-child(2),
+  .company-table th:nth-child(3),
+  .company-table td:nth-child(3) {
+    display: none;
+  }
+
+  .company-table__actions {
+    flex-direction: column;
+  }
 }
