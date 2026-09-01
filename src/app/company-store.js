@@ -15,6 +15,9 @@ const companyStore = (() => {
             ppsNumber: company.ppsNumber.trim(),
             trade: company.trade.trim(),
             postalCodes: [...new Set(company.postalCodes.map(String))].sort(),
+            information: Array.isArray(company.information)
+                ? company.information.map((item) => ({ category: String(item.category), value: String(item.value) }))
+                : [],
             active: company.active !== false
         };
     }
