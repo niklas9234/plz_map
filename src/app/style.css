@@ -242,7 +242,7 @@ dialog::backdrop {
 
 .management-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(180px, 240px) auto auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto auto auto;
   align-items: end;
   gap: 12px;
   padding: 20px 28px;
@@ -295,11 +295,32 @@ dialog::backdrop {
 
 .company-table {
   width: 100%;
+  table-layout: fixed;
   border-spacing: 0;
   border: 1px solid #d8e0da;
   border-radius: 9px;
   overflow: hidden;
   font-size: 14px;
+}
+
+.company-table__column--company {
+  width: 30%;
+}
+
+.company-table__column--trade {
+  width: 16%;
+}
+
+.company-table__column--pps {
+  width: 14%;
+}
+
+.company-table__column--postal-codes {
+  width: auto;
+}
+
+.company-table__column--actions {
+  width: 132px;
 }
 
 .company-table th,
@@ -321,12 +342,53 @@ dialog::backdrop {
   text-transform: uppercase;
 }
 
+.company-table th:first-child,
+.company-table__name-cell {
+  border-right: 1px solid #d8e0da;
+}
+
 .company-table tr:last-child td {
   border-bottom: 0;
 }
 
 .company-table tbody tr:hover {
   background: #f8faf8;
+}
+
+.company-table tbody tr.is-inactive,
+.trade-list li.is-inactive {
+  color: #69736c;
+  background: #f1f3f1;
+}
+
+.status-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e1e5e2;
+  color: #59625c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.company-table__name-content {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.company-table__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-table__name-content .status-badge {
+  flex: 0 0 auto;
+  margin-left: 0;
 }
 
 .company-table__postal-codes {
@@ -339,6 +401,65 @@ dialog::backdrop {
   justify-content: flex-end;
   gap: 8px;
   white-space: nowrap;
+}
+
+.table-action {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #b8c3bb;
+  border-radius: 7px;
+  background: #fff;
+  color: #294735;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.table-action:hover,
+.table-action:focus-visible {
+  border-color: #146b37;
+  background: #edf5ef;
+  outline: 2px solid rgba(20, 107, 55, 0.18);
+}
+
+.table-action--delete {
+  border-color: #dfb6b6;
+  color: #8e2424;
+}
+
+.trade-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  padding: 0 0 24px;
+}
+
+.trade-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 12px;
+  padding: 22px 28px;
+}
+
+.trade-list {
+  display: grid;
+  gap: 8px;
+  max-height: 340px;
+  margin: 18px 28px 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.trade-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 7px 10px 7px 14px;
+  border: 1px solid #d8e0da;
+  border-radius: 7px;
 }
 
 .company-table__empty {
@@ -414,6 +535,22 @@ dialog::backdrop {
   .company-table td:nth-child(4) {
     display: none;
   }
+
+  .company-table__column--company {
+    width: 38%;
+  }
+
+  .company-table__column--trade {
+    width: 22%;
+  }
+
+  .company-table__column--pps {
+    width: auto;
+  }
+
+  .company-table__column--postal-codes {
+    width: 0;
+  }
 }
 
 @media (max-width: 600px) {
@@ -426,7 +563,8 @@ dialog::backdrop {
   }
 
   .management-toolbar,
-  .editor-fields {
+  .editor-fields,
+  .trade-form {
     grid-template-columns: 1fr;
   }
 
@@ -443,7 +581,27 @@ dialog::backdrop {
     display: none;
   }
 
+  .company-table__column--company {
+    width: auto;
+  }
+
+  .company-table__column--trade,
+  .company-table__column--pps {
+    width: 0;
+  }
+
+  .company-table__column--actions {
+    width: 126px;
+  }
+
   .company-table__actions {
-    flex-direction: column;
+    gap: 4px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .company-table__actions .table-action {
+    width: 30px;
+    height: 30px;
   }
 }

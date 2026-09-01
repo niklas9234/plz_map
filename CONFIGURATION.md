@@ -16,9 +16,14 @@ Browser verwendet werden und die Anwendung keinen Build-Schritt benötigt.
 Die Basiskarte wird aus
 `src/app/data/pmtiles/germany-luxembourg.pmtiles` geladen. Sie liefert die in
 `src/app/basemap.js` dargestellten Karteninhalte, darunter Städte und Straßen.
-Der Hostname wird automatisch von der geöffneten Seite übernommen, sodass
-dafür keine auf `localhost` begrenzte URL konfiguriert werden muss. Das große,
-lokal bereitgestellte Archiv bleibt durch `.gitignore` von Git ausgeschlossen.
+Die URL wird relativ zur URL der geöffneten Anwendung aufgelöst und anschließend
+mit dem von PMTiles erwarteten `pmtiles://`-Schema versehen. Bei einem Aufruf an
+der Domain-Wurzel verweist sie daher auf
+`/data/pmtiles/germany-luxembourg.pmtiles`; beim in `README.md` beschriebenen
+Aufruf unter `/src/app/` verweist sie auf
+`/src/app/data/pmtiles/germany-luxembourg.pmtiles`. Dadurch sind weder Hostname
+noch Installationspfad fest konfiguriert. Das große, lokal bereitgestellte Archiv
+bleibt durch `.gitignore` von Git ausgeschlossen.
 
 Nach einem frischen Checkout muss die PMTiles-Datei manuell in dieses
 Verzeichnis kopiert werden. Weitere Hinweise stehen in

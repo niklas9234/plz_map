@@ -14,7 +14,8 @@ const companyStore = (() => {
             name: company.name.trim(),
             ppsNumber: company.ppsNumber.trim(),
             trade: company.trade.trim(),
-            postalCodes: [...new Set(company.postalCodes.map(String))].sort()
+            postalCodes: [...new Set(company.postalCodes.map(String))].sort(),
+            active: company.active !== false
         };
     }
 
@@ -54,6 +55,7 @@ const companyStore = (() => {
 
         const existingIndex = companies.findIndex((item) => item.id === company.id);
         const normalized = normalizeCompany({
+            ...(existingIndex === -1 ? {} : companies[existingIndex]),
             ...company,
             id: company.id || (crypto.randomUUID ? crypto.randomUUID() : `company-${Date.now()}`)
         });
@@ -70,5 +72,14 @@ const companyStore = (() => {
         persist();
     }
 
-    return { list, save, remove };
+    async function setActive(id, active) {
+        await initialize();
+        const company = companies.find((item) => item.id === id);
+        if (!company) throw new Error("Das Unternehmen wurde nicht gefunden.");
+        company.active = active;
+        persist();
+        return clone(company);
+    }
+
+    return { list, save, remove, setActive };
 })();

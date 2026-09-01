@@ -40,3 +40,10 @@ keine Framework- oder Datenbankentscheidung.
 
 Die PMTiles-Datei wird nicht in Git aufgenommen. Weitere Karteneinstellungen
 sind in `CONFIGURATION.md` beschrieben.
+
+## Fachliche Spezifikation
+
+Das verbindliche [Datenmodell](docs/data-model.md) beschreibt Unternehmen,
+zweistellige PLZ-Gebiete, erweiterbare Gewerke und den Lebenszyklus von
+Datensätzen. Der darauf aufbauende [API-Vertrag](docs/api.md) dient als Grundlage
+für die noch ausstehende Backend- und Datenbankimplementierung.
