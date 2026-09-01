@@ -217,6 +217,11 @@ dialog::backdrop {
   overflow: hidden;
 }
 
+/* Author-level display rules must not override the view switching attribute. */
+.management-dialog [hidden] {
+  display: none !important;
+}
+
 .management-dialog__header {
   display: flex;
   align-items: flex-start;
@@ -478,13 +483,6 @@ dialog::backdrop {
 .company-detail__heading h2 {
   margin: 0;
   font-size: 24px;
-}
-
-.company-detail__company-name {
-  margin: 4px 0 0;
-  color: #5d6b61;
-  font-size: 15px;
-  font-weight: 650;
 }
 
 .company-detail__navigation-actions {

@@ -159,8 +159,7 @@ function initializeCompanyManagement() {
             <div class="company-detail__nav">
               <div class="company-detail__heading">
                 <p class="eyebrow">Unternehmensdaten</p>
-                <h2>Unternehmen verwalten</h2>
-                <p class="company-detail__company-name"></p>
+                <h2 class="company-detail__company-name"></h2>
               </div>
               <div class="company-detail__navigation-actions">
                 <button class="detail-back" type="button" aria-label="Zurück zu den Stammdaten">&#8592;</button>
