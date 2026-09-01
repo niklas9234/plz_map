@@ -27,24 +27,13 @@ keine Framework- oder Datenbankentscheidung.
 
 1. Die Datei `germany-luxembourg.pmtiles` nach
    `src/app/data/pmtiles/` kopieren.
-2. Einen statischen Webserver mit Unterstützung für HTTP-Range-Requests und
-   `src/app` als Dokumentenwurzel starten, zum Beispiel mit Node.js:
+2. Einen statischen Webserver mit `src/app` als Dokumentenwurzel starten:
 
    ```sh
-   npx serve src/app --listen 8000
+   python -m http.server 8000 --directory src/app
    ```
 
 3. `http://localhost:8000` im Browser öffnen.
 
 Die PMTiles-Datei wird nicht in Git aufgenommen. Weitere Karteneinstellungen
-sind in `CONFIGURATION.md` beschrieben. `python -m http.server` eignet sich
-hier nicht, weil der PMTiles-Client Bytebereiche aus dem Kartenarchiv abruft.
-
-## Unternehmensverwaltung im Frontend-Prototyp
-
-Über **Verwalten** lassen sich Unternehmen suchen, nach Gewerk filtern,
-anlegen, bearbeiten und löschen. Bis das Python-Backend und PostgreSQL
-implementiert sind, speichert der Browser diese Änderungen ausschließlich im
-lokalen Speicher (`localStorage`). Die Datei `companies.json` dient beim ersten
-Aufruf als Ausgangsdatenbestand. Änderungen sind daher noch nicht zwischen
-mehreren Browsern oder Rechnern synchronisiert.
+sind in `CONFIGURATION.md` beschrieben.
