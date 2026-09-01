@@ -148,7 +148,7 @@ function initializeCompanyManagement() {
         detailView.querySelector(".information-empty").hidden = !empty;
     }
 
-    function openCompany(company) {
+    function openCompany(company, isNew = false) {
         detailView?.remove();
         currentCompany = company;
         listElements.forEach((element) => { element.hidden = true; });
@@ -188,7 +188,7 @@ function initializeCompanyManagement() {
             </div>`;
         dialog.append(detailView);
         detailView.querySelector("#detail-name").value = company.name;
-        detailView.querySelector(".company-detail__company-name").textContent = company.name;
+        detailView.querySelector(".company-detail__company-name").textContent = isNew ? "Neues Unternehmen" : company.name;
         detailView.querySelector("#detail-pps").value = company.ppsNumber;
         const tradeSelect = detailView.querySelector("#detail-trade");
         trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
@@ -215,18 +215,39 @@ function initializeCompanyManagement() {
         initialState = formState();
         detailView.addEventListener("input", updateDirtyState);
         detailView.addEventListener("change", updateDirtyState);
-        detailView.querySelector("#detail-name").addEventListener("input", (event) => {
-            detailView.querySelector(".company-detail__company-name").textContent = event.target.value || "Unternehmen ohne Namen";
-        });
+        if (!isNew) {
+            detailView.querySelector("#detail-name").addEventListener("input", (event) => {
+                detailView.querySelector(".company-detail__company-name").textContent = event.target.value || "Unternehmen ohne Namen";
+            });
+        }
         detailView.addEventListener("submit", async (event) => { event.preventDefault(); await saveCompany(); });
         detailView.querySelector(".detail-back").addEventListener("click", () => leaveDetail("list"));
         detailView.querySelector(".detail-close").addEventListener("click", () => leaveDetail("map"));
         detailView.querySelector(".detail-cancel").addEventListener("click", () => {
+            if (isNew) {
+                showList();
+                return;
+            }
             const original = companies.find((item) => item.id === currentCompany.id) || currentCompany;
             openCompany(original);
         });
         detailView.querySelector(".information-add").addEventListener("click", () => { addInformationRow(); updateDirtyState(); });
         detailView.focus({ preventScroll: true });
+        if (isNew) detailView.querySelector("#detail-name").focus();
+    }
+
+    function openNewCompany() {
+        const firstActiveTrade = trades.find((trade) => trade.active)?.name || "";
+        openCompany({
+            name: "",
+            ppsNumber: "",
+            trade: firstActiveTrade,
+            postalCodes: [],
+            information: [],
+            active: true
+        }, true);
+        // Beim Anlegen muss die primäre Aktion von Anfang an sichtbar sein.
+        detailView.querySelector(".detail-actions").hidden = false;
     }
 
     async function saveCompany() {
@@ -267,6 +288,7 @@ function initializeCompanyManagement() {
         searchInput.focus();
     });
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
+    document.getElementById("create-company").addEventListener("click", openNewCompany);
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
     window.addEventListener("trades:changed", refresh);
