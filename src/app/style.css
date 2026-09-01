@@ -295,11 +295,32 @@ dialog::backdrop {
 
 .company-table {
   width: 100%;
+  table-layout: fixed;
   border-spacing: 0;
   border: 1px solid #d8e0da;
   border-radius: 9px;
   overflow: hidden;
   font-size: 14px;
+}
+
+.company-table__column--company {
+  width: 30%;
+}
+
+.company-table__column--trade {
+  width: 16%;
+}
+
+.company-table__column--pps {
+  width: 14%;
+}
+
+.company-table__column--postal-codes {
+  width: auto;
+}
+
+.company-table__column--actions {
+  width: 132px;
 }
 
 .company-table th,
@@ -319,6 +340,11 @@ dialog::backdrop {
   font-size: 12px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+.company-table th:first-child,
+.company-table__name-cell {
+  border-right: 1px solid #d8e0da;
 }
 
 .company-table tr:last-child td {
@@ -490,6 +516,22 @@ dialog::backdrop {
   .company-table td:nth-child(4) {
     display: none;
   }
+
+  .company-table__column--company {
+    width: 38%;
+  }
+
+  .company-table__column--trade {
+    width: 22%;
+  }
+
+  .company-table__column--pps {
+    width: auto;
+  }
+
+  .company-table__column--postal-codes {
+    width: 0;
+  }
 }
 
 @media (max-width: 600px) {
@@ -520,7 +562,27 @@ dialog::backdrop {
     display: none;
   }
 
+  .company-table__column--company {
+    width: auto;
+  }
+
+  .company-table__column--trade,
+  .company-table__column--pps {
+    width: 0;
+  }
+
+  .company-table__column--actions {
+    width: 126px;
+  }
+
   .company-table__actions {
-    flex-direction: column;
+    gap: 4px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .company-table__actions .table-action {
+    width: 30px;
+    height: 30px;
   }
 }
