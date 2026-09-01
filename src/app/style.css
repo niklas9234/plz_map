@@ -211,6 +211,7 @@ dialog::backdrop {
 
 .management-dialog {
   width: min(1120px, calc(100vw - 40px));
+  height: min(760px, calc(100vh - 40px));
   max-height: calc(100vh - 40px);
   padding: 0;
   overflow: hidden;
