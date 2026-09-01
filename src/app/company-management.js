@@ -11,6 +11,13 @@ function initializeCompanyManagement() {
     let currentCompany = null;
     let initialState = "";
     let detailView = null;
+    let pointerStartedOnBackdrop = false;
+
+    function isOutsideDialog(event) {
+        const bounds = dialog.getBoundingClientRect();
+        return event.clientX < bounds.left || event.clientX > bounds.right ||
+            event.clientY < bounds.top || event.clientY > bounds.bottom;
+    }
 
     function filteredCompanies() {
         const query = normalizeSearchValue(searchInput.value);
@@ -150,9 +157,15 @@ function initializeCompanyManagement() {
         detailView.className = "company-detail";
         detailView.innerHTML = `
             <div class="company-detail__nav">
-              <button class="icon-button detail-back" type="button" aria-label="Zurück zu den Stammdaten">&#8249;</button>
-              <span class="eyebrow">Unternehmensseite</span>
-              <button class="icon-button detail-close" type="button" aria-label="Zurück zur Karte">&times;</button>
+              <div class="company-detail__heading">
+                <p class="eyebrow">Unternehmensdaten</p>
+                <h2>Unternehmen verwalten</h2>
+                <p class="company-detail__company-name"></p>
+              </div>
+              <div class="company-detail__navigation-actions">
+                <button class="detail-back" type="button" aria-label="Zurück zu den Stammdaten">&#8592;</button>
+                <button class="icon-button detail-close" type="button" aria-label="Zurück zur Karte">&times;</button>
+              </div>
             </div>
             <div class="company-detail__content">
               <div class="company-detail__master-data">
@@ -175,6 +188,7 @@ function initializeCompanyManagement() {
             </div>`;
         dialog.append(detailView);
         detailView.querySelector("#detail-name").value = company.name;
+        detailView.querySelector(".company-detail__company-name").textContent = company.name;
         detailView.querySelector("#detail-pps").value = company.ppsNumber;
         const tradeSelect = detailView.querySelector("#detail-trade");
         trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
@@ -201,6 +215,9 @@ function initializeCompanyManagement() {
         initialState = formState();
         detailView.addEventListener("input", updateDirtyState);
         detailView.addEventListener("change", updateDirtyState);
+        detailView.querySelector("#detail-name").addEventListener("input", (event) => {
+            detailView.querySelector(".company-detail__company-name").textContent = event.target.value || "Unternehmen ohne Namen";
+        });
         detailView.addEventListener("submit", async (event) => { event.preventDefault(); await saveCompany(); });
         detailView.querySelector(".detail-back").addEventListener("click", () => leaveDetail("list"));
         detailView.querySelector(".detail-close").addEventListener("click", () => leaveDetail("map"));
@@ -252,6 +269,19 @@ function initializeCompanyManagement() {
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
+    dialog.addEventListener("pointerdown", (event) => {
+        pointerStartedOnBackdrop = isOutsideDialog(event);
+    });
+    dialog.addEventListener("pointercancel", () => {
+        pointerStartedOnBackdrop = false;
+    });
+    dialog.addEventListener("click", (event) => {
+        const clickedBackdrop = pointerStartedOnBackdrop && isOutsideDialog(event);
+        pointerStartedOnBackdrop = false;
+        if (!clickedBackdrop) return;
+        if (detailView) leaveDetail("map");
+        else closeToMap();
+    });
     dialog.addEventListener("cancel", (event) => {
         if (!detailView) return;
         event.preventDefault();
