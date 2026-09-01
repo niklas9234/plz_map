@@ -429,7 +429,7 @@ dialog::backdrop {
 
 .trade-form {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 1.5fr auto;
   align-items: end;
   gap: 12px;
   padding: 22px 28px;
@@ -453,6 +453,69 @@ dialog::backdrop {
   padding: 7px 10px 7px 14px;
   border: 1px solid #d8e0da;
   border-radius: 7px;
+}
+
+.management-dialog__header-actions,
+.trade-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-picker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.color-picker legend {
+  margin-bottom: 7px;
+  color: #34483a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.color-options {
+  display: grid;
+  grid-template-columns: repeat(10, 22px);
+  gap: 5px;
+}
+
+.color-options--compact {
+  grid-template-columns: repeat(10, 18px);
+}
+
+.color-option {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(23, 36, 27, 0.28);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-options--compact .color-option {
+  width: 18px;
+  height: 18px;
+}
+
+.color-option:has(input:checked) {
+  outline: 3px solid #146b37;
+  outline-offset: 2px;
+}
+
+.color-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.trade-active {
+  white-space: nowrap;
+}
+
+.trade-error {
+  margin: 0 28px;
 }
 
 .company-table__empty {

@@ -38,7 +38,10 @@
         <p class="eyebrow">Stammdaten</p>
         <h2 id="management-title">Unternehmen verwalten</h2>
       </div>
-      <button id="close-company-management" class="icon-button" type="button" aria-label="Verwaltung schließen">&times;</button>
+      <div class="management-dialog__header-actions">
+        <button id="open-trade-management" class="button button--secondary" type="button">Gewerke</button>
+        <button id="close-company-management" class="icon-button" type="button" aria-label="Verwaltung schließen">&times;</button>
+      </div>
     </div>
 
     <div class="management-toolbar">
@@ -74,6 +77,20 @@
         <tbody id="company-table-body"></tbody>
       </table>
     </div>
+  </dialog>
+
+  <dialog id="trade-management" class="management-dialog trade-dialog" aria-labelledby="trade-title">
+    <div class="management-dialog__header">
+      <div><p class="eyebrow">Einstellungen</p><h2 id="trade-title">Gewerke verwalten</h2></div>
+      <button id="close-trade-management" class="icon-button" type="button" aria-label="Gewerke schließen">&times;</button>
+    </div>
+    <form id="trade-form" class="trade-form">
+      <label class="form-field"><span>Neues Gewerk</span><input id="trade-name" required maxlength="80" placeholder="Name des Gewerks"></label>
+      <fieldset class="color-picker"><legend>Farbe</legend><div id="new-trade-colors" class="color-options"></div></fieldset>
+      <button class="button button--primary" type="submit">Hinzufügen</button>
+    </form>
+    <p id="trade-error" class="form-error trade-error" role="alert" hidden></p>
+    <ul id="trade-list" class="trade-list"></ul>
   </dialog>
 
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>

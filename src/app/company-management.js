@@ -30,7 +30,7 @@ function initializeCompanyManagement() {
     function populateTradeOptions() {
         const current = tradeFilter.value;
         tradeFilter.replaceChildren(new Option("Alle Gewerke", ""));
-        trades.forEach((trade) => tradeFilter.add(new Option(trade.name, trade.name)));
+        trades.filter((trade) => trade.active).forEach((trade) => tradeFilter.add(new Option(trade.name, trade.name)));
         if ([...tradeFilter.options].some((option) => option.value === current)) tradeFilter.value = current;
     }
 
@@ -269,6 +269,7 @@ function initializeCompanyManagement() {
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
+    window.addEventListener("trades:changed", refresh);
     dialog.addEventListener("pointerdown", (event) => {
         pointerStartedOnBackdrop = isOutsideDialog(event);
     });
@@ -290,3 +291,92 @@ function initializeCompanyManagement() {
 }
 
 document.addEventListener("DOMContentLoaded", initializeCompanyManagement);
+
+function initializeTradeManagement() {
+    const dialog = document.getElementById("trade-management");
+    const form = document.getElementById("trade-form");
+    const nameInput = document.getElementById("trade-name");
+    const list = document.getElementById("trade-list");
+    const error = document.getElementById("trade-error");
+    const newColors = document.getElementById("new-trade-colors");
+
+    function colorOptions(selected, name) {
+        const fragment = document.createDocumentFragment();
+        tradeStore.colors.forEach((color, index) => {
+            const label = document.createElement("label");
+            label.className = "color-option";
+            label.style.backgroundColor = color;
+            label.title = `Farbe ${index + 1}`;
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = name;
+            radio.value = color;
+            radio.checked = color === selected;
+            radio.setAttribute("aria-label", `Farbe ${index + 1}`);
+            label.append(radio);
+            fragment.append(label);
+        });
+        return fragment;
+    }
+
+    newColors.append(colorOptions(tradeStore.colors[0], "new-trade-color"));
+
+    async function render() {
+        const trades = await tradeStore.list();
+        list.replaceChildren();
+        trades.forEach((trade) => {
+            const item = document.createElement("li");
+            item.classList.toggle("is-inactive", !trade.active);
+            const name = document.createElement("strong");
+            name.textContent = trade.name;
+            const colors = document.createElement("div");
+            colors.className = "color-options color-options--compact";
+            colors.append(colorOptions(trade.color, `trade-color-${trade.name}`));
+            colors.addEventListener("change", (event) => tradeStore.setColor(trade.name, event.target.value));
+            const activeLabel = document.createElement("label");
+            activeLabel.className = "trade-active";
+            const active = document.createElement("input");
+            active.type = "checkbox";
+            active.checked = trade.active;
+            active.addEventListener("change", () => tradeStore.setActive(trade.name, active.checked));
+            activeLabel.append(active, " Aktiv");
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "table-action table-action--delete";
+            remove.textContent = "×";
+            remove.setAttribute("aria-label", `${trade.name} löschen`);
+            remove.addEventListener("click", async () => {
+                if (!window.confirm(`Gewerk „${trade.name}“ wirklich löschen?`)) return;
+                await tradeStore.remove(trade.name);
+                await render();
+            });
+            const actions = document.createElement("div");
+            actions.className = "trade-list__actions";
+            actions.append(activeLabel, remove);
+            item.append(name, colors, actions);
+            list.append(item);
+        });
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+            const selectedColor = form.querySelector('input[name="new-trade-color"]:checked').value;
+            await tradeStore.add(nameInput.value, selectedColor);
+            nameInput.value = "";
+            error.hidden = true;
+            await render();
+        } catch (addError) {
+            error.textContent = addError.message;
+            error.hidden = false;
+        }
+    });
+    document.getElementById("open-trade-management").addEventListener("click", async () => {
+        await render();
+        dialog.showModal();
+        nameInput.focus();
+    });
+    document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
+}
+
+document.addEventListener("DOMContentLoaded", initializeTradeManagement);
