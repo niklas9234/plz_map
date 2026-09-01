@@ -457,68 +457,36 @@ dialog::backdrop {
 }
 
 .company-detail {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
+  min-height: min(620px, calc(100vh - 40px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
 }
 
 .company-detail__nav {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: flex-start;
-  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
   gap: 16px;
   padding: 18px 28px;
   border-bottom: 1px solid #dce5df;
   background: #fff;
 }
 
-.company-detail__heading h2 {
+.company-detail__nav .eyebrow {
   margin: 0;
-  font-size: 24px;
+  text-align: center;
 }
 
-.company-detail__company-name {
-  margin: 4px 0 0;
-  color: #5d6b61;
-  font-size: 15px;
-  font-weight: 650;
-}
-
-.company-detail__navigation-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.detail-back {
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #405247;
-  font: inherit;
-  font-size: 28px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.detail-back:hover,
-.detail-back:focus-visible {
-  color: #146b37;
-  outline: 2px solid rgba(20, 107, 55, 0.2);
-  outline-offset: -2px;
+.company-detail__nav .detail-back {
+  border: 1px solid #aab8ae;
+  font-size: 38px;
 }
 
 .company-detail__content {
-  flex: 1 1 auto;
-  min-height: 0;
   padding: 28px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .company-detail__master-data {
@@ -773,7 +741,8 @@ dialog::backdrop {
 
 @media (max-width: 600px) {
   .company-detail {
-    height: 100%;
+    min-height: 100vh;
+    max-height: 100vh;
   }
 
   .company-detail__nav,
