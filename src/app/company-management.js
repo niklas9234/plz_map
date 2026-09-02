@@ -191,8 +191,9 @@ function initializeCompanyManagement() {
               </div>
               <section class="detail-section postal-code-section">
                 <h3>PLZ-Gebiete</h3>
+                <p class="postal-code-section__hint">Nach Endziffer angeordnet – zum Beispiel stehen 02, 12, 22 und 32 untereinander.</p>
                 <div class="postal-code-selection-summary">
-                 <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
+                  <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
                   <button class="button button--secondary postal-code-clear" type="button">Auswahl löschen</button>
                 </div>
                 <div class="postal-code-picker">
@@ -254,34 +255,10 @@ function initializeCompanyManagement() {
             return tile;
         }
 
-        const headerRow = document.createElement("div");
-        headerRow.className = "postal-code-grid__row postal-code-grid__header-row";
-        headerRow.setAttribute("role", "row");
-        const corner = document.createElement("span");
-        corner.className = "postal-code-grid__corner";
-        corner.setAttribute("aria-hidden", "true");
-        headerRow.append(corner);
-        for (let finalDigit = 0; finalDigit <= 9; finalDigit += 1) {
-            const columnHeader = document.createElement("span");
-            columnHeader.className = "postal-code-grid__column-header";
-            columnHeader.id = `postal-code-column-${finalDigit}`;
-            columnHeader.setAttribute("role", "columnheader");
-            columnHeader.textContent = String(finalDigit);
-            columnHeader.setAttribute("aria-label", `Endziffer ${finalDigit}`);
-            headerRow.append(columnHeader);
-        }
-        grid.append(headerRow);
-
         for (let firstDigit = 0; firstDigit <= 9; firstDigit += 1) {
             const row = document.createElement("div");
             row.className = "postal-code-grid__row";
             row.setAttribute("role", "row");
-            const rowHeader = document.createElement("span");
-            rowHeader.className = "postal-code-grid__row-header";
-            rowHeader.id = `postal-code-row-${firstDigit}`;
-            rowHeader.setAttribute("role", "rowheader");
-            rowHeader.textContent = `${firstDigit}0–${firstDigit}9`;
-            row.append(rowHeader);
 
             for (let finalDigit = 0; finalDigit <= 9; finalDigit += 1) {
                 const code = `${firstDigit}${finalDigit}`;
@@ -294,7 +271,6 @@ function initializeCompanyManagement() {
                 tile.dataset.code = code;
                 tile.textContent = code;
                 tile.setAttribute("aria-label", `PLZ-Gebiet ${code}`);
-                tile.setAttribute("aria-describedby", `${rowHeader.id} postal-code-column-${finalDigit}`);
                 if (selectablePostalCodes.has(code)) {
                     const selected = company.postalCodes.includes(code);
                     tile.classList.toggle("is-selected", selected);

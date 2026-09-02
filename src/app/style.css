@@ -697,6 +697,31 @@ dialog::backdrop {
   font-weight: 650;
 }
 
+.postal-code-grid__row {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(36px, 1fr));
+  gap: 8px;
+}
+
+.postal-code-grid__cell {
+  display: flex;
+  min-width: 0;
+}
+
+.postal-code-selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 12px;
+}
+
+.postal-code-selection-status {
+  margin: 0;
+  color: #526459;
+  font-weight: 650;
+}
+
 .postal-code-section__hint {
   margin: -6px 0 14px;
   color: #68786d;
@@ -993,6 +1018,11 @@ dialog::backdrop {
 
   .postal-code-grid__row {
     grid-template-columns: 68px repeat(10, 36px);
+    gap: 6px;
+  }
+
+  .postal-code-grid__row {
+    grid-template-columns: repeat(10, 36px);
     gap: 6px;
   }
 }
