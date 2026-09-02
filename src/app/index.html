@@ -94,6 +94,15 @@
     <ul id="trade-list" class="trade-list"></ul>
   </dialog>
 
+  <dialog id="delete-company-confirmation" class="confirm-dialog" aria-labelledby="delete-company-title" aria-describedby="delete-company-description">
+    <h2 id="delete-company-title">Unternehmen löschen?</h2>
+    <p id="delete-company-description">Möchten Sie <strong id="delete-company-name"></strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    <div class="dialog-actions">
+      <button id="cancel-company-delete" class="button button--secondary" type="button">Abbrechen</button>
+      <button id="confirm-company-delete" class="button button--danger" type="button">Unternehmen löschen</button>
+    </div>
+  </dialog>
+
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
 

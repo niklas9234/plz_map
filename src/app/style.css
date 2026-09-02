@@ -165,6 +165,11 @@ select {
   color: #fff;
 }
 
+.button--danger:hover,
+.button--danger:focus-visible {
+  background: #821d1d;
+}
+
 .button--ghost-danger {
   border-color: #dfb6b6;
   background: #fff;
@@ -632,6 +637,24 @@ dialog::backdrop {
   font-size: 15px;
 }
 
+.company-delete-section {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid #ead2d2;
+}
+
+.company-delete-section h3 {
+  margin: 0 0 6px;
+  color: #8e2424;
+  font-size: 15px;
+}
+
+.company-delete-section p {
+  margin: 0 0 16px;
+  color: #68786d;
+  font-size: 14px;
+}
+
 .postal-code-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
@@ -763,6 +786,12 @@ dialog::backdrop {
 .confirm-dialog {
   width: min(480px, calc(100vw - 32px));
   padding: 26px 28px 8px;
+}
+
+.confirm-dialog p {
+  margin: 14px 0 4px;
+  color: #526158;
+  line-height: 1.5;
 }
 
 .confirm-dialog .dialog-actions {
