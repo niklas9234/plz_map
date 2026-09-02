@@ -1,12 +1,14 @@
 const TRADE_STORAGE_KEY = "plz-map.trades.v1";
 
 // Gut unterscheidbare, etwas entsättigte Farben: kräftig genug für die Karte,
-// aber weiterhin hell genug für dunkle Beschriftungen.
+// aber bei der transparenten Flächendarstellung weiterhin hell genug, damit
+// Ortsnamen und PLZ lesbar bleiben. Jede Reihe des Farbwählers bildet eine
+// eigenständige Farbfamilie ohne Wiederholungen aus anderen Reihen.
 const TRADE_COLORS = [
     "#72b788", "#63b5ad", "#68a9c7", "#7898ca", "#938bc5",
-    "#b180bd", "#c17fa6", "#ca8587", "#cf956e", "#c7a85f",
+    "#a85fa8", "#c45c83", "#d06a62", "#d1844f", "#c39a3d",
     "#b3b65e", "#8eb969", "#69b99a", "#5fb3c3", "#758fc8",
-    "#9a82bd", "#ba7faf", "#ca8194", "#ce8d78", "#bfa36d"
+    "#73599b", "#92527e", "#a65e68", "#ad684f", "#8f7848"
 ];
 
 const tradeStore = (() => {
