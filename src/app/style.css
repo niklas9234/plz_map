@@ -824,10 +824,16 @@ dialog::backdrop {
   outline: 2px solid rgba(20, 107, 55, 0.16);
 }
 
-.postal-code-tile.is-selected {
+.postal-code-tile.is-primary {
   border-color: #146b37;
-  background: #146b37;
+  background: #238c4a;
   color: #fff;
+}
+
+.postal-code-tile.is-alternative {
+  border-color: #b07b00;
+  background: #f2c94c;
+  color: #302400;
 }
 
 .postal-code-tile--international {

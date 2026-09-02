@@ -63,6 +63,10 @@ function createTradeBadge(trade) {
     return badge;
 }
 
+function companyPostalCodes(company) {
+    return company.territories.map((territory) => territory.postalCode);
+}
+
 function findCompany(companies, searchValue) {
     const query = normalizeSearchValue(searchValue);
     if (!query) return null;
@@ -124,9 +128,9 @@ async function initializeCompanySearch(map, postalCodeData) {
         selectedCompany = company;
         input.value = "";
         closeSuggestions();
-        setVisiblePostalCodes(map, company.postalCodes);
+        setVisiblePostalCodes(map, companyPostalCodes(company));
         tradeStore.colorFor(company.trade).then((color) => setPostalCodeColor(map, color));
-        zoomToPostalCodes(map, company.postalCodes, postalCodeData);
+        zoomToPostalCodes(map, companyPostalCodes(company), postalCodeData);
 
         const companyDetails = document.createElement("div");
         companyDetails.className = "company-search__company-details";
@@ -161,7 +165,7 @@ async function initializeCompanySearch(map, postalCodeData) {
               <circle cx="12" cy="12" r="7"></circle>
               <path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path>
             </svg>`;
-        centerButton.addEventListener("click", () => zoomToPostalCodes(map, company.postalCodes, postalCodeData));
+        centerButton.addEventListener("click", () => zoomToPostalCodes(map, companyPostalCodes(company), postalCodeData));
 
         const detailsId = `company-search-details-${company.id}`;
         const detailsButton = document.createElement("button");
@@ -180,7 +184,9 @@ async function initializeCompanySearch(map, postalCodeData) {
         postalCodeArea.className = "company-search__postal-codes";
         postalCodeArea.id = detailsId;
         postalCodeArea.hidden = true;
-        postalCodeArea.textContent = `PLZ-Gebiete: ${company.postalCodes.join(", ")}`;
+        const primaryCodes = company.territories.filter((territory) => territory.role === "primary").map((territory) => territory.postalCode);
+        const alternativeCodes = company.territories.filter((territory) => territory.role === "alternative").map((territory) => territory.postalCode);
+        postalCodeArea.textContent = `Vorzug: ${primaryCodes.join(", ") || "–"} · Alternativ: ${alternativeCodes.join(", ") || "–"}`;
 
         detailsButton.addEventListener("click", () => {
             const isOpen = detailsButton.getAttribute("aria-expanded") === "true";

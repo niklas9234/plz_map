@@ -12,7 +12,7 @@ Regeln lokal ab.
 | `name` | String | Pflichtfeld, nach dem Entfernen äußerer Leerzeichen nicht leer. |
 | `ppsNumber` | String | Pflichtfeld und global eindeutig; Änderungen ändern nicht die `id`. |
 | `tradeId` | UUID | Pflichtverweis auf ein vorhandenes Gewerk. Kein Freitext. |
-| `postalCodes` | String-Liste | Mindestens ein Eintrag, ohne Duplikate. Jeder Wert besteht aus genau zwei Ziffern. Führende Nullen, etwa `08`, bleiben erhalten. |
+| `territories` | Gebietszuordnungs-Liste | Mindestens ein Eintrag. Jede Zuordnung enthält `postalCode` und die Rolle `primary` oder `alternative`. |
 | `status` | Enum | `active` oder `inactive`; neue Unternehmen sind `active`. |
 | `createdAt` | Zeitpunkt | Vom Server gesetzter Erstellungszeitpunkt. |
 | `updatedAt` | Zeitpunkt | Vom Server bei jeder Änderung aktualisiert. |
@@ -20,6 +20,12 @@ Regeln lokal ab.
 Ein Unternehmen darf gleichzeitig deutsche und luxemburgische PLZ-Gebiete
 besitzen. Die API behandelt Postleitzahlen ausdrücklich als Strings und nie als
 Zahlen, damit führende Nullen nicht verloren gehen.
+
+Pro Kombination aus PLZ-Gebiet und Gewerk darf es höchstens einen
+Vorzugsdienstleister (`primary`) geben. Beliebig viele Unternehmen können als
+Alternativdienstleister (`alternative`) zugeordnet sein; zwischen ihnen besteht
+keine weitere Rangfolge. Ein Unternehmen kann in verschiedenen Gebieten
+unterschiedliche Rollen haben.
 
 Für die derzeitige Oberfläche darf die API zusätzlich den Namen des Gewerks als
 eingebettetes Feld `trade` liefern. `tradeId` bleibt trotzdem die maßgebliche

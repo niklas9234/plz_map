@@ -82,7 +82,9 @@ function initializeCompanyManagement() {
             row.insertCell().textContent = company.ppsNumber;
             const postalCodes = row.insertCell();
             postalCodes.className = "company-table__postal-codes";
-            postalCodes.textContent = company.postalCodes.join(", ");
+            postalCodes.textContent = company.territories.map((territory) =>
+                `${territory.postalCode}${territory.role === "primary" ? " (Vorzug)" : " (alternativ)"}`
+            ).join(", ");
             row.addEventListener("click", () => openCompany(company));
             row.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -109,7 +111,10 @@ function initializeCompanyManagement() {
             name: detailView.querySelector("#detail-name").value,
             ppsNumber: detailView.querySelector("#detail-pps").value,
             trade: detailView.querySelector("#detail-trade").value,
-            postalCodes: [...detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)")].map((tile) => tile.dataset.code),
+            territories: [...detailView.querySelectorAll(".postal-code-tile[data-role]:not(:disabled)")].map((tile) => ({
+                postalCode: tile.dataset.code,
+                role: tile.dataset.role
+            })),
             information
         });
     }
@@ -191,7 +196,7 @@ function initializeCompanyManagement() {
               </div>
               <section class="detail-section postal-code-section">
                 <h3>PLZ-Gebiete</h3>
-                <p class="postal-code-section__hint">Nach Endziffer angeordnet. Maustaste gedrückt halten und über weitere Gebiete ziehen, um mehrere auszuwählen.</p>
+                <p class="postal-code-section__hint">Klicken Sie mehrfach auf ein Gebiet: Weiß = nicht zugewiesen, Grün = Vorzugsdienstleister, Gelb = Alternativdienstleister.</p>
                 <div class="postal-code-selection-summary">
                   <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
                   <button class="button button--secondary postal-code-clear" type="button">Auswahl löschen</button>
@@ -231,18 +236,33 @@ function initializeCompanyManagement() {
         const clearSelection = detailView.querySelector(".postal-code-clear");
         const selectablePostalCodes = new Set(SELECTABLE_POSTAL_CODES);
         let activePostalCodePointer = null;
-        let postalCodeDragState = false;
+        let postalCodeDragRole = null;
 
-        function updatePostalCodeSelection() {
-            const selectedCount = detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)").length;
-            selectionStatus.textContent = `${selectedCount} ${selectedCount === 1 ? "Gebiet" : "Gebiete"} ausgewählt`;
-            clearSelection.disabled = selectedCount === 0;
+        function roleForCode(code) {
+            return company.territories?.find((territory) => territory.postalCode === code)?.role || null;
         }
 
-        function setPostalCodeSelected(tile, selected) {
-            if (tile.disabled || tile.classList.contains("is-selected") === selected) return;
-            tile.classList.toggle("is-selected", selected);
-            tile.setAttribute("aria-pressed", String(selected));
+        function nextPostalCodeRole(role) {
+            if (!role) return "primary";
+            if (role === "primary") return "alternative";
+            return null;
+        }
+
+        function updatePostalCodeSelection() {
+            const primaryCount = detailView.querySelectorAll('.postal-code-tile[data-role="primary"]:not(:disabled)').length;
+            const alternativeCount = detailView.querySelectorAll('.postal-code-tile[data-role="alternative"]:not(:disabled)').length;
+            selectionStatus.textContent = `${primaryCount} Vorzug, ${alternativeCount} alternativ`;
+            clearSelection.disabled = primaryCount + alternativeCount === 0;
+        }
+
+        function setPostalCodeRole(tile, role) {
+            if (tile.disabled || (tile.dataset.role || null) === role) return;
+            if (role) tile.dataset.role = role;
+            else delete tile.dataset.role;
+            tile.classList.toggle("is-primary", role === "primary");
+            tile.classList.toggle("is-alternative", role === "alternative");
+            const roleLabel = role === "primary" ? "Vorzugsdienstleister" : role === "alternative" ? "Alternativdienstleister" : "nicht zugewiesen";
+            tile.setAttribute("aria-label", `PLZ-Gebiet ${tile.dataset.code}, ${roleLabel}`);
             updatePostalCodeSelection();
             updateDirtyState();
         }
@@ -258,21 +278,21 @@ function initializeCompanyManagement() {
             tile.addEventListener("pointerdown", (event) => {
                 if (event.button !== 0) return;
                 activePostalCodePointer = event.pointerId;
-                postalCodeDragState = !tile.classList.contains("is-selected");
-                setPostalCodeSelected(tile, postalCodeDragState);
+                postalCodeDragRole = nextPostalCodeRole(tile.dataset.role);
+                setPostalCodeRole(tile, postalCodeDragRole);
                 document.addEventListener("pointerup", finishPostalCodeDrag);
                 document.addEventListener("pointercancel", finishPostalCodeDrag);
             });
             tile.addEventListener("pointerenter", (event) => {
                 if (event.pointerId === activePostalCodePointer && (event.buttons & 1) === 1) {
-                    setPostalCodeSelected(tile, postalCodeDragState);
+                    setPostalCodeRole(tile, postalCodeDragRole);
                 }
             });
             tile.addEventListener("click", (event) => {
                 // Pointer-Eingaben werden bereits beim Drücken verarbeitet; ein
                 // Tastatur-Klick (detail === 0) behält das bisherige Verhalten.
                 if (event.detail !== 0) return;
-                setPostalCodeSelected(tile, !tile.classList.contains("is-selected"));
+                setPostalCodeRole(tile, nextPostalCodeRole(tile.dataset.role));
             });
         }
 
@@ -282,9 +302,11 @@ function initializeCompanyManagement() {
             tile.className = "postal-code-tile";
             tile.dataset.code = code;
             tile.textContent = code;
-            tile.classList.toggle("is-selected", company.postalCodes.includes(code));
-            tile.setAttribute("aria-pressed", String(company.postalCodes.includes(code)));
-            tile.setAttribute("aria-label", ariaLabel);
+            const role = roleForCode(code);
+            if (role) tile.dataset.role = role;
+            tile.classList.toggle("is-primary", role === "primary");
+            tile.classList.toggle("is-alternative", role === "alternative");
+            tile.setAttribute("aria-label", `${ariaLabel}, ${role === "primary" ? "Vorzugsdienstleister" : role === "alternative" ? "Alternativdienstleister" : "nicht zugewiesen"}`);
             makePostalCodeTileInteractive(tile);
             return tile;
         }
@@ -306,9 +328,11 @@ function initializeCompanyManagement() {
                 tile.textContent = code;
                 tile.setAttribute("aria-label", `PLZ-Gebiet ${code}`);
                 if (selectablePostalCodes.has(code)) {
-                    const selected = company.postalCodes.includes(code);
-                    tile.classList.toggle("is-selected", selected);
-                    tile.setAttribute("aria-pressed", String(selected));
+                    const role = roleForCode(code);
+                    if (role) tile.dataset.role = role;
+                    tile.classList.toggle("is-primary", role === "primary");
+                    tile.classList.toggle("is-alternative", role === "alternative");
+                    tile.setAttribute("aria-label", `PLZ-Gebiet ${code}, ${role === "primary" ? "Vorzugsdienstleister" : role === "alternative" ? "Alternativdienstleister" : "nicht zugewiesen"}`);
                     makePostalCodeTileInteractive(tile);
                 } else {
                     tile.disabled = true;
@@ -324,10 +348,7 @@ function initializeCompanyManagement() {
         luxTile.classList.add("postal-code-tile--international");
         internationalCodes.append(luxTile);
         clearSelection.addEventListener("click", () => {
-            detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)").forEach((tile) => {
-                tile.classList.remove("is-selected");
-                tile.setAttribute("aria-pressed", "false");
-            });
+            detailView.querySelectorAll(".postal-code-tile[data-role]:not(:disabled)").forEach((tile) => setPostalCodeRole(tile, null));
             updatePostalCodeSelection();
             updateDirtyState();
         });
@@ -369,7 +390,7 @@ function initializeCompanyManagement() {
             name: "",
             ppsNumber: "",
             trade: firstActiveTrade,
-            postalCodes: [],
+            territories: [],
             information: [],
             active: true
         }, true);
@@ -380,7 +401,7 @@ function initializeCompanyManagement() {
     async function saveCompany() {
         const data = JSON.parse(formState());
         const error = detailView.querySelector(".detail-error");
-        if (!data.postalCodes.length) {
+        if (!data.territories.length) {
             error.textContent = "Bitte wählen Sie mindestens ein PLZ-Gebiet aus.";
             error.hidden = false;
             return false;
