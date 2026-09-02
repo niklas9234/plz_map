@@ -1,4 +1,5 @@
 function addBaseMapLayers(map) {
+    const oceanFilter = ["==", ["get", "kind"], "ocean"];
 
     map.addLayer({
         id: "background",
@@ -29,6 +30,7 @@ function addBaseMapLayers(map) {
 
         source: "basemap",
         "source-layer": "water",
+        filter: oceanFilter,
 
         paint: {
             "fill-color": MAP_SETTINGS.basemap.waterColor
@@ -43,6 +45,7 @@ function addBaseMapLayers(map) {
 
         source: "basemap",
         "source-layer": "water",
+        filter: oceanFilter,
 
         paint: {
             "line-color": MAP_SETTINGS.basemap.waterLineColor,
