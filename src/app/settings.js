@@ -20,6 +20,7 @@ const MAP_SETTINGS = {
         roadColor: "#999999",
         roadWidths: [5, 0.5, 8, 1, 12, 2],
         placeLabel: {
+            minZoom: 8,
             font: ["Noto Sans Regular"],
             sizes: [5, 10, 8, 13, 12, 16],
             color: "#222222",
