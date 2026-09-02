@@ -191,9 +191,8 @@ function initializeCompanyManagement() {
               </div>
               <section class="detail-section postal-code-section">
                 <h3>PLZ-Gebiete</h3>
-                <p class="postal-code-section__hint">Nach Endziffer angeordnet – zum Beispiel stehen 02, 12, 22 und 32 untereinander.</p>
                 <div class="postal-code-selection-summary">
-                  <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
+                 <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
                   <button class="button button--secondary postal-code-clear" type="button">Auswahl löschen</button>
                 </div>
                 <div class="postal-code-picker">
