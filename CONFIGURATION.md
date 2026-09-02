@@ -17,6 +17,9 @@ Browser verwendet werden und die Anwendung keinen Build-Schritt benötigt.
 Die Basiskarte wird aus
 `src/app/data/pmtiles/germany-luxembourg.pmtiles` geladen. Sie liefert die in
 `src/app/basemap.js` dargestellten Karteninhalte, darunter Städte und Straßen.
+Von den Wasserflächen werden ausschließlich Meere (`kind: ocean`) dargestellt;
+Binnengewässer wie Flüsse und Seen werden sowohl als Fläche als auch als Linie
+ausgefiltert.
 Die URL wird relativ zur URL der geöffneten Anwendung aufgelöst und anschließend
 mit dem von PMTiles erwarteten `pmtiles://`-Schema versehen. Bei einem Aufruf an
 der Domain-Wurzel verweist sie daher auf
