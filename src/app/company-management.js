@@ -109,7 +109,7 @@ function initializeCompanyManagement() {
             name: detailView.querySelector("#detail-name").value,
             ppsNumber: detailView.querySelector("#detail-pps").value,
             trade: detailView.querySelector("#detail-trade").value,
-            postalCodes: [...detailView.querySelectorAll(".postal-code-tile.is-selected")].map((tile) => tile.dataset.code),
+            postalCodes: [...detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)")].map((tile) => tile.dataset.code),
             information
         });
     }
@@ -192,8 +192,12 @@ function initializeCompanyManagement() {
               <section class="detail-section postal-code-section">
                 <h3>PLZ-Gebiete</h3>
                 <p class="postal-code-section__hint">Nach Endziffer angeordnet – zum Beispiel stehen 02, 12, 22 und 32 untereinander.</p>
+                <div class="postal-code-selection-summary">
+                  <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
+                  <button class="button button--secondary postal-code-clear" type="button">Auswahl löschen</button>
+                </div>
                 <div class="postal-code-picker">
-                  <div class="postal-code-grid" aria-label="Deutsche PLZ-Gebiete auswählen"></div>
+                  <div class="postal-code-grid" role="grid" aria-label="Deutsche PLZ-Gebiete auswählen"></div>
                 </div>
                 <div class="postal-code-international" aria-label="Weitere PLZ-Gebiete"></div>
               </section>
@@ -223,7 +227,17 @@ function initializeCompanyManagement() {
         tradeSelect.value = company.trade;
         const grid = detailView.querySelector(".postal-code-grid");
         const internationalCodes = detailView.querySelector(".postal-code-international");
-        [...SELECTABLE_POSTAL_CODES, "LUX"].forEach((code) => {
+        const selectionStatus = detailView.querySelector(".postal-code-selection-status");
+        const clearSelection = detailView.querySelector(".postal-code-clear");
+        const selectablePostalCodes = new Set(SELECTABLE_POSTAL_CODES);
+
+        function updatePostalCodeSelection() {
+            const selectedCount = detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)").length;
+            selectionStatus.textContent = `${selectedCount} ${selectedCount === 1 ? "Gebiet" : "Gebiete"} ausgewählt`;
+            clearSelection.disabled = selectedCount === 0;
+        }
+
+        function createSelectableTile(code, ariaLabel = `PLZ-Gebiet ${code}`) {
             const tile = document.createElement("button");
             tile.type = "button";
             tile.className = "postal-code-tile";
@@ -231,23 +245,89 @@ function initializeCompanyManagement() {
             tile.textContent = code;
             tile.classList.toggle("is-selected", company.postalCodes.includes(code));
             tile.setAttribute("aria-pressed", String(company.postalCodes.includes(code)));
+            tile.setAttribute("aria-label", ariaLabel);
             tile.addEventListener("click", () => {
                 tile.classList.toggle("is-selected");
                 tile.setAttribute("aria-pressed", String(tile.classList.contains("is-selected")));
+                updatePostalCodeSelection();
                 updateDirtyState();
             });
-            if (code === "LUX") {
-                tile.classList.add("postal-code-tile--international");
-                tile.setAttribute("aria-label", "Luxemburg");
-                internationalCodes.append(tile);
-            } else {
-                // Feste Rasterpositionen lassen Lücken für nicht vergebene Gebiete,
-                // ohne dass die nachfolgenden PLZ in eine falsche Spalte rutschen.
-                tile.style.gridColumn = String(Number(code[1]) + 1);
-                tile.style.gridRow = String(Number(code[0]) + 1);
-                grid.append(tile);
+            return tile;
+        }
+
+        const headerRow = document.createElement("div");
+        headerRow.className = "postal-code-grid__row postal-code-grid__header-row";
+        headerRow.setAttribute("role", "row");
+        const corner = document.createElement("span");
+        corner.className = "postal-code-grid__corner";
+        corner.setAttribute("aria-hidden", "true");
+        headerRow.append(corner);
+        for (let finalDigit = 0; finalDigit <= 9; finalDigit += 1) {
+            const columnHeader = document.createElement("span");
+            columnHeader.className = "postal-code-grid__column-header";
+            columnHeader.id = `postal-code-column-${finalDigit}`;
+            columnHeader.setAttribute("role", "columnheader");
+            columnHeader.textContent = String(finalDigit);
+            columnHeader.setAttribute("aria-label", `Endziffer ${finalDigit}`);
+            headerRow.append(columnHeader);
+        }
+        grid.append(headerRow);
+
+        for (let firstDigit = 0; firstDigit <= 9; firstDigit += 1) {
+            const row = document.createElement("div");
+            row.className = "postal-code-grid__row";
+            row.setAttribute("role", "row");
+            const rowHeader = document.createElement("span");
+            rowHeader.className = "postal-code-grid__row-header";
+            rowHeader.id = `postal-code-row-${firstDigit}`;
+            rowHeader.setAttribute("role", "rowheader");
+            rowHeader.textContent = `${firstDigit}0–${firstDigit}9`;
+            row.append(rowHeader);
+
+            for (let finalDigit = 0; finalDigit <= 9; finalDigit += 1) {
+                const code = `${firstDigit}${finalDigit}`;
+                const cell = document.createElement("span");
+                cell.className = "postal-code-grid__cell";
+                cell.setAttribute("role", "gridcell");
+                const tile = document.createElement("button");
+                tile.type = "button";
+                tile.className = "postal-code-tile";
+                tile.dataset.code = code;
+                tile.textContent = code;
+                tile.setAttribute("aria-label", `PLZ-Gebiet ${code}`);
+                tile.setAttribute("aria-describedby", `${rowHeader.id} postal-code-column-${finalDigit}`);
+                if (selectablePostalCodes.has(code)) {
+                    const selected = company.postalCodes.includes(code);
+                    tile.classList.toggle("is-selected", selected);
+                    tile.setAttribute("aria-pressed", String(selected));
+                    tile.addEventListener("click", () => {
+                        tile.classList.toggle("is-selected");
+                        tile.setAttribute("aria-pressed", String(tile.classList.contains("is-selected")));
+                        updatePostalCodeSelection();
+                        updateDirtyState();
+                    });
+                } else {
+                    tile.disabled = true;
+                    tile.setAttribute("aria-label", `PLZ-Gebiet ${code} nicht vergeben`);
+                }
+                cell.append(tile);
+                row.append(cell);
             }
+            grid.append(row);
+        }
+
+        const luxTile = createSelectableTile("LUX", "Luxemburg");
+        luxTile.classList.add("postal-code-tile--international");
+        internationalCodes.append(luxTile);
+        clearSelection.addEventListener("click", () => {
+            detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)").forEach((tile) => {
+                tile.classList.remove("is-selected");
+                tile.setAttribute("aria-pressed", "false");
+            });
+            updatePostalCodeSelection();
+            updateDirtyState();
         });
+        updatePostalCodeSelection();
         (company.information || []).forEach(addInformationRow);
         updateInformationEmptyState();
         initialState = formState();
