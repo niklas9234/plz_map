@@ -16,7 +16,7 @@ body {
   z-index: 2;
   top: 16px;
   left: 16px;
-  width: min(430px, calc(100vw - 32px));
+  width: min(470px, calc(100vw - 32px));
   box-sizing: border-box;
   padding: 16px;
   border-radius: 10px;
@@ -107,8 +107,61 @@ body {
   margin: 10px 0 0;
 }
 
+.company-search__status:empty {
+  display: none;
+}
+
 .company-search__company-details {
   font-size: 15px;
+}
+
+.company-search__company-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.company-search__company-identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.company-search__action {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  padding: 6px;
+  place-items: center;
+  border: 1px solid #9aaba0;
+  border-radius: 6px;
+  color: #263b2d;
+  background: #fff;
+  cursor: pointer;
+}
+
+.company-search__action:hover,
+.company-search__action:focus-visible {
+  border-color: #416c50;
+  background: #e7f3eb;
+}
+
+.company-search__action svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.company-search__details-toggle svg {
+  transition: transform 160ms ease;
+}
+
+.company-search__details-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
 }
 
 .company-search__postal-codes {
@@ -119,6 +172,10 @@ body {
   background: #f2f7f4;
   color: #34463a;
   font-size: 13px;
+}
+
+.company-search__postal-codes[hidden] {
+  display: none;
 }
 
 .button,

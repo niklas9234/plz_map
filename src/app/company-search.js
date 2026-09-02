@@ -90,6 +90,7 @@ async function initializeCompanySearch(map, postalCodeData) {
     const suggestions = document.getElementById("company-suggestions");
     const status = document.getElementById("company-search-status");
     let activeSuggestionIndex = -1;
+    let selectedCompany = null;
 
     function suggestionButtons() {
         return [...suggestions.querySelectorAll("button")];
@@ -120,6 +121,7 @@ async function initializeCompanySearch(map, postalCodeData) {
     }
 
     function selectCompany(company) {
+        selectedCompany = company;
         input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, company.postalCodes);
@@ -129,13 +131,19 @@ async function initializeCompanySearch(map, postalCodeData) {
         const companyDetails = document.createElement("div");
         companyDetails.className = "company-search__company-details";
 
+        const companySummary = document.createElement("div");
+        companySummary.className = "company-search__company-summary";
+
+        const companyIdentity = document.createElement("div");
+        companyIdentity.className = "company-search__company-identity";
+
         const companyName = document.createElement("strong");
         companyName.textContent = company.name;
 
         const companyNumber = document.createElement("strong");
         companyNumber.textContent = company.ppsNumber;
 
-        companyDetails.append(
+        companyIdentity.append(
             companyName,
             " · ",
             companyNumber,
@@ -143,11 +151,48 @@ async function initializeCompanySearch(map, postalCodeData) {
             createTradeBadge(company.trade)
         );
 
+        const centerButton = document.createElement("button");
+        centerButton.type = "button";
+        centerButton.className = "company-search__action company-search__center";
+        centerButton.setAttribute("aria-label", `${company.name} auf der Karte zentrieren`);
+        centerButton.title = "Auf der Karte zentrieren";
+        centerButton.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="7"></circle>
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path>
+            </svg>`;
+        centerButton.addEventListener("click", () => zoomToPostalCodes(map, company.postalCodes, postalCodeData));
+
+        const detailsId = `company-search-details-${company.id}`;
+        const detailsButton = document.createElement("button");
+        detailsButton.type = "button";
+        detailsButton.className = "company-search__action company-search__details-toggle";
+        detailsButton.setAttribute("aria-label", `Details zu ${company.name} anzeigen`);
+        detailsButton.setAttribute("aria-expanded", "false");
+        detailsButton.setAttribute("aria-controls", detailsId);
+        detailsButton.title = "Details anzeigen";
+        detailsButton.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m5 9 7 7 7-7"></path>
+            </svg>`;
+
         const postalCodeArea = document.createElement("div");
         postalCodeArea.className = "company-search__postal-codes";
+        postalCodeArea.id = detailsId;
+        postalCodeArea.hidden = true;
         postalCodeArea.textContent = `PLZ-Gebiete: ${company.postalCodes.join(", ")}`;
 
-        status.replaceChildren(companyDetails, postalCodeArea);
+        detailsButton.addEventListener("click", () => {
+            const isOpen = detailsButton.getAttribute("aria-expanded") === "true";
+            detailsButton.setAttribute("aria-expanded", String(!isOpen));
+            detailsButton.setAttribute("aria-label", `Details zu ${company.name} ${isOpen ? "anzeigen" : "ausblenden"}`);
+            detailsButton.title = isOpen ? "Details anzeigen" : "Details ausblenden";
+            postalCodeArea.hidden = isOpen;
+        });
+
+        companySummary.append(companyIdentity, centerButton, detailsButton);
+        companyDetails.append(companySummary, postalCodeArea);
+        status.replaceChildren(companyDetails);
         input.focus();
     }
 
@@ -155,7 +200,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         let activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
         let companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
 
-        status.textContent = `${companies.length} Unternehmen verfügbar.`;
+        status.replaceChildren();
 
         input.addEventListener("input", () => {
             closeSuggestions();
@@ -217,14 +262,24 @@ async function initializeCompanySearch(map, postalCodeData) {
         window.addEventListener("companies:changed", async () => {
             activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
             companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
-            status.textContent = `${companies.length} Unternehmen verfügbar.`;
+            const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
+            if (updatedSelection) selectCompany(updatedSelection);
+            else {
+                selectedCompany = null;
+                status.replaceChildren();
+            }
             closeSuggestions();
         });
 
         window.addEventListener("trades:changed", async () => {
             activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
             companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
-            status.textContent = `${companies.length} Unternehmen verfügbar.`;
+            const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
+            if (updatedSelection) selectCompany(updatedSelection);
+            else {
+                selectedCompany = null;
+                status.replaceChildren();
+            }
             closeSuggestions();
         });
 
