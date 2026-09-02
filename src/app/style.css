@@ -657,8 +657,28 @@ dialog::backdrop {
 
 .postal-code-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  grid-template-columns: repeat(10, minmax(36px, 1fr));
+  grid-template-rows: repeat(10, 40px);
   gap: 8px;
+  min-width: 432px;
+}
+
+.postal-code-section__hint {
+  margin: -6px 0 14px;
+  color: #68786d;
+  font-size: 13px;
+}
+
+.postal-code-picker {
+  overflow-x: auto;
+  padding: 3px;
+  margin: -3px;
+  scrollbar-width: thin;
+}
+
+.postal-code-international {
+  display: flex;
+  margin-top: 12px;
 }
 
 .postal-code-tile {
@@ -682,6 +702,12 @@ dialog::backdrop {
   border-color: #146b37;
   background: #146b37;
   color: #fff;
+}
+
+.postal-code-tile--international {
+  min-width: 76px;
+  padding-right: 16px;
+  padding-left: 16px;
 }
 
 .information-empty {
@@ -914,5 +940,11 @@ dialog::backdrop {
   .information-delete {
     width: 42px;
     justify-self: end;
+  }
+
+  .postal-code-grid {
+    grid-template-columns: repeat(10, 36px);
+    gap: 6px;
+    min-width: 414px;
   }
 }

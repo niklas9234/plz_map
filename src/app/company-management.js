@@ -1,3 +1,16 @@
+const SELECTABLE_POSTAL_CODES = [
+    "01", "02", "03", "04", "06", "07", "08", "09",
+    "10", "12", "13", "14", "15", "16", "17", "18", "19",
+    "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+    "30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
+    "40", "41", "42", "44", "45", "46", "47", "48", "49",
+    "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
+    "60", "61", "63", "64", "65", "66", "67", "68", "69",
+    "70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
+    "80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
+    "90", "91", "92", "93", "94", "95", "96", "97", "98", "99"
+];
+
 function initializeCompanyManagement() {
     const dialog = document.getElementById("company-management");
     const tableBody = document.getElementById("company-table-body");
@@ -176,7 +189,14 @@ function initializeCompanyManagement() {
                 <label class="form-field"><span>PPS-Nummer</span><input id="detail-pps" required maxlength="40"></label>
                 <label class="form-field"><span>Gewerk</span><select id="detail-trade" required></select></label>
               </div>
-              <section class="detail-section"><h3>PLZ-Gebiete</h3><div class="postal-code-grid" aria-label="PLZ-Gebiete auswählen"></div></section>
+              <section class="detail-section postal-code-section">
+                <h3>PLZ-Gebiete</h3>
+                <p class="postal-code-section__hint">Nach Endziffer angeordnet – zum Beispiel stehen 02, 12, 22 und 32 untereinander.</p>
+                <div class="postal-code-picker">
+                  <div class="postal-code-grid" aria-label="Deutsche PLZ-Gebiete auswählen"></div>
+                </div>
+                <div class="postal-code-international" aria-label="Weitere PLZ-Gebiete"></div>
+              </section>
               <section class="detail-section information-section">
                 <h3>Informationen</h3>
                 <p class="information-empty">Fügen Sie hier weitere Informationen über das Unternehmen hinzu.</p>
@@ -202,11 +222,8 @@ function initializeCompanyManagement() {
         trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
         tradeSelect.value = company.trade;
         const grid = detailView.querySelector(".postal-code-grid");
-        const selectablePostalCodes = [
-            ...Array.from({ length: 99 }, (_, index) => String(index + 1).padStart(2, "0")),
-            "LUX"
-        ];
-        selectablePostalCodes.forEach((code) => {
+        const internationalCodes = detailView.querySelector(".postal-code-international");
+        [...SELECTABLE_POSTAL_CODES, "LUX"].forEach((code) => {
             const tile = document.createElement("button");
             tile.type = "button";
             tile.className = "postal-code-tile";
@@ -219,7 +236,17 @@ function initializeCompanyManagement() {
                 tile.setAttribute("aria-pressed", String(tile.classList.contains("is-selected")));
                 updateDirtyState();
             });
-            grid.append(tile);
+            if (code === "LUX") {
+                tile.classList.add("postal-code-tile--international");
+                tile.setAttribute("aria-label", "Luxemburg");
+                internationalCodes.append(tile);
+            } else {
+                // Feste Rasterpositionen lassen Lücken für nicht vergebene Gebiete,
+                // ohne dass die nachfolgenden PLZ in eine falsche Spalte rutschen.
+                tile.style.gridColumn = String(Number(code[1]) + 1);
+                tile.style.gridRow = String(Number(code[0]) + 1);
+                grid.append(tile);
+            }
         });
         (company.information || []).forEach(addInformationRow);
         updateInformationEmptyState();
