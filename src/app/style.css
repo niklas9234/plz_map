@@ -657,10 +657,33 @@ dialog::backdrop {
 
 .postal-code-grid {
   display: grid;
-  grid-template-columns: repeat(10, minmax(36px, 1fr));
-  grid-template-rows: repeat(10, 40px);
   gap: 8px;
   min-width: 432px;
+}
+
+.postal-code-grid__row {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(36px, 1fr));
+  gap: 8px;
+}
+
+.postal-code-grid__cell {
+  display: flex;
+  min-width: 0;
+}
+
+.postal-code-selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 12px;
+}
+
+.postal-code-selection-status {
+  margin: 0;
+  color: #526459;
+  font-weight: 650;
 }
 
 .postal-code-section__hint {
@@ -682,6 +705,7 @@ dialog::backdrop {
 }
 
 .postal-code-tile {
+  width: 100%;
   min-height: 40px;
   border: 1px solid #aab8ae;
   border-radius: 6px;
@@ -692,8 +716,17 @@ dialog::backdrop {
   cursor: pointer;
 }
 
-.postal-code-tile:hover,
-.postal-code-tile:focus-visible {
+.postal-code-tile:disabled {
+  border-color: #d5dcd7;
+  background: #f2f4f2;
+  color: #9ba59e;
+  cursor: not-allowed;
+  font-weight: 500;
+  opacity: 0.72;
+}
+
+.postal-code-tile:not(:disabled):hover,
+.postal-code-tile:not(:disabled):focus-visible {
   border-color: #146b37;
   outline: 2px solid rgba(20, 107, 55, 0.16);
 }
@@ -943,8 +976,12 @@ dialog::backdrop {
   }
 
   .postal-code-grid {
-    grid-template-columns: repeat(10, 36px);
     gap: 6px;
     min-width: 414px;
+  }
+
+  .postal-code-grid__row {
+    grid-template-columns: repeat(10, 36px);
+    gap: 6px;
   }
 }
