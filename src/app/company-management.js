@@ -82,9 +82,7 @@ function initializeCompanyManagement() {
             row.insertCell().textContent = company.ppsNumber;
             const postalCodes = row.insertCell();
             postalCodes.className = "company-table__postal-codes";
-            postalCodes.textContent = company.territories.map((territory) =>
-                `${territory.postalCode}${territory.role === "primary" ? " (Vorzug)" : " (alternativ)"}`
-            ).join(", ");
+            postalCodes.textContent = formatCompanyTerritories(company.territories);
             row.addEventListener("click", () => openCompany(company));
             row.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {

@@ -67,6 +67,12 @@ function companyPostalCodes(company) {
     return company.territories.map((territory) => territory.postalCode);
 }
 
+function formatCompanyTerritories(territories) {
+    const primaryCodes = territories.filter((territory) => territory.role === "primary").map((territory) => territory.postalCode);
+    const alternativeCodes = territories.filter((territory) => territory.role === "alternative").map((territory) => territory.postalCode);
+    return `Vorzug: ${primaryCodes.join(", ") || "–"} · Alternative: ${alternativeCodes.join(", ") || "–"}`;
+}
+
 function findCompany(companies, searchValue) {
     const query = normalizeSearchValue(searchValue);
     if (!query) return null;
@@ -184,9 +190,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         postalCodeArea.className = "company-search__postal-codes";
         postalCodeArea.id = detailsId;
         postalCodeArea.hidden = true;
-        const primaryCodes = company.territories.filter((territory) => territory.role === "primary").map((territory) => territory.postalCode);
-        const alternativeCodes = company.territories.filter((territory) => territory.role === "alternative").map((territory) => territory.postalCode);
-        postalCodeArea.textContent = `Vorzug: ${primaryCodes.join(", ") || "–"} · Alternativ: ${alternativeCodes.join(", ") || "–"}`;
+        postalCodeArea.textContent = formatCompanyTerritories(company.territories);
 
         detailsButton.addEventListener("click", () => {
             const isOpen = detailsButton.getAttribute("aria-expanded") === "true";
