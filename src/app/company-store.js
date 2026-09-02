@@ -9,12 +9,21 @@ const companyStore = (() => {
     }
 
     function normalizeCompany(company, index = 0) {
+        const territories = Array.isArray(company.territories)
+            ? company.territories
+            : (company.postalCodes || []).map((postalCode) => ({ postalCode, role: "primary" }));
+        const normalizedTerritories = [...new Map(territories.map((territory) => {
+            const postalCode = String(territory.postalCode);
+            const role = territory.role === "alternative" ? "alternative" : "primary";
+            return [postalCode, { postalCode, role }];
+        })).values()].sort((first, second) => first.postalCode.localeCompare(second.postalCode));
+
         return {
             id: String(company.id || company.ppsNumber || `company-${index}`),
             name: company.name.trim(),
             ppsNumber: company.ppsNumber.trim(),
             trade: company.trade.trim(),
-            postalCodes: [...new Set(company.postalCodes.map(String))].sort(),
+            territories: normalizedTerritories,
             information: Array.isArray(company.information)
                 ? company.information.map((item) => ({ category: String(item.category), value: String(item.value) }))
                 : [],
@@ -55,6 +64,29 @@ const companyStore = (() => {
             item.id !== company.id
         );
         if (duplicate) throw new Error("Diese PPS-Nummer wird bereits verwendet.");
+
+        const candidate = normalizeCompany(company);
+        const primaryTerritories = candidate.territories.filter((territory) => territory.role === "primary");
+        const primaryConflict = primaryTerritories.find((territory) => companies.some((item) =>
+            item.id !== company.id &&
+            item.trade === candidate.trade &&
+            item.territories.some((assignment) =>
+                assignment.postalCode === territory.postalCode && assignment.role === "primary"
+            )
+        ));
+        if (primaryConflict) {
+            const existingPrimary = companies.find((item) =>
+                item.id !== company.id &&
+                item.trade === candidate.trade &&
+                item.territories.some((assignment) =>
+                    assignment.postalCode === primaryConflict.postalCode && assignment.role === "primary"
+                )
+            );
+            throw new Error(
+                `Für das PLZ-Gebiet ${primaryConflict.postalCode} und das Gewerk ${candidate.trade} ` +
+                `ist bereits ${existingPrimary.name} als Vorzugsdienstleister eingetragen.`
+            );
+        }
 
         const existingIndex = companies.findIndex((item) => item.id === company.id);
         const normalized = normalizeCompany({

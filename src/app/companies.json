@@ -3,14 +3,6 @@
     "name": "Nordlicht Logistik GmbH",
     "ppsNumber": "PPS-1001",
     "trade": "Fliesenleger",
-    "postalCodes": [
-      "20",
-      "21",
-      "22",
-      "23",
-      "24",
-      "25"
-    ],
     "information": [
       {
         "category": "Adresse",
@@ -24,22 +16,38 @@
         "category": "Ansprechpartner",
         "value": "Mara Hansen"
       }
+    ],
+    "territories": [
+      {
+        "postalCode": "20",
+        "role": "primary"
+      },
+      {
+        "postalCode": "21",
+        "role": "primary"
+      },
+      {
+        "postalCode": "22",
+        "role": "primary"
+      },
+      {
+        "postalCode": "23",
+        "role": "primary"
+      },
+      {
+        "postalCode": "24",
+        "role": "primary"
+      },
+      {
+        "postalCode": "25",
+        "role": "primary"
+      }
     ]
   },
   {
     "name": "Rheinland Versorgung AG",
     "ppsNumber": "PPS-1002",
     "trade": "Estrich",
-    "postalCodes": [
-      "40",
-      "41",
-      "42",
-      "45",
-      "46",
-      "47",
-      "50",
-      "51"
-    ],
     "information": [
       {
         "category": "Adresse",
@@ -49,23 +57,72 @@
         "category": "Sonstiges",
         "value": "Anlieferung werktags von 7 bis 16 Uhr"
       }
+    ],
+    "territories": [
+      {
+        "postalCode": "40",
+        "role": "primary"
+      },
+      {
+        "postalCode": "41",
+        "role": "primary"
+      },
+      {
+        "postalCode": "42",
+        "role": "primary"
+      },
+      {
+        "postalCode": "45",
+        "role": "primary"
+      },
+      {
+        "postalCode": "46",
+        "role": "primary"
+      },
+      {
+        "postalCode": "47",
+        "role": "primary"
+      },
+      {
+        "postalCode": "50",
+        "role": "primary"
+      },
+      {
+        "postalCode": "51",
+        "role": "primary"
+      }
     ]
   },
   {
     "name": "Mainland Service KG",
     "ppsNumber": "PPS-1003",
     "trade": "Maler",
-    "postalCodes": [
-      "60",
-      "61",
-      "63",
-      "64",
-      "65"
-    ],
     "information": [
       {
         "category": "Telefon",
         "value": "+49 69 987654-0"
+      }
+    ],
+    "territories": [
+      {
+        "postalCode": "60",
+        "role": "primary"
+      },
+      {
+        "postalCode": "61",
+        "role": "primary"
+      },
+      {
+        "postalCode": "63",
+        "role": "primary"
+      },
+      {
+        "postalCode": "64",
+        "role": "primary"
+      },
+      {
+        "postalCode": "65",
+        "role": "primary"
       }
     ]
   },
@@ -73,28 +130,70 @@
     "name": "Südwest Partner GmbH",
     "ppsNumber": "PPS-1004",
     "trade": "Trockenbau",
-    "postalCodes": [
-      "66",
-      "67",
-      "68",
-      "69",
-      "70",
-      "71",
-      "72"
+    "territories": [
+      {
+        "postalCode": "66",
+        "role": "primary"
+      },
+      {
+        "postalCode": "67",
+        "role": "primary"
+      },
+      {
+        "postalCode": "68",
+        "role": "primary"
+      },
+      {
+        "postalCode": "69",
+        "role": "primary"
+      },
+      {
+        "postalCode": "70",
+        "role": "primary"
+      },
+      {
+        "postalCode": "71",
+        "role": "primary"
+      },
+      {
+        "postalCode": "72",
+        "role": "primary"
+      }
     ]
   },
   {
     "name": "Isar Handel SE",
     "ppsNumber": "PPS-1005",
     "trade": "Elektro",
-    "postalCodes": [
-      "80",
-      "81",
-      "82",
-      "83",
-      "84",
-      "85",
-      "86"
+    "territories": [
+      {
+        "postalCode": "80",
+        "role": "primary"
+      },
+      {
+        "postalCode": "81",
+        "role": "primary"
+      },
+      {
+        "postalCode": "82",
+        "role": "primary"
+      },
+      {
+        "postalCode": "83",
+        "role": "primary"
+      },
+      {
+        "postalCode": "84",
+        "role": "primary"
+      },
+      {
+        "postalCode": "85",
+        "role": "primary"
+      },
+      {
+        "postalCode": "86",
+        "role": "primary"
+      }
     ]
   }
 ]

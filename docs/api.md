@@ -25,7 +25,10 @@ Beispiel einer Antwort:
   "ppsNumber": "PPS-1001",
   "tradeId": "9603b68f-f93e-433f-91cb-a8a76194452d",
   "trade": "Elektro",
-  "postalCodes": ["08", "82"],
+  "territories": [
+    { "postalCode": "08", "role": "primary" },
+    { "postalCode": "82", "role": "alternative" }
+  ],
   "status": "active",
   "createdAt": "2026-09-01T10:00:00Z",
   "updatedAt": "2026-09-01T10:00:00Z"
