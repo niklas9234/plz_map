@@ -194,8 +194,11 @@ function initializeCompanyManagement() {
         trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
         tradeSelect.value = company.trade;
         const grid = detailView.querySelector(".postal-code-grid");
-        for (let number = 1; number <= 99; number += 1) {
-            const code = String(number).padStart(2, "0");
+        const selectablePostalCodes = [
+            ...Array.from({ length: 99 }, (_, index) => String(index + 1).padStart(2, "0")),
+            "LUX"
+        ];
+        selectablePostalCodes.forEach((code) => {
             const tile = document.createElement("button");
             tile.type = "button";
             tile.className = "postal-code-tile";
@@ -209,7 +212,7 @@ function initializeCompanyManagement() {
                 updateDirtyState();
             });
             grid.append(tile);
-        }
+        });
         (company.information || []).forEach(addInformationRow);
         updateInformationEmptyState();
         initialState = formState();
