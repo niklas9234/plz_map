@@ -39,7 +39,7 @@ const MAP_SETTINGS = {
         borderColor: "#146b37",
         borderWidth: 2,
         label: {
-            minZoom: 6,
+            minZoom: 4,
             font: ["Noto Sans Regular"],
             // Abwechselnd Zoomstufe und Schriftgröße in Pixeln.
             sizes: [5, 18, 7, 20, 9, 18],

@@ -39,6 +39,7 @@ function addBaseMapLayers(map) {
     map.addLayer({
         id: "water-lines",
         type: "line",
+        minzoom: MAP_SETTINGS.basemap.minZoomMapObjects,
 
         source: "basemap",
         "source-layer": "water",
