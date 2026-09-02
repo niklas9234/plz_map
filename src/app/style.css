@@ -86,10 +86,10 @@ body {
 .company-search__trade-badge {
   display: inline-block;
   padding: 2px 7px;
-  border: 1px solid #78a98a;
+  border: 1px solid #ffffff;
   border-radius: 999px;
-  background: #dff1e5;
-  color: #225c38;
+  background: #000000;
+  color: #ffffff;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
