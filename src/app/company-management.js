@@ -4,6 +4,9 @@ function initializeCompanyManagement() {
     const searchInput = document.getElementById("management-search");
     const tradeFilter = document.getElementById("management-trade-filter");
     const resultStatus = document.getElementById("management-result-status");
+    const deleteConfirmation = document.getElementById("delete-company-confirmation");
+    const deleteCompanyName = document.getElementById("delete-company-name");
+    const confirmCompanyDelete = document.getElementById("confirm-company-delete");
     const header = dialog.querySelector(".management-dialog__header");
     const listElements = [dialog.querySelector(".management-toolbar"), resultStatus, dialog.querySelector(".company-table-wrapper")];
     let companies = [];
@@ -180,6 +183,11 @@ function initializeCompanyManagement() {
                 <div class="information-list"></div>
                 <button class="information-add" type="button" aria-label="Information hinzufügen">+</button>
               </section>
+              ${isNew ? "" : `<section class="company-delete-section">
+                <h3>Unternehmen löschen</h3>
+                <p>Entfernt das Unternehmen und alle zugehörigen Daten dauerhaft.</p>
+                <button class="button button--ghost-danger detail-delete" type="button">Unternehmen löschen</button>
+              </section>`}
               <p class="form-error detail-error" role="alert" hidden></p>
               <div class="dialog-actions detail-actions" hidden>
                 <button class="button button--secondary detail-cancel" type="button">Abbrechen</button>
@@ -235,6 +243,11 @@ function initializeCompanyManagement() {
             openCompany(original);
         });
         detailView.querySelector(".information-add").addEventListener("click", () => { addInformationRow(); updateDirtyState(); });
+        detailView.querySelector(".detail-delete")?.addEventListener("click", () => {
+            deleteCompanyName.textContent = currentCompany.name;
+            deleteConfirmation.showModal();
+            confirmCompanyDelete.focus();
+        });
         detailView.focus({ preventScroll: true });
         if (isNew) detailView.querySelector("#detail-name").focus();
     }
@@ -292,6 +305,19 @@ function initializeCompanyManagement() {
     });
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
     document.getElementById("create-company").addEventListener("click", openNewCompany);
+    document.getElementById("cancel-company-delete").addEventListener("click", () => deleteConfirmation.close());
+    confirmCompanyDelete.addEventListener("click", async () => {
+        if (!currentCompany) return;
+        confirmCompanyDelete.disabled = true;
+        try {
+            await companyStore.remove(currentCompany.id);
+            deleteConfirmation.close();
+            await refresh();
+            showList();
+        } finally {
+            confirmCompanyDelete.disabled = false;
+        }
+    });
     searchInput.addEventListener("input", renderCompanies);
     tradeFilter.addEventListener("change", renderCompanies);
     window.addEventListener("trades:changed", refresh);
