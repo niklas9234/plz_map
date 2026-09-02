@@ -191,7 +191,7 @@ function initializeCompanyManagement() {
               </div>
               <section class="detail-section postal-code-section">
                 <h3>PLZ-Gebiete</h3>
-                <p class="postal-code-section__hint">Nach Endziffer angeordnet – zum Beispiel stehen 02, 12, 22 und 32 untereinander.</p>
+                <p class="postal-code-section__hint">Nach Endziffer angeordnet. Maustaste gedrückt halten und über weitere Gebiete ziehen, um mehrere auszuwählen.</p>
                 <div class="postal-code-selection-summary">
                   <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
                   <button class="button button--secondary postal-code-clear" type="button">Auswahl löschen</button>
@@ -230,11 +230,50 @@ function initializeCompanyManagement() {
         const selectionStatus = detailView.querySelector(".postal-code-selection-status");
         const clearSelection = detailView.querySelector(".postal-code-clear");
         const selectablePostalCodes = new Set(SELECTABLE_POSTAL_CODES);
+        let activePostalCodePointer = null;
+        let postalCodeDragState = false;
 
         function updatePostalCodeSelection() {
             const selectedCount = detailView.querySelectorAll(".postal-code-tile.is-selected:not(:disabled)").length;
             selectionStatus.textContent = `${selectedCount} ${selectedCount === 1 ? "Gebiet" : "Gebiete"} ausgewählt`;
             clearSelection.disabled = selectedCount === 0;
+        }
+
+        function setPostalCodeSelected(tile, selected) {
+            if (tile.disabled || tile.classList.contains("is-selected") === selected) return;
+            tile.classList.toggle("is-selected", selected);
+            tile.setAttribute("aria-pressed", String(selected));
+            updatePostalCodeSelection();
+            updateDirtyState();
+        }
+
+        function finishPostalCodeDrag(event) {
+            if (event.pointerId !== activePostalCodePointer) return;
+            activePostalCodePointer = null;
+            document.removeEventListener("pointerup", finishPostalCodeDrag);
+            document.removeEventListener("pointercancel", finishPostalCodeDrag);
+        }
+
+        function makePostalCodeTileInteractive(tile) {
+            tile.addEventListener("pointerdown", (event) => {
+                if (event.button !== 0) return;
+                activePostalCodePointer = event.pointerId;
+                postalCodeDragState = !tile.classList.contains("is-selected");
+                setPostalCodeSelected(tile, postalCodeDragState);
+                document.addEventListener("pointerup", finishPostalCodeDrag);
+                document.addEventListener("pointercancel", finishPostalCodeDrag);
+            });
+            tile.addEventListener("pointerenter", (event) => {
+                if (event.pointerId === activePostalCodePointer && (event.buttons & 1) === 1) {
+                    setPostalCodeSelected(tile, postalCodeDragState);
+                }
+            });
+            tile.addEventListener("click", (event) => {
+                // Pointer-Eingaben werden bereits beim Drücken verarbeitet; ein
+                // Tastatur-Klick (detail === 0) behält das bisherige Verhalten.
+                if (event.detail !== 0) return;
+                setPostalCodeSelected(tile, !tile.classList.contains("is-selected"));
+            });
         }
 
         function createSelectableTile(code, ariaLabel = `PLZ-Gebiet ${code}`) {
@@ -246,12 +285,7 @@ function initializeCompanyManagement() {
             tile.classList.toggle("is-selected", company.postalCodes.includes(code));
             tile.setAttribute("aria-pressed", String(company.postalCodes.includes(code)));
             tile.setAttribute("aria-label", ariaLabel);
-            tile.addEventListener("click", () => {
-                tile.classList.toggle("is-selected");
-                tile.setAttribute("aria-pressed", String(tile.classList.contains("is-selected")));
-                updatePostalCodeSelection();
-                updateDirtyState();
-            });
+            makePostalCodeTileInteractive(tile);
             return tile;
         }
 
@@ -275,12 +309,7 @@ function initializeCompanyManagement() {
                     const selected = company.postalCodes.includes(code);
                     tile.classList.toggle("is-selected", selected);
                     tile.setAttribute("aria-pressed", String(selected));
-                    tile.addEventListener("click", () => {
-                        tile.classList.toggle("is-selected");
-                        tile.setAttribute("aria-pressed", String(tile.classList.contains("is-selected")));
-                        updatePostalCodeSelection();
-                        updateDirtyState();
-                    });
+                    makePostalCodeTileInteractive(tile);
                 } else {
                     tile.disabled = true;
                     tile.setAttribute("aria-label", `PLZ-Gebiet ${code} nicht vergeben`);
