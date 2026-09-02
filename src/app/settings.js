@@ -1,9 +1,5 @@
 /**
  * Zentrale Einstellungen der Karte.
- *
- * Nach einer Änderung genügt es, die Seite neu zu laden. Eine .env-Datei ist
- * hier nicht nötig: Die Karte läuft direkt im Browser und benötigt keine
- * geheimen Zugangsdaten oder einen Build-Schritt.
  */
 const MAP_SETTINGS = {
     map: {
