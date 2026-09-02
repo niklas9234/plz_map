@@ -2,7 +2,8 @@
 
 Die Darstellung der Webkarte wird zentral in `src/app/settings.js` konfiguriert.
 Dort lassen sich unter anderem Farben, Linienbreiten, Kartenposition sowie
-Schriftart und dynamische Schriftgrößen ändern. Die Einstellungen unter
+Schriftart, dynamische Schriftgrößen und die Mindest-Zoomstufe der Städtenamen
+ändern. Die Einstellungen unter
 `postalCodes` werden gemeinsam für die deutschen und luxemburgischen
 Postleitzahl-Layer verwendet; dadurch haben beide immer dieselbe Füllung,
 Umrandung, Mindest-Zoomstufe und Schriftgrößen-Skalierung.

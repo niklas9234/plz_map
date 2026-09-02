@@ -75,6 +75,7 @@ function addBaseMapLayers(map) {
     map.addLayer({
         id: "places",
         type: "symbol",
+        minzoom: MAP_SETTINGS.basemap.placeLabel.minZoom,
 
         source: "basemap",
         "source-layer": "places",
