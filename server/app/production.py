@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import logging
 import mimetypes
-import os
 import secrets
 import signal
 import sys
@@ -18,7 +17,7 @@ from pathlib import Path
 from wsgiref.simple_server import WSGIRequestHandler, make_server
 
 from .application import application as api_application
-from .database import connect, initialize, prepare_data_directories
+from .database import create_database_engine, database_url, initialize, prepare_data_directories
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
@@ -68,8 +67,9 @@ def backup_database(database: Path, backup_dir: Path, keep: int = 10) -> None:
         return
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     target = backup_dir / f"plz_map-{stamp}.sqlite3"
-    source = connect(database)
-    destination = connect(target)
+    import sqlite3
+    source = sqlite3.connect(database)
+    destination = sqlite3.connect(target)
     try:
         source.backup(destination)
     finally:
@@ -94,18 +94,17 @@ def request_running_server_stop(control_file: Path) -> bool:
 
 def run(open_browser: bool = False) -> int:
     paths = prepare_data_directories()
-    database = Path(os.environ.get("PLZ_MAP_DATABASE", paths["root"] / "plz_map.sqlite3")).expanduser()
+    url = database_url()
     control_file = paths["root"] / "server.token"
     logging.basicConfig(
         filename=paths["logs"] / "plz-map.log", level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8",
     )
-    backup_database(database, paths["backups"])
-    connection = connect(database)
-    try:
-        initialize(connection)
-    finally:
-        connection.close()
+    if url.startswith("sqlite:///") and not url.endswith(":memory:"):
+        backup_database(Path(url.removeprefix("sqlite:///")), paths["backups"])
+    engine = create_database_engine(url)
+    initialize(engine)
+    engine.dispose()
 
     token = secrets.token_urlsafe(32)
     server = make_server(HOST, PORT, lambda *_: [], handler_class=WSGIRequestHandler)

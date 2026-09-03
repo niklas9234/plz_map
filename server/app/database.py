@@ -1,18 +1,20 @@
-"""SQLite connection and schema used by the master-data API."""
+"""Database configuration shared by local SQLite and server PostgreSQL."""
 
 from __future__ import annotations
 
 import os
-import sqlite3
 import sys
 from pathlib import Path
 
+from sqlalchemy import Engine, create_engine, event
+from sqlalchemy.engine import make_url
+
+from .models import Base
 
 APPLICATION_NAME = "PLZ-Karte"
 
 
 def data_directory() -> Path:
-    """Return a writable, update-safe directory for all mutable application data."""
     override = os.environ.get("PLZ_MAP_DATA_DIR")
     if override:
         return Path(override).expanduser().resolve()
@@ -33,63 +35,31 @@ def prepare_data_directories() -> dict[str, Path]:
     return paths
 
 
-def connect(path: str | Path | None = None) -> sqlite3.Connection:
-    database_path = Path(path or os.environ.get("PLZ_MAP_DATABASE", data_directory() / "plz_map.sqlite3"))
-    if str(database_path) != ":memory:":
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-    database = str(database_path)
-    connection = sqlite3.connect(database)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+def database_url() -> str:
+    """Return the single database setting, defaulting to the local SQLite file."""
+    configured = os.environ.get("DATABASE_URL")
+    if configured:
+        return configured
+    legacy = os.environ.get("PLZ_MAP_DATABASE")
+    path = Path(legacy).expanduser() if legacy else data_directory() / "plz_map.sqlite3"
+    return f"sqlite:///{path}"
 
 
-def initialize(connection: sqlite3.Connection) -> None:
-    connection.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS trades (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
-            status TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
-            color TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS companies (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            pps_number TEXT NOT NULL UNIQUE,
-            trade_id TEXT NOT NULL REFERENCES trades(id),
-            status TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS territories (
-            company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-            postal_code TEXT NOT NULL,
-            role TEXT NOT NULL CHECK (role IN ('primary', 'alternative')),
-            PRIMARY KEY (company_id, postal_code)
-        );
-        CREATE TABLE IF NOT EXISTS company_information (
-            company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-            position INTEGER NOT NULL,
-            category TEXT NOT NULL,
-            value TEXT NOT NULL,
-            PRIMARY KEY (company_id, position)
-        );
+def create_database_engine(url: str | None = None) -> Engine:
+    configured_url = url or database_url()
+    parsed_url = make_url(configured_url)
+    if parsed_url.get_backend_name() == "sqlite" and parsed_url.database not in {None, "", ":memory:"}:
+        Path(parsed_url.database).expanduser().parent.mkdir(parents=True, exist_ok=True)
+    engine = create_engine(configured_url)
+    if engine.dialect.name == "sqlite":
+        @event.listens_for(engine, "connect")
+        def enable_foreign_keys(dbapi_connection, _connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys = ON")
+            cursor.close()
+    return engine
 
-        -- SQLite cannot express this cross-table uniqueness rule as an index.
-        CREATE TRIGGER IF NOT EXISTS territories_primary_insert
-        BEFORE INSERT ON territories WHEN NEW.role = 'primary'
-        BEGIN
-          SELECT RAISE(ABORT, 'primary territory conflict') WHERE EXISTS (
-            SELECT 1 FROM territories t
-            JOIN companies existing ON existing.id = t.company_id
-            JOIN companies incoming ON incoming.id = NEW.company_id
-            WHERE t.postal_code = NEW.postal_code AND t.role = 'primary'
-              AND existing.trade_id = incoming.trade_id
-          );
-        END;
-        """
-    )
-    connection.commit()
+
+def initialize(engine: Engine) -> None:
+    """Create a fresh schema; deployed databases are upgraded with Alembic."""
+    Base.metadata.create_all(engine)
