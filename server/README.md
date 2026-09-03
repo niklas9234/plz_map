@@ -29,6 +29,13 @@ als JSON-Body an `POST /api/admin/import?mode=validate` (nur prüfen) oder
 `POST /api/admin/import?mode=empty` (in eine leere Datenbank übernehmen)
 gesendet. Der Datenbankpfad kann mit `PLZ_MAP_DATABASE` gesetzt werden.
 
+Beim ersten Start einer leeren Datenbank importiert das Backend die gebündelten
+Stammdaten aus `src/app/companies.json`. Import und Versionsmarkierung werden in
+einer gemeinsamen Transaktion geschrieben. Die dauerhafte Markierung verhindert
+auch nach einem Programmupdate oder nach dem Löschen aller Fachdaten einen
+erneuten Seed-Import; vorhandene Datenbanken werden grundsätzlich nicht befüllt.
+Umfang und abgelehnte Datensätze werden in das Anwendungslog geschrieben.
+
 ## Veränderliche Daten
 
 Programmdateien und Benutzerdaten sind strikt getrennt. Ohne explizite

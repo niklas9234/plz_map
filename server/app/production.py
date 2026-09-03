@@ -19,6 +19,7 @@ from wsgiref.simple_server import WSGIRequestHandler, make_server
 
 from .application import application as api_application
 from .database import connect, initialize, prepare_data_directories
+from .initial_seed import import_initial_seed
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
@@ -104,6 +105,7 @@ def run(open_browser: bool = False) -> int:
     connection = connect(database)
     try:
         initialize(connection)
+        import_initial_seed(connection)
     finally:
         connection.close()
 

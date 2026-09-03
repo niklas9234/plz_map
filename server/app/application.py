@@ -8,6 +8,7 @@ from http import HTTPStatus
 from urllib.parse import parse_qs
 
 from .database import connect, initialize
+from .initial_seed import import_initial_seed
 from .transfer import ImportValidationError, SCHEMA_VERSION, dumps, import_data
 
 
@@ -21,6 +22,7 @@ def application(environ, start_response):
     path, method = environ.get("PATH_INFO", ""), environ.get("REQUEST_METHOD", "GET")
     connection = connect()
     initialize(connection)
+    import_initial_seed(connection)
     try:
         if path == "/api/admin/export" and method == "GET":
             body = dumps(connection)
