@@ -16,16 +16,34 @@
 
   <section class="company-search" aria-labelledby="company-search-title">
     <div class="company-search__heading">
-      <h1 id="company-search-title">Unternehmen suchen</h1>
+      <div class="search-tabs" role="tablist" aria-label="Suchart auswählen">
+        <button id="company-search-tab" class="search-tabs__tab is-active" type="button" role="tab"
+          aria-selected="true" aria-controls="company-search-panel">Unternehmen suchen</button>
+        <button id="area-search-tab" class="search-tabs__tab" type="button" role="tab"
+          aria-selected="false" aria-controls="area-search-panel">Gebiete suchen</button>
+      </div>
       <button id="open-company-management" class="button button--secondary" type="button">Verwalten</button>
     </div>
-    <div class="company-search__controls" role="search">
-      <input id="company-search-input" type="text" autocomplete="off" autofocus
-        placeholder="Name oder PPS-Nummer" aria-label="Name oder PPS-Nummer"
-        aria-autocomplete="list" aria-controls="company-suggestions" aria-expanded="false">
-      <ul id="company-suggestions" class="company-search__suggestions" role="listbox" hidden></ul>
+    <h1 id="company-search-title" class="visually-hidden">Partnersuche</h1>
+    <div id="company-search-panel" role="tabpanel" aria-labelledby="company-search-tab">
+      <div class="company-search__controls" role="search">
+        <input id="company-search-input" type="text" autocomplete="off" autofocus
+          placeholder="Name oder PPS-Nummer" aria-label="Name oder PPS-Nummer"
+          aria-autocomplete="list" aria-controls="company-suggestions" aria-expanded="false">
+        <ul id="company-suggestions" class="company-search__suggestions" role="listbox" hidden></ul>
+      </div>
+      <div id="company-search-status" class="company-search__status" role="status" aria-live="polite"></div>
     </div>
-    <div id="company-search-status" class="company-search__status" role="status" aria-live="polite"></div>
+    <div id="area-search-panel" role="tabpanel" aria-labelledby="area-search-tab" hidden>
+      <div class="area-search__controls" role="search">
+        <label class="visually-hidden" for="area-postal-code">PLZ-Gebiet</label>
+        <input id="area-postal-code" type="text" inputmode="numeric" autocomplete="postal-code"
+          maxlength="2" placeholder="PLZ-Gebiet">
+        <label class="visually-hidden" for="area-trade">Gewerk</label>
+        <select id="area-trade"><option value="">Gewerk auswählen</option></select>
+      </div>
+      <div id="area-search-results" class="area-search__results" role="status" aria-live="polite"></div>
+    </div>
   </section>
 
   <div id="map"></div>
@@ -111,6 +129,7 @@
 <script src="company-store.js"></script>
 <script src="trade-store.js"></script>
 <script src="company-search.js"></script>
+<script src="area-search.js"></script>
 <script src="company-management.js"></script>
 <script src="map.js"></script>
 </body>
