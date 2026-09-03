@@ -40,13 +40,13 @@ function initializeCompanyManagement() {
         return companies.filter((company) => (!query ||
             normalizeSearchValue(company.name).includes(query) ||
             normalizeSearchValue(company.ppsNumber).includes(query)) &&
-            (!tradeFilter.value || company.trade === tradeFilter.value));
+            (!tradeFilter.value || company.tradeId === tradeFilter.value));
     }
 
     function populateTradeOptions() {
         const current = tradeFilter.value;
         tradeFilter.replaceChildren(new Option("Alle Gewerke", ""));
-        trades.filter((trade) => trade.active).forEach((trade) => tradeFilter.add(new Option(trade.name, trade.name)));
+        trades.filter((trade) => trade.status === "active").forEach((trade) => tradeFilter.add(new Option(trade.name, trade.id)));
         if ([...tradeFilter.options].some((option) => option.value === current)) tradeFilter.value = current;
     }
 
@@ -66,19 +66,19 @@ function initializeCompanyManagement() {
             row.tabIndex = 0;
             row.setAttribute("role", "button");
             row.setAttribute("aria-label", `${company.name} öffnen`);
-            row.classList.toggle("is-inactive", !company.active);
+            row.classList.toggle("is-inactive", company.status !== "active");
             const nameCell = row.insertCell();
             nameCell.className = "company-table__name-cell";
             const name = document.createElement("strong");
             name.textContent = company.name;
             nameCell.append(name);
-            if (!company.active) {
+            if (company.status !== "active") {
                 const status = document.createElement("span");
                 status.className = "status-badge";
                 status.textContent = "Inaktiv";
                 nameCell.append(" ", status);
             }
-            row.insertCell().append(createTradeBadge(company.trade));
+            row.insertCell().append(createTradeBadge(company.tradeId));
             row.insertCell().textContent = company.ppsNumber;
             const postalCodes = row.insertCell();
             postalCodes.className = "company-table__postal-codes";
@@ -108,7 +108,7 @@ function initializeCompanyManagement() {
         return JSON.stringify({
             name: detailView.querySelector("#detail-name").value,
             ppsNumber: detailView.querySelector("#detail-pps").value,
-            trade: detailView.querySelector("#detail-trade").value,
+            tradeId: detailView.querySelector("#detail-trade").value,
             territories: [...detailView.querySelectorAll(".postal-code-tile[data-role]:not(:disabled)")].map((tile) => ({
                 postalCode: tile.dataset.code,
                 role: tile.dataset.role
@@ -139,12 +139,12 @@ function initializeCompanyManagement() {
         dialog.close();
     }
 
-    function addInformationRow(information = { category: "Adresse", value: "" }) {
+    function addInformationRow(information = { category: "address", value: "" }) {
         const row = document.createElement("div");
         row.className = "information-row";
         const select = document.createElement("select");
         select.setAttribute("aria-label", "Informationskategorie");
-        ["Adresse", "Telefon", "Ansprechpartner", "Sonstiges"].forEach((category) => select.add(new Option(category, category)));
+        [["Adresse", "address"], ["Telefon", "phone"], ["Ansprechpartner", "contact"], ["Sonstiges", "other"]].forEach(([label, value]) => select.add(new Option(label, value)));
         select.value = information.category;
         const input = document.createElement("input");
         input.type = "text";
@@ -226,8 +226,8 @@ function initializeCompanyManagement() {
         detailView.querySelector(".company-detail__company-name").textContent = isNew ? "Neues Unternehmen" : company.name;
         detailView.querySelector("#detail-pps").value = company.ppsNumber;
         const tradeSelect = detailView.querySelector("#detail-trade");
-        trades.filter((trade) => trade.active || trade.name === company.trade).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
-        tradeSelect.value = company.trade;
+        trades.filter((trade) => trade.status === "active" || trade.id === company.tradeId).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.id)));
+        tradeSelect.value = company.tradeId;
         const grid = detailView.querySelector(".postal-code-grid");
         const internationalCodes = detailView.querySelector(".postal-code-international");
         const selectionStatus = detailView.querySelector(".postal-code-selection-status");
@@ -383,14 +383,14 @@ function initializeCompanyManagement() {
     }
 
     function openNewCompany() {
-        const firstActiveTrade = trades.find((trade) => trade.active)?.name || "";
+        const firstActiveTrade = trades.find((trade) => trade.status === "active")?.id || "";
         openCompany({
             name: "",
             ppsNumber: "",
-            trade: firstActiveTrade,
+            tradeId: firstActiveTrade,
             territories: [],
             information: [],
-            active: true
+            status: "active"
         }, true);
         // Beim Anlegen muss die primäre Aktion von Anfang an sichtbar sein.
         detailView.querySelector(".detail-actions").hidden = false;
@@ -531,20 +531,20 @@ function initializeTradeManagement() {
         list.replaceChildren();
         trades.forEach((trade) => {
             const item = document.createElement("li");
-            item.classList.toggle("is-inactive", !trade.active);
+            item.classList.toggle("is-inactive", trade.status !== "active");
             const name = document.createElement("strong");
             name.textContent = trade.name;
             const colors = createColorPicker(trade.color, trade.name);
             colors.addEventListener("colorchange", async (event) => {
-                await tradeStore.setColor(trade.name, event.detail.color);
+                await tradeStore.setColor(trade.id, event.detail.color);
                 await render();
             });
             const activeLabel = document.createElement("label");
             activeLabel.className = "trade-active";
             const active = document.createElement("input");
             active.type = "checkbox";
-            active.checked = trade.active;
-            active.addEventListener("change", () => tradeStore.setActive(trade.name, active.checked));
+            active.checked = trade.status === "active";
+            active.addEventListener("change", () => tradeStore.setActive(trade.id, active.checked));
             activeLabel.append(active, " Aktiv");
             const remove = document.createElement("button");
             remove.type = "button";
@@ -553,7 +553,7 @@ function initializeTradeManagement() {
             remove.setAttribute("aria-label", `${trade.name} löschen`);
             remove.addEventListener("click", async () => {
                 if (!window.confirm(`Gewerk „${trade.name}“ wirklich löschen?`)) return;
-                await tradeStore.remove(trade.name);
+                await tradeStore.remove(trade.id);
                 await render();
             });
             const actions = document.createElement("div");
