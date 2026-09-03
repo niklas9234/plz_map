@@ -4,11 +4,40 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import sys
 from pathlib import Path
 
 
+APPLICATION_NAME = "PLZ-Karte"
+
+
+def data_directory() -> Path:
+    """Return a writable, update-safe directory for all mutable application data."""
+    override = os.environ.get("PLZ_MAP_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    if sys.platform == "win32":
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return base / APPLICATION_NAME
+
+
+def prepare_data_directories() -> dict[str, Path]:
+    root = data_directory()
+    paths = {"root": root, "backups": root / "backups", "logs": root / "logs"}
+    for path in paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+    return paths
+
+
 def connect(path: str | Path | None = None) -> sqlite3.Connection:
-    database = str(path or os.environ.get("PLZ_MAP_DATABASE", "server/plz_map.sqlite3"))
+    database_path = Path(path or os.environ.get("PLZ_MAP_DATABASE", data_directory() / "plz_map.sqlite3"))
+    if str(database_path) != ":memory:":
+        database_path.parent.mkdir(parents=True, exist_ok=True)
+    database = str(database_path)
     connection = sqlite3.connect(database)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
