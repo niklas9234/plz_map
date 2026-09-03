@@ -41,6 +41,41 @@ keine Framework- oder Datenbankentscheidung.
 Die PMTiles-Datei wird nicht in Git aufgenommen. Weitere Karteneinstellungen
 sind in `CONFIGURATION.md` beschrieben.
 
+## Windows-Installation (ohne Docker und Python)
+
+Das konkrete Paketierungsziel ist **Windows 10/11 (64 Bit)**. Das Setup enthält
+den Python-Interpreter, das Backend und das Frontend; auf dem Zielrechner werden
+weder Docker noch eine Python-Installation benötigt.
+
+1. `PLZ-Karte-1.0.0-Setup.exe` ausführen und den Installationsdialog abschließen.
+2. Über **PLZ-Karte starten** im Startmenü starten. Diese Verknüpfung öffnet den
+   Standardbrowser. Die optionale Desktop-Verknüpfung tut dasselbe.
+3. Vor Abmeldung, Neustart oder Update **PLZ-Karte beenden** im Startmenü wählen.
+   Dadurch werden laufende Datenbankoperationen kontrolliert abgeschlossen. Es
+   ist keine Eingabeaufforderung erforderlich.
+
+Ein Update wird durch Ausführen des neueren Setups in dasselbe Verzeichnis
+installiert. Vorher ist die Anwendung über **PLZ-Karte beenden** zu schließen.
+Das Setup ersetzt ausschließlich unveränderliche Programmdateien unter
+`%LOCALAPPDATA%\Programs\PLZ-Karte`; Datenbank, Backups und Logs bleiben separat
+unter `%LOCALAPPDATA%\PLZ-Karte` erhalten.
+
+Zur Deinstallation in den Windows-Einstellungen **Apps > Installierte Apps >
+PLZ-Karte > Deinstallieren** wählen. Der Deinstaller beendet zunächst den
+Server und entfernt nur die Programmdateien. Benutzerdaten bleiben absichtlich
+unter `%LOCALAPPDATA%\PLZ-Karte` erhalten und können für eine Neuinstallation
+übernommen werden. Sollen sie endgültig entfernt werden, kann dieser Ordner
+anschließend im Explorer gelöscht werden.
+
+### Windows-Paket erstellen
+
+Auf einem Windows-Buildrechner werden Python 3.12, PowerShell und Inno Setup 6
+benötigt. `packaging\windows\build.ps1` installiert die festgelegte
+PyInstaller-Version, erzeugt die eigenständige Anwendung und anschließend das
+Setup in `dist-installer\`. Vor dem Build muss die nicht versionierte
+PMTiles-Datei in `src\app\data\pmtiles\` liegen, wenn sie Teil des Installers
+sein soll.
+
 ## Fachliche Spezifikation
 
 Das verbindliche [Datenmodell](docs/data-model.md) beschreibt Unternehmen,
