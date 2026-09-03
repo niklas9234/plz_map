@@ -31,7 +31,9 @@ const companyStore = (() => {
             : (company.postalCodes || []).map((postalCode) => ({ postalCode, role: "primary" }));
         const normalizedTerritories = [...new Map(territories.map((territory) => {
             const postalCode = String(territory.postalCode);
-            if (!/^\d{2}$/.test(postalCode)) throw new Error(`Ungültiges PLZ-Gebiet: ${postalCode}`);
+            if (!/^\d{2}$/.test(postalCode) && postalCode !== "LUX") {
+                throw new Error(`Ungültiges PLZ-Gebiet: ${postalCode}`);
+            }
             if (!["primary", "alternative"].includes(territory.role)) throw new Error(`Ungültige Gebietsrolle: ${territory.role}`);
             return [postalCode, { postalCode, role: territory.role }];
         })).values()].sort((a, b) => a.postalCode.localeCompare(b.postalCode));
