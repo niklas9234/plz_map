@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import re
-import sqlite3
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 from uuid import UUID
+
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
 
 FORMAT = "plz-map-data-export"
 SCHEMA_VERSION = 1
@@ -52,24 +54,26 @@ def _uuid(value: Any, path: str, errors: list[str]) -> None:
         errors.append(f"{path}: muss eine UUID sein")
 
 
-def export_data(connection: sqlite3.Connection) -> dict[str, Any]:
+def export_data(connection: Connection) -> dict[str, Any]:
     """Read one consistent snapshot and retain every domain field verbatim."""
-    started_snapshot = not connection.in_transaction
+    started_snapshot = not connection.in_transaction()
     if started_snapshot:
-        connection.execute("BEGIN")
+        connection.begin()
     trades = [
         {"id": row["id"], "name": row["name"], "status": row["status"],
          "color": row["color"], "createdAt": row["created_at"], "updatedAt": row["updated_at"]}
-        for row in connection.execute("SELECT * FROM trades ORDER BY id")
+        for row in connection.execute(text("SELECT * FROM trades ORDER BY id")).mappings()
     ]
     companies = []
-    for row in connection.execute("SELECT * FROM companies ORDER BY id"):
-        territories = [dict(item) for item in connection.execute(
-            "SELECT postal_code AS postalCode, role FROM territories WHERE company_id=? ORDER BY postal_code", (row["id"],)
-        )]
-        information = [dict(item) for item in connection.execute(
-            "SELECT category, value FROM company_information WHERE company_id=? ORDER BY position", (row["id"],)
-        )]
+    for row in connection.execute(text("SELECT * FROM companies ORDER BY id")).mappings():
+        territories = [dict(item) for item in connection.execute(text(
+            "SELECT postal_code AS \"postalCode\", role FROM territories "
+            "WHERE company_id=:company_id ORDER BY postal_code"
+        ), {"company_id": row["id"]}).mappings()]
+        information = [dict(item) for item in connection.execute(text(
+            "SELECT category, value FROM company_information "
+            "WHERE company_id=:company_id ORDER BY position"
+        ), {"company_id": row["id"]}).mappings()]
         companies.append({
             "id": row["id"], "name": row["name"], "ppsNumber": row["pps_number"],
             "tradeId": row["trade_id"], "territories": territories,
@@ -138,8 +142,8 @@ def validate_import(document: Any) -> dict[str, Any]:
             value = company.get(field)
             if not isinstance(value, str) or not value.strip() or value != value.strip(): errors.append(f"{path}.{field}: ungültig")
         pps = company.get("ppsNumber")
-        if isinstance(pps, str) and pps.casefold() in pps_numbers: errors.append(f"{path}.ppsNumber: nicht eindeutig")
-        elif isinstance(pps, str): pps_numbers.add(pps.casefold())
+        if isinstance(pps, str) and pps in pps_numbers: errors.append(f"{path}.ppsNumber: nicht eindeutig")
+        elif isinstance(pps, str): pps_numbers.add(pps)
         if company.get("status") not in STATUS: errors.append(f"{path}.status: ungültiger Status")
         territories = company.get("territories")
         if not isinstance(territories, list) or not territories: errors.append(f"{path}.territories: mindestens eine Zuordnung erforderlich"); territories = []
@@ -158,40 +162,53 @@ def validate_import(document: Any) -> dict[str, Any]:
         information = company.get("information")
         if not isinstance(information, list): errors.append(f"{path}.information: muss eine Liste sein"); information = []
         for pos, item in enumerate(information):
-            if not isinstance(item, dict) or set(item) != {"category", "value"} or not all(isinstance(item.get(k), str) for k in ("category", "value")):
-                errors.append(f"{path}.information[{pos}]: Kategorie und Wert müssen Strings sein")
+            if (not isinstance(item, dict) or set(item) != {"category", "value"}
+                    or item.get("category") not in {"address", "phone", "contact", "other"}
+                    or not isinstance(item.get("value"), str) or not item["value"].strip()
+                    or item["value"] != item["value"].strip()):
+                errors.append(f"{path}.information[{pos}]: ungültige Kategorie oder ungültiger Wert")
         _timestamp(company.get("createdAt"), f"{path}.createdAt", errors); _timestamp(company.get("updatedAt"), f"{path}.updatedAt", errors)
     if errors: raise ImportValidationError(errors)
     return document
 
 
-def import_data(connection: sqlite3.Connection, document: Any, mode: str = "empty") -> dict[str, int | bool]:
+def import_data(connection: Connection, document: Any, mode: str = "empty") -> dict[str, int | bool]:
     if mode not in {"empty", "validate"}:
         raise ImportValidationError(["mode: erlaubt sind 'empty' und 'validate'"])
     data = validate_import(document)
     counts = {"trades": len(data["trades"]), "companies": len(data["companies"])}
     if mode == "validate": return {**counts, "written": False}
     try:
-        connection.execute("BEGIN IMMEDIATE")
-        if any(connection.execute(f"SELECT EXISTS(SELECT 1 FROM {table})").fetchone()[0] for table in ("trades", "companies")):
+        if connection.in_transaction():
+            connection.commit()
+        transaction = connection.begin()
+        if any(connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table})")).scalar() for table in ("trades", "companies")):
             raise ImportValidationError(["Die Zieldatenbank ist nicht leer."])
-        write_validated_data(connection, data)
-        connection.commit()
+        for trade in data["trades"]:
+            connection.execute(text("INSERT INTO trades (id, name, status, color, created_at, updated_at) VALUES (:id, :name, :status, :color, :created_at, :updated_at)"), {
+                "id": trade["id"], "name": trade["name"],
+                "status": trade["status"], "color": trade["color"], "created_at": trade["createdAt"], "updated_at": trade["updatedAt"],
+            })
+        for company in data["companies"]:
+            connection.execute(text("INSERT INTO companies (id, name, pps_number, trade_id, status, created_at, updated_at) VALUES (:id, :name, :pps_number, :trade_id, :status, :created_at, :updated_at)"), {
+                "id": company["id"], "name": company["name"], "pps_number": company["ppsNumber"], "trade_id": company["tradeId"],
+                "status": company["status"], "created_at": company["createdAt"], "updated_at": company["updatedAt"],
+            })
+            connection.execute(text("INSERT INTO territories (company_id, postal_code, trade_id, role) VALUES (:company_id, :postal_code, :trade_id, :role)"), [
+                {"company_id": company["id"], "postal_code": item["postalCode"], "trade_id": company["tradeId"], "role": item["role"]}
+                for item in company["territories"]
+            ])
+            if company["information"]:
+                connection.execute(text("INSERT INTO company_information (company_id, position, category, value) VALUES (:company_id, :position, :category, :value)"), [
+                    {"company_id": company["id"], "position": pos, "category": item["category"], "value": item["value"]}
+                    for pos, item in enumerate(company["information"])
+                ])
+        transaction.commit()
     except Exception:
         connection.rollback()
         raise
     return {**counts, "written": True}
 
 
-def write_validated_data(connection: sqlite3.Connection, data: dict[str, Any]) -> None:
-    """Write validated records without controlling the caller's transaction."""
-    for trade in data["trades"]:
-        connection.execute("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?)", (trade["id"], trade["name"], trade["status"], trade["color"], trade["createdAt"], trade["updatedAt"]))
-    for company in data["companies"]:
-        connection.execute("INSERT INTO companies VALUES (?, ?, ?, ?, ?, ?, ?)", (company["id"], company["name"], company["ppsNumber"], company["tradeId"], company["status"], company["createdAt"], company["updatedAt"]))
-        connection.executemany("INSERT INTO territories VALUES (?, ?, ?)", ((company["id"], item["postalCode"], item["role"]) for item in company["territories"]))
-        connection.executemany("INSERT INTO company_information VALUES (?, ?, ?, ?)", ((company["id"], pos, item["category"], item["value"]) for pos, item in enumerate(company["information"])))
-
-
-def dumps(connection: sqlite3.Connection) -> bytes:
+def dumps(connection: Connection) -> bytes:
     return json.dumps(export_data(connection), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"

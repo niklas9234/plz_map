@@ -7,8 +7,7 @@ from datetime import date
 from http import HTTPStatus
 from urllib.parse import parse_qs
 
-from .database import connect, initialize
-from .initial_seed import import_initial_seed
+from .database import create_database_engine, initialize
 from .transfer import ImportValidationError, SCHEMA_VERSION, dumps, import_data
 
 
@@ -18,30 +17,44 @@ def _json(start_response, status: HTTPStatus, payload: object):
     return [body]
 
 
+def create_application(engine=None):
+    """Build an API app; injecting an engine lets every backend share tests."""
+    configured_engine = engine or create_database_engine()
+    initialize(configured_engine)
+
+    def app(environ, start_response):
+        path, method = environ.get("PATH_INFO", ""), environ.get("REQUEST_METHOD", "GET")
+        connection = configured_engine.connect()
+        try:
+            if path == "/api/admin/export" and method == "GET":
+                body = dumps(connection)
+                filename = f"plz-map-export-{date.today().isoformat()}-schema-v{SCHEMA_VERSION}.json"
+                start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"),
+                                          ("Content-Disposition", f'attachment; filename="{filename}"'),
+                                          ("Content-Length", str(len(body)))])
+                return [body]
+            if path == "/api/admin/import" and method == "POST":
+                try:
+                    length = int(environ.get("CONTENT_LENGTH") or 0)
+                    document = json.loads(environ["wsgi.input"].read(length))
+                    mode = parse_qs(environ.get("QUERY_STRING", "")).get("mode", ["empty"])[0]
+                    return _json(start_response, HTTPStatus.OK, import_data(connection, document, mode))
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    return _json(start_response, HTTPStatus.BAD_REQUEST, {"code": "invalid_json", "message": "Ungültiges JSON."})
+                except ImportValidationError as error:
+                    return _json(start_response, HTTPStatus.UNPROCESSABLE_ENTITY,
+                                 {"code": "invalid_import", "message": "Import wurde abgelehnt.", "fields": error.errors})
+            return _json(start_response, HTTPStatus.NOT_FOUND, {"code": "not_found", "message": "Endpunkt nicht gefunden."})
+        finally:
+            connection.close()
+    return app
+
+
+_default_application = None
+
+
 def application(environ, start_response):
-    path, method = environ.get("PATH_INFO", ""), environ.get("REQUEST_METHOD", "GET")
-    connection = connect()
-    initialize(connection)
-    import_initial_seed(connection)
-    try:
-        if path == "/api/admin/export" and method == "GET":
-            body = dumps(connection)
-            filename = f"plz-map-export-{date.today().isoformat()}-schema-v{SCHEMA_VERSION}.json"
-            start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"),
-                                      ("Content-Disposition", f'attachment; filename="{filename}"'),
-                                      ("Content-Length", str(len(body)))])
-            return [body]
-        if path == "/api/admin/import" and method == "POST":
-            try:
-                length = int(environ.get("CONTENT_LENGTH") or 0)
-                document = json.loads(environ["wsgi.input"].read(length))
-                mode = parse_qs(environ.get("QUERY_STRING", "")).get("mode", ["empty"])[0]
-                return _json(start_response, HTTPStatus.OK, import_data(connection, document, mode))
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                return _json(start_response, HTTPStatus.BAD_REQUEST, {"code": "invalid_json", "message": "Ungültiges JSON."})
-            except ImportValidationError as error:
-                return _json(start_response, HTTPStatus.UNPROCESSABLE_ENTITY,
-                             {"code": "invalid_import", "message": "Import wurde abgelehnt.", "fields": error.errors})
-        return _json(start_response, HTTPStatus.NOT_FOUND, {"code": "not_found", "message": "Endpunkt nicht gefunden."})
-    finally:
-        connection.close()
+    global _default_application
+    if _default_application is None:
+        _default_application = create_application()
+    return _default_application(environ, start_response)
