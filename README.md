@@ -47,3 +47,7 @@ Das verbindliche [Datenmodell](docs/data-model.md) beschreibt Unternehmen,
 zweistellige PLZ-Gebiete, erweiterbare Gewerke und den Lebenszyklus von
 Datensätzen. Der darauf aufbauende [API-Vertrag](docs/api.md) dient als Grundlage
 für die noch ausstehende Backend- und Datenbankimplementierung.
+
+Das [Exportformat](docs/export-format.md) und die getrennte
+[SQLite-zu-PostgreSQL-Anleitung](docs/sqlite-to-postgresql.md) beschreiben die
+portable Datensicherung und den Systemumzug.
