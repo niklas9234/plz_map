@@ -55,9 +55,8 @@ einen Check Constraint auf die vier Werte.
   Unique Constraint. Der Import und die API prüfen dies zusätzlich, der
   Constraint bleibt aber die letzte Instanz bei parallelen Anfragen.
 - Äußere Leerzeichen in Name und PPS-Nummer werden entfernt.
-- Deutsche PLZ-Gebiete müssen dem regulären Ausdruck `^\d{2}$` entsprechen;
-  `LUX` ist die Sonderkennung für Luxemburg. `08`, `82` und `LUX` sind deshalb
-  gültig, `8`, `082` und numerische Werte dagegen nicht.
+- PLZ-Werte müssen dem regulären Ausdruck `^\d{2}$` entsprechen. `08` und `82`
+  sind deshalb gültig, `8`, `082` und numerische Werte dagegen nicht.
 - Doppelte PLZ-Werte werden abgelehnt oder vor dem Speichern eindeutig
   normalisiert; die gewählte Importstrategie muss das Ergebnis protokollieren.
 
