@@ -25,17 +25,55 @@ body {
   font: 14px/1.4 system-ui, sans-serif;
 }
 
-.company-search h1 {
-  margin: 0;
-  font-size: 19px;
-}
-
 .company-search__heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.search-tabs {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+}
+
+.search-tabs__tab {
+  padding: 8px 10px;
+  border: 1px solid #aab8ae;
+  border-radius: 7px;
+  color: #24452f;
+  background: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.search-tabs__tab:hover,
+.search-tabs__tab:focus-visible {
+  background: #edf5ef;
+}
+
+.search-tabs__tab.is-active {
+  border-color: #146b37;
+  background: #146b37;
+  color: #fff;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[role="tabpanel"][hidden] {
+  display: none;
 }
 
 .company-search__controls {
@@ -49,6 +87,75 @@ body {
   border: 1px solid #777;
   border-radius: 5px;
   font: inherit;
+}
+
+.area-search__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.area-search__controls select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #777;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.area-search__results {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.area-search__results:empty {
+  display: none;
+}
+
+.area-search__group h2 {
+  margin: 0 0 7px;
+  color: #526158;
+  font-size: 13px;
+}
+
+.area-search__partner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  padding: 10px 12px;
+  border: 1px solid #c7d5cb;
+  border-radius: 7px;
+  background: #f8faf8;
+}
+
+.area-search__partner span {
+  flex: 0 0 auto;
+  color: #526158;
+}
+
+.area-search__empty {
+  margin: 0;
+  color: #68786d;
+  font-size: 13px;
+}
+
+@media (max-width: 480px) {
+  .company-search__heading {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .search-tabs {
+    flex: 1 1 100%;
+  }
+
+  .search-tabs__tab {
+    flex: 1;
+  }
 }
 
 .company-search__suggestions {

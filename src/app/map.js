@@ -27,7 +27,9 @@ map.on("load", async () => {
     addBaseMapLayers(map);
     const germanyPostalCodes = await addGermanyPlzLayers(map);
     const luxembourgPostalCodes = await addLuxembourgLayers(map);
-    initializeCompanySearch(map, [germanyPostalCodes, luxembourgPostalCodes]);
+    const postalCodeData = [germanyPostalCodes, luxembourgPostalCodes];
+    initializeCompanySearch(map, postalCodeData);
+    initializeAreaSearch(map, postalCodeData);
 });
 
 map.on("zoom", () => {
