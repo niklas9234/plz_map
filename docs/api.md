@@ -24,16 +24,24 @@ Beispiel einer Antwort:
   "name": "Beispiel GmbH",
   "ppsNumber": "PPS-1001",
   "tradeId": "9603b68f-f93e-433f-91cb-a8a76194452d",
-  "trade": "Elektro",
   "territories": [
     { "postalCode": "08", "role": "primary" },
     { "postalCode": "82", "role": "alternative" }
+  ],
+  "information": [
+    { "category": "phone", "value": "+49 30 123456" }
   ],
   "status": "active",
   "createdAt": "2026-09-01T10:00:00Z",
   "updatedAt": "2026-09-01T10:00:00Z"
 }
 ```
+
+Schreiboperationen akzeptieren ausschließlich `tradeId`, nie einen Gewerkname
+in `trade`. `information` folgt der Kategorienliste und Validierung aus dem
+Datenmodell. `id`, `createdAt` und `updatedAt` werden bei regulären POST- und
+PATCH-Aufrufen serverseitig verwaltet und dürfen vom Client nicht überschrieben
+werden. Eine PATCH-Antwort enthält stets die vollständige aktuelle Ressource.
 
 ## Gewerke
 
@@ -45,6 +53,41 @@ Beispiel einer Antwort:
 | `POST /api/trades/{id}/deactivate` | Gewerk deaktivieren. |
 | `POST /api/trades/{id}/activate` | Gewerk reaktivieren. |
 | `DELETE /api/trades/{id}` | Nur ein unbenutztes Gewerk endgültig löschen. |
+
+Eine Gewerkantwort enthält `id`, `name`, `color`, `status`, `createdAt` und
+`updatedAt`. Auch hier wird kein boolesches Feld `active` ausgegeben.
+
+## Portabler Import und Export
+
+| Methode und Pfad | Verhalten |
+| --- | --- |
+| `GET /api/export` | Liefert einen vollständigen, konsistenten Snapshot im Format `plz-map-v2`. |
+| `POST /api/import` | Validiert und importiert einen vollständigen Snapshot atomar; nur für Administratoren. |
+
+```json
+{
+  "schemaVersion": 2,
+  "exportedAt": "2026-09-03T12:00:00.000Z",
+  "trades": [
+    {
+      "id": "9603b68f-f93e-433f-91cb-a8a76194452d",
+      "name": "Elektro",
+      "color": "#72b788",
+      "status": "active",
+      "createdAt": "2026-09-01T10:00:00.000Z",
+      "updatedAt": "2026-09-01T10:00:00.000Z"
+    }
+  ],
+  "companies": []
+}
+```
+
+`exportedAt` ist Metadatum des Exports und beim Seed optional; die Datensätze
+sind in beiden Fällen identisch. Der Import akzeptiert exakt `schemaVersion: 2`,
+prüft vor dem Schreiben sämtliche UUIDs, Zeitpunkte, Enums, Fremdschlüssel und
+Eindeutigkeitsregeln und schreibt entweder alles oder nichts. Unbekannte Felder
+werden abgelehnt. Der lokale Export `companyStore.exportData()` erzeugt genau
+diese Hülle und enthält keine abgeleiteten Anzeigenamen.
 
 ## Fehler und Nebenläufigkeit
 

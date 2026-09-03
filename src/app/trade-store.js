@@ -1,7 +1,7 @@
-const TRADE_API_URL = "/api/trades";
+const TRADE_DATA_URL = "./companies.json";
+const TRADE_STORAGE_KEY = "plz-map.trades.v2";
 const LEGACY_TRADE_STORAGE_KEY = "plz-map.trades.v1";
 
-// Gut unterscheidbare, etwas entsättigte Farben für Karte und Farbwähler.
 const TRADE_COLORS = [
     "#72b788", "#63b5ad", "#68a9c7", "#7898ca", "#938bc5",
     "#a85fa8", "#c45c83", "#d06a62", "#d1844f", "#c39a3d",
@@ -11,124 +11,107 @@ const TRADE_COLORS = [
 
 const tradeStore = (() => {
     let trades;
-
-    function clone(value) {
-        return JSON.parse(JSON.stringify(value));
-    }
+    const clone = (value) => JSON.parse(JSON.stringify(value));
+    const now = () => new Date().toISOString();
+    const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value || "");
 
     function normalizeTrade(trade) {
+        const timestamp = now();
+        const name = String(trade.name || "").trim();
+        if (!name) throw new Error("Der Gewerkname darf nicht leer sein.");
         return {
-            id: trade.id == null ? "" : String(trade.id),
-            name: String(trade.name || "").trim(),
-            active: trade.active !== undefined ? trade.active !== false : trade.status !== "inactive",
-            color: trade.color || "#d7ded9"
+            id: isUuid(trade.id) ? trade.id : crypto.randomUUID(),
+            name,
+            color: trade.color,
+            status: trade.status === "inactive" || trade.active === false ? "inactive" : "active",
+            createdAt: trade.createdAt || timestamp,
+            updatedAt: trade.updatedAt || timestamp
         };
     }
 
-    function errorMessage(status, details) {
-        const suffix = details?.message ? ` ${details.message}` : "";
-        if (status === 400 || status === 422) return `Die Gewerkdaten sind ungültig.${suffix}`;
-        if (status === 409) return `Konflikt bei den Gewerkdaten.${suffix}`;
-        if (status === 404) return `Das Gewerk wurde nicht gefunden.${suffix}`;
-        return `Das Backend konnte die Gewerk-Anfrage nicht verarbeiten (${status}).${suffix}`;
-    }
-
-    async function request(path = "", options = {}) {
-        let response;
-        try {
-            response = await fetch(`${TRADE_API_URL}${path}`, {
-                ...options,
-                headers: { "Content-Type": "application/json", Accept: "application/json", ...options.headers }
-            });
-        } catch (_) {
-            throw new Error("Das Backend ist nicht erreichbar. Bitte prüfen Sie die Verbindung und versuchen Sie es erneut.");
-        }
-        let body = null;
-        if (response.status !== 204) {
-            try { body = await response.json(); } catch (_) { /* Eine Fehlerantwort darf leer sein. */ }
-        }
-        if (!response.ok) throw new Error(errorMessage(response.status, body));
-        return body;
+    function assignColors(items) {
+        const assigned = new Set();
+        items.forEach((trade) => {
+            if (!TRADE_COLORS.includes(trade.color) || assigned.has(trade.color)) {
+                trade.color = TRADE_COLORS.find((color) => !assigned.has(color));
+            }
+            if (trade.color) assigned.add(trade.color);
+        });
     }
 
     async function initialize() {
         if (trades) return;
-        const result = await request();
-        const items = Array.isArray(result) ? result : result?.items;
-        if (!Array.isArray(items)) throw new Error("Das Backend hat ungültige Gewerkdaten geliefert.");
-        trades = items.map(normalizeTrade);
-        // Kontrollierter Abschluss der Übergangsphase: erst nach erfolgreichem GET,
-        // niemals als Fallback oder dauerhafte Datenquelle.
-        try { localStorage.removeItem(LEGACY_TRADE_STORAGE_KEY); } catch (_) { /* Storage kann gesperrt sein. */ }
+        const stored = localStorage.getItem(TRADE_STORAGE_KEY);
+        const legacy = localStorage.getItem(LEGACY_TRADE_STORAGE_KEY);
+        if (stored || legacy) {
+            trades = JSON.parse(stored || legacy).map(normalizeTrade);
+            assignColors(trades);
+            if (!stored) persist(false);
+            return;
+        }
+        const response = await fetch(TRADE_DATA_URL);
+        if (!response.ok) throw new Error(`Gewerkedaten konnten nicht geladen werden (${response.status}).`);
+        const seed = await response.json();
+        if (seed.schemaVersion !== 2 || !Array.isArray(seed.trades)) throw new Error("Das Seed-Format wird nicht unterstützt.");
+        trades = seed.trades.map(normalizeTrade);
+        assignColors(trades);
     }
 
-    function changed() {
-        window.dispatchEvent(new CustomEvent("trades:changed"));
+    function persist(notify = true) {
+        localStorage.setItem(TRADE_STORAGE_KEY, JSON.stringify(trades));
+        if (notify) window.dispatchEvent(new CustomEvent("trades:changed"));
     }
 
-    function findByName(name) {
-        const trade = trades.find((item) => item.name === name);
-        if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
-        return trade;
-    }
+    async function list() { await initialize(); return clone(trades); }
 
-    async function list() {
-        await initialize();
-        return clone(trades);
+    function availableColor(color, currentId = "") {
+        const used = new Set(trades.filter((trade) => trade.id !== currentId).map((trade) => trade.color));
+        const selected = TRADE_COLORS.includes(color) && !used.has(color) ? color : TRADE_COLORS.find((item) => !used.has(item));
+        if (!selected) throw new Error("Alle 20 Gewerkfarben sind bereits vergeben.");
+        return selected;
     }
 
     async function add(name, color) {
         await initialize();
-        const response = await request("", {
-            method: "POST",
-            body: JSON.stringify({ name: name.trim(), color })
-        });
-        if (!response) throw new Error("Das Backend hat das gespeicherte Gewerk nicht zurückgegeben.");
-        const created = normalizeTrade(response);
-        trades.push(created);
+        const normalizedName = name.trim();
+        if (!normalizedName) throw new Error("Bitte einen Namen für das Gewerk eingeben.");
+        if (trades.some((trade) => trade.name.localeCompare(normalizedName, "de", { sensitivity: "base" }) === 0)) {
+            throw new Error("Dieses Gewerk ist bereits vorhanden.");
+        }
+        trades.push(normalizeTrade({ name: normalizedName, color: availableColor(color), status: "active" }));
         trades.sort((left, right) => left.name.localeCompare(right.name, "de"));
         changed();
         return clone(created);
     }
 
-    async function patch(name, payload) {
-        const current = findByName(name);
-        const response = await request(`/${encodeURIComponent(current.id)}`, {
-            method: "PATCH",
-            body: JSON.stringify(payload)
-        });
-        const updated = normalizeTrade(response || { ...current, ...payload });
-        trades[trades.indexOf(current)] = updated;
-        changed();
-        return clone(updated);
+    async function setColor(id, color) {
+        await initialize();
+        const trade = trades.find((item) => item.id === id);
+        if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
+        trade.color = availableColor(color, id);
+        trade.updatedAt = now();
+        persist();
     }
 
-    async function setColor(name, color) {
+    async function remove(id) {
         await initialize();
-        return patch(name, { color });
+        const index = trades.findIndex((item) => item.id === id);
+        if (index === -1) throw new Error("Das Gewerk wurde nicht gefunden.");
+        const companies = await companyStore.list();
+        if (companies.some((company) => company.tradeId === id)) throw new Error("Ein verwendetes Gewerk kann nicht gelöscht werden.");
+        trades.splice(index, 1);
+        persist();
     }
 
-    async function remove(name) {
-        await initialize();
-        const trade = findByName(name);
-        await request(`/${encodeURIComponent(trade.id)}`, { method: "DELETE" });
-        trades = trades.filter((item) => item.id !== trade.id);
-        changed();
-    }
+    async function colorFor(id) { await initialize(); return trades.find((trade) => trade.id === id)?.color || "#d7ded9"; }
 
-    async function colorFor(name) {
+    async function setActive(id, active) {
         await initialize();
-        return trades.find((trade) => trade.name === name)?.color || "#d7ded9";
-    }
-
-    async function setActive(name, active) {
-        await initialize();
-        const current = findByName(name);
-        const response = await request(`/${encodeURIComponent(current.id)}/${active ? "activate" : "deactivate"}`, { method: "POST" });
-        const updated = normalizeTrade(response || { ...current, active });
-        trades[trades.indexOf(current)] = updated;
-        changed();
-        return clone(updated);
+        const trade = trades.find((item) => item.id === id);
+        if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
+        trade.status = active ? "active" : "inactive";
+        trade.updatedAt = now();
+        persist();
     }
 
     return { list, add, remove, setActive, setColor, colorFor, colors: TRADE_COLORS };

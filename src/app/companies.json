@@ -1,199 +1,266 @@
-[
-  {
-    "name": "Nordlicht Logistik GmbH",
-    "ppsNumber": "PPS-1001",
-    "trade": "Fliesenleger",
-    "information": [
-      {
-        "category": "Adresse",
-        "value": "Hafenstraße 12, 20457 Hamburg"
-      },
-      {
-        "category": "Telefon",
-        "value": "+49 40 123456-0"
-      },
-      {
-        "category": "Ansprechpartner",
-        "value": "Mara Hansen"
-      }
-    ],
-    "territories": [
-      {
-        "postalCode": "20",
-        "role": "primary"
-      },
-      {
-        "postalCode": "21",
-        "role": "primary"
-      },
-      {
-        "postalCode": "22",
-        "role": "primary"
-      },
-      {
-        "postalCode": "23",
-        "role": "primary"
-      },
-      {
-        "postalCode": "24",
-        "role": "primary"
-      },
-      {
-        "postalCode": "25",
-        "role": "primary"
-      }
-    ]
-  },
-  {
-    "name": "Rheinland Versorgung AG",
-    "ppsNumber": "PPS-1002",
-    "trade": "Estrich",
-    "information": [
-      {
-        "category": "Adresse",
-        "value": "Rheinallee 8, 40213 Düsseldorf"
-      },
-      {
-        "category": "Sonstiges",
-        "value": "Anlieferung werktags von 7 bis 16 Uhr"
-      }
-    ],
-    "territories": [
-      {
-        "postalCode": "40",
-        "role": "primary"
-      },
-      {
-        "postalCode": "41",
-        "role": "primary"
-      },
-      {
-        "postalCode": "42",
-        "role": "primary"
-      },
-      {
-        "postalCode": "45",
-        "role": "primary"
-      },
-      {
-        "postalCode": "46",
-        "role": "primary"
-      },
-      {
-        "postalCode": "47",
-        "role": "primary"
-      },
-      {
-        "postalCode": "50",
-        "role": "primary"
-      },
-      {
-        "postalCode": "51",
-        "role": "primary"
-      }
-    ]
-  },
-  {
-    "name": "Mainland Service KG",
-    "ppsNumber": "PPS-1003",
-    "trade": "Maler",
-    "information": [
-      {
-        "category": "Telefon",
-        "value": "+49 69 987654-0"
-      }
-    ],
-    "territories": [
-      {
-        "postalCode": "60",
-        "role": "primary"
-      },
-      {
-        "postalCode": "61",
-        "role": "primary"
-      },
-      {
-        "postalCode": "63",
-        "role": "primary"
-      },
-      {
-        "postalCode": "64",
-        "role": "primary"
-      },
-      {
-        "postalCode": "65",
-        "role": "primary"
-      }
-    ]
-  },
-  {
-    "name": "Südwest Partner GmbH",
-    "ppsNumber": "PPS-1004",
-    "trade": "Trockenbau",
-    "territories": [
-      {
-        "postalCode": "66",
-        "role": "primary"
-      },
-      {
-        "postalCode": "67",
-        "role": "primary"
-      },
-      {
-        "postalCode": "68",
-        "role": "primary"
-      },
-      {
-        "postalCode": "69",
-        "role": "primary"
-      },
-      {
-        "postalCode": "70",
-        "role": "primary"
-      },
-      {
-        "postalCode": "71",
-        "role": "primary"
-      },
-      {
-        "postalCode": "72",
-        "role": "primary"
-      }
-    ]
-  },
-  {
-    "name": "Isar Handel SE",
-    "ppsNumber": "PPS-1005",
-    "trade": "Elektro",
-    "territories": [
-      {
-        "postalCode": "80",
-        "role": "primary"
-      },
-      {
-        "postalCode": "81",
-        "role": "primary"
-      },
-      {
-        "postalCode": "82",
-        "role": "primary"
-      },
-      {
-        "postalCode": "83",
-        "role": "primary"
-      },
-      {
-        "postalCode": "84",
-        "role": "primary"
-      },
-      {
-        "postalCode": "85",
-        "role": "primary"
-      },
-      {
-        "postalCode": "86",
-        "role": "primary"
-      }
-    ]
-  }
-]
+{
+  "schemaVersion": 2,
+  "trades": [
+    {
+      "id": "5ee3bdcf-3f8a-5ff2-86c0-5a4d6d3d306f",
+      "name": "Elektro",
+      "color": "#72b788",
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "afab6d06-a971-5424-ba7e-d112ebfe2ecb",
+      "name": "Estrich",
+      "color": "#63b5ad",
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "e17741c8-e541-5859-923f-22d1f02e3f64",
+      "name": "Fliesenleger",
+      "color": "#68a9c7",
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "ab1db731-34c0-5259-b9f4-26e6514ee97b",
+      "name": "Maler",
+      "color": "#7898ca",
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "ab2eb52f-f400-5c38-948a-d689e9f5221c",
+      "name": "Trockenbau",
+      "color": "#938bc5",
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    }
+  ],
+  "companies": [
+    {
+      "id": "e892a721-8890-504a-a8c7-27b9276e6e0b",
+      "name": "Nordlicht Logistik GmbH",
+      "ppsNumber": "PPS-1001",
+      "tradeId": "e17741c8-e541-5859-923f-22d1f02e3f64",
+      "territories": [
+        {
+          "postalCode": "20",
+          "role": "primary"
+        },
+        {
+          "postalCode": "21",
+          "role": "primary"
+        },
+        {
+          "postalCode": "22",
+          "role": "primary"
+        },
+        {
+          "postalCode": "23",
+          "role": "primary"
+        },
+        {
+          "postalCode": "24",
+          "role": "primary"
+        },
+        {
+          "postalCode": "25",
+          "role": "primary"
+        }
+      ],
+      "information": [
+        {
+          "category": "address",
+          "value": "Hafenstraße 12, 20457 Hamburg"
+        },
+        {
+          "category": "phone",
+          "value": "+49 40 123456-0"
+        },
+        {
+          "category": "contact",
+          "value": "Mara Hansen"
+        }
+      ],
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "ee266c9f-afc6-5475-ade8-2bf6f373eb0e",
+      "name": "Rheinland Versorgung AG",
+      "ppsNumber": "PPS-1002",
+      "tradeId": "afab6d06-a971-5424-ba7e-d112ebfe2ecb",
+      "territories": [
+        {
+          "postalCode": "40",
+          "role": "primary"
+        },
+        {
+          "postalCode": "41",
+          "role": "primary"
+        },
+        {
+          "postalCode": "42",
+          "role": "primary"
+        },
+        {
+          "postalCode": "45",
+          "role": "primary"
+        },
+        {
+          "postalCode": "46",
+          "role": "primary"
+        },
+        {
+          "postalCode": "47",
+          "role": "primary"
+        },
+        {
+          "postalCode": "50",
+          "role": "primary"
+        },
+        {
+          "postalCode": "51",
+          "role": "primary"
+        }
+      ],
+      "information": [
+        {
+          "category": "address",
+          "value": "Rheinallee 8, 40213 Düsseldorf"
+        },
+        {
+          "category": "other",
+          "value": "Anlieferung werktags von 7 bis 16 Uhr"
+        }
+      ],
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "a9559e54-f852-503b-a516-872d14b6e5e2",
+      "name": "Mainland Service KG",
+      "ppsNumber": "PPS-1003",
+      "tradeId": "ab1db731-34c0-5259-b9f4-26e6514ee97b",
+      "territories": [
+        {
+          "postalCode": "60",
+          "role": "primary"
+        },
+        {
+          "postalCode": "61",
+          "role": "primary"
+        },
+        {
+          "postalCode": "63",
+          "role": "primary"
+        },
+        {
+          "postalCode": "64",
+          "role": "primary"
+        },
+        {
+          "postalCode": "65",
+          "role": "primary"
+        }
+      ],
+      "information": [
+        {
+          "category": "phone",
+          "value": "+49 69 987654-0"
+        }
+      ],
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "99dc32a0-6ce2-5153-bed2-e210774df026",
+      "name": "Südwest Partner GmbH",
+      "ppsNumber": "PPS-1004",
+      "tradeId": "ab2eb52f-f400-5c38-948a-d689e9f5221c",
+      "territories": [
+        {
+          "postalCode": "66",
+          "role": "primary"
+        },
+        {
+          "postalCode": "67",
+          "role": "primary"
+        },
+        {
+          "postalCode": "68",
+          "role": "primary"
+        },
+        {
+          "postalCode": "69",
+          "role": "primary"
+        },
+        {
+          "postalCode": "70",
+          "role": "primary"
+        },
+        {
+          "postalCode": "71",
+          "role": "primary"
+        },
+        {
+          "postalCode": "72",
+          "role": "primary"
+        }
+      ],
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "f7aadfa9-9ca4-57f7-b78e-f74313405425",
+      "name": "Isar Handel SE",
+      "ppsNumber": "PPS-1005",
+      "tradeId": "5ee3bdcf-3f8a-5ff2-86c0-5a4d6d3d306f",
+      "territories": [
+        {
+          "postalCode": "80",
+          "role": "primary"
+        },
+        {
+          "postalCode": "81",
+          "role": "primary"
+        },
+        {
+          "postalCode": "82",
+          "role": "primary"
+        },
+        {
+          "postalCode": "83",
+          "role": "primary"
+        },
+        {
+          "postalCode": "84",
+          "role": "primary"
+        },
+        {
+          "postalCode": "85",
+          "role": "primary"
+        },
+        {
+          "postalCode": "86",
+          "role": "primary"
+        }
+      ],
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    }
+  ]
+}

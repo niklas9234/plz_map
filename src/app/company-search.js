@@ -55,11 +55,11 @@ function normalizeSearchValue(value) {
     return value.trim().toLocaleLowerCase("de-DE");
 }
 
-function createTradeBadge(trade) {
+function createTradeBadge(tradeId) {
     const badge = document.createElement("span");
     badge.className = "company-search__trade-badge";
-    badge.textContent = trade;
-    tradeStore.colorFor(trade).then((color) => { badge.style.backgroundColor = color; });
+    tradeStore.list().then((trades) => { badge.textContent = trades.find((trade) => trade.id === tradeId)?.name || "Unbekanntes Gewerk"; });
+    tradeStore.colorFor(tradeId).then((color) => { badge.style.backgroundColor = color; });
     return badge;
 }
 
@@ -135,7 +135,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, companyPostalCodes(company));
-        tradeStore.colorFor(company.trade).then((color) => setPostalCodeColor(map, color));
+        tradeStore.colorFor(company.tradeId).then((color) => setPostalCodeColor(map, color));
         zoomToPostalCodes(map, companyPostalCodes(company), postalCodeData);
 
         const companyDetails = document.createElement("div");
@@ -158,7 +158,7 @@ async function initializeCompanySearch(map, postalCodeData) {
             " · ",
             companyNumber,
             " · ",
-            createTradeBadge(company.trade)
+            createTradeBadge(company.tradeId)
         );
 
         const centerButton = document.createElement("button");
@@ -207,8 +207,8 @@ async function initializeCompanySearch(map, postalCodeData) {
     }
 
     try {
-        let activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
-        let companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
+        let activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
+        let companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTrades.has(company.tradeId));
 
         status.replaceChildren();
 
@@ -229,7 +229,7 @@ async function initializeCompanySearch(map, postalCodeData) {
                 button.setAttribute("aria-selected", "false");
                 const companyLabel = document.createElement("span");
                 companyLabel.textContent = `${company.name} · ${company.ppsNumber} · `;
-                button.append(companyLabel, createTradeBadge(company.trade));
+                button.append(companyLabel, createTradeBadge(company.tradeId));
                 button.addEventListener("click", () => selectCompany(company));
                 item.append(button);
                 suggestions.append(item);
@@ -270,8 +270,8 @@ async function initializeCompanySearch(map, postalCodeData) {
         });
 
         window.addEventListener("companies:changed", async () => {
-            activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
-            companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
+            activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
+            companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTrades.has(company.tradeId));
             const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
             if (updatedSelection) selectCompany(updatedSelection);
             else {
@@ -282,8 +282,8 @@ async function initializeCompanySearch(map, postalCodeData) {
         });
 
         window.addEventListener("trades:changed", async () => {
-            activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.active).map((trade) => trade.name));
-            companies = (await companyStore.list()).filter((company) => company.active && activeTrades.has(company.trade));
+            activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
+            companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTrades.has(company.tradeId));
             const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
             if (updatedSelection) selectCompany(updatedSelection);
             else {
