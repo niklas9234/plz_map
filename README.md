@@ -70,9 +70,11 @@ anschließend im Explorer gelöscht werden.
 ### Windows-Paket erstellen
 
 Auf einem Windows-Buildrechner werden Python 3.12, PowerShell und Inno Setup 6
-benötigt. `packaging\windows\build.ps1` installiert die festgelegte
-PyInstaller-Version, erzeugt die eigenständige Anwendung und anschließend das
-Setup in `dist-installer\`. Vor dem Build muss die nicht versionierte
+benötigt. `packaging\windows\build.ps1` installiert mit demselben
+Python-Interpreter die Laufzeitabhängigkeiten aus `server\requirements.txt` und
+die Buildabhängigkeiten aus `packaging\windows\requirements-build.txt`, erzeugt
+die eigenständige Anwendung und anschließend das Setup in `dist-installer\`.
+Vor dem Build muss die nicht versionierte
 PMTiles-Datei in `src\app\data\pmtiles\` liegen, wenn sie Teil des Installers
 sein soll.
 
