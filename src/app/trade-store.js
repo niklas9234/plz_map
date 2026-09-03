@@ -1,9 +1,7 @@
-const TRADE_STORAGE_KEY = "plz-map.trades.v1";
+const TRADE_API_URL = "/api/trades";
+const LEGACY_TRADE_STORAGE_KEY = "plz-map.trades.v1";
 
-// Gut unterscheidbare, etwas entsättigte Farben: kräftig genug für die Karte,
-// aber bei der transparenten Flächendarstellung weiterhin hell genug, damit
-// Ortsnamen und PLZ lesbar bleiben. Jede Reihe des Farbwählers bildet eine
-// eigenständige Farbfamilie ohne Wiederholungen aus anderen Reihen.
+// Gut unterscheidbare, etwas entsättigte Farben für Karte und Farbwähler.
 const TRADE_COLORS = [
     "#72b788", "#63b5ad", "#68a9c7", "#7898ca", "#938bc5",
     "#a85fa8", "#c45c83", "#d06a62", "#d1844f", "#c39a3d",
@@ -18,29 +16,60 @@ const tradeStore = (() => {
         return JSON.parse(JSON.stringify(value));
     }
 
-    async function initialize() {
-        if (trades) return;
-        const storedTrades = localStorage.getItem(TRADE_STORAGE_KEY);
-        if (storedTrades) {
-            trades = JSON.parse(storedTrades);
-            const assignedColors = new Set();
-            trades.forEach((trade) => {
-                if (!TRADE_COLORS.includes(trade.color) || assignedColors.has(trade.color)) {
-                    trade.color = TRADE_COLORS.find((color) => !assignedColors.has(color));
-                }
-                if (trade.color) assignedColors.add(trade.color);
-            });
-            return;
-        }
-        const companies = await companyStore.list();
-        trades = [...new Set(companies.map((company) => company.trade))]
-            .sort((left, right) => left.localeCompare(right, "de"))
-            .map((name, index) => ({ name, active: true, color: TRADE_COLORS[index % TRADE_COLORS.length] }));
+    function normalizeTrade(trade) {
+        return {
+            id: trade.id == null ? "" : String(trade.id),
+            name: String(trade.name || "").trim(),
+            active: trade.active !== undefined ? trade.active !== false : trade.status !== "inactive",
+            color: trade.color || "#d7ded9"
+        };
     }
 
-    function persist() {
-        localStorage.setItem(TRADE_STORAGE_KEY, JSON.stringify(trades));
+    function errorMessage(status, details) {
+        const suffix = details?.message ? ` ${details.message}` : "";
+        if (status === 400 || status === 422) return `Die Gewerkdaten sind ungültig.${suffix}`;
+        if (status === 409) return `Konflikt bei den Gewerkdaten.${suffix}`;
+        if (status === 404) return `Das Gewerk wurde nicht gefunden.${suffix}`;
+        return `Das Backend konnte die Gewerk-Anfrage nicht verarbeiten (${status}).${suffix}`;
+    }
+
+    async function request(path = "", options = {}) {
+        let response;
+        try {
+            response = await fetch(`${TRADE_API_URL}${path}`, {
+                ...options,
+                headers: { "Content-Type": "application/json", Accept: "application/json", ...options.headers }
+            });
+        } catch (_) {
+            throw new Error("Das Backend ist nicht erreichbar. Bitte prüfen Sie die Verbindung und versuchen Sie es erneut.");
+        }
+        let body = null;
+        if (response.status !== 204) {
+            try { body = await response.json(); } catch (_) { /* Eine Fehlerantwort darf leer sein. */ }
+        }
+        if (!response.ok) throw new Error(errorMessage(response.status, body));
+        return body;
+    }
+
+    async function initialize() {
+        if (trades) return;
+        const result = await request();
+        const items = Array.isArray(result) ? result : result?.items;
+        if (!Array.isArray(items)) throw new Error("Das Backend hat ungültige Gewerkdaten geliefert.");
+        trades = items.map(normalizeTrade);
+        // Kontrollierter Abschluss der Übergangsphase: erst nach erfolgreichem GET,
+        // niemals als Fallback oder dauerhafte Datenquelle.
+        try { localStorage.removeItem(LEGACY_TRADE_STORAGE_KEY); } catch (_) { /* Storage kann gesperrt sein. */ }
+    }
+
+    function changed() {
         window.dispatchEvent(new CustomEvent("trades:changed"));
+    }
+
+    function findByName(name) {
+        const trade = trades.find((item) => item.name === name);
+        if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
+        return trade;
     }
 
     async function list() {
@@ -50,42 +79,41 @@ const tradeStore = (() => {
 
     async function add(name, color) {
         await initialize();
-        const normalizedName = name.trim();
-        if (!normalizedName) throw new Error("Bitte einen Namen für das Gewerk eingeben.");
-        if (trades.some((trade) => trade.name.localeCompare(normalizedName, "de", { sensitivity: "base" }) === 0)) {
-            throw new Error("Dieses Gewerk ist bereits vorhanden.");
-        }
-        trades.push({ name: normalizedName, active: true, color: availableColor(color) });
+        const response = await request("", {
+            method: "POST",
+            body: JSON.stringify({ name: name.trim(), color })
+        });
+        if (!response) throw new Error("Das Backend hat das gespeicherte Gewerk nicht zurückgegeben.");
+        const created = normalizeTrade(response);
+        trades.push(created);
         trades.sort((left, right) => left.name.localeCompare(right.name, "de"));
-        persist();
+        changed();
+        return clone(created);
     }
 
-    function availableColor(color, currentName = "") {
-        const usedColors = new Set(trades.filter((trade) => trade.name !== currentName).map((trade) => trade.color));
-        const selectedColor = TRADE_COLORS.includes(color) && !usedColors.has(color)
-            ? color
-            : TRADE_COLORS.find((candidate) => !usedColors.has(candidate));
-        if (!selectedColor) throw new Error("Alle 20 Gewerkfarben sind bereits vergeben.");
-        return selectedColor;
+    async function patch(name, payload) {
+        const current = findByName(name);
+        const response = await request(`/${encodeURIComponent(current.id)}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload)
+        });
+        const updated = normalizeTrade(response || { ...current, ...payload });
+        trades[trades.indexOf(current)] = updated;
+        changed();
+        return clone(updated);
     }
 
     async function setColor(name, color) {
         await initialize();
-        const trade = trades.find((item) => item.name === name);
-        if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
-        if (trades.some((item) => item.name !== name && item.color === color)) {
-            throw new Error("Diese Farbe wird bereits von einem anderen Gewerk verwendet.");
-        }
-        trade.color = availableColor(color, name);
-        persist();
+        return patch(name, { color });
     }
 
     async function remove(name) {
         await initialize();
-        const index = trades.findIndex((item) => item.name === name);
-        if (index === -1) throw new Error("Das Gewerk wurde nicht gefunden.");
-        trades.splice(index, 1);
-        persist();
+        const trade = findByName(name);
+        await request(`/${encodeURIComponent(trade.id)}`, { method: "DELETE" });
+        trades = trades.filter((item) => item.id !== trade.id);
+        changed();
     }
 
     async function colorFor(name) {
@@ -95,10 +123,12 @@ const tradeStore = (() => {
 
     async function setActive(name, active) {
         await initialize();
-        const trade = trades.find((item) => item.name === name);
-        if (!trade) throw new Error("Das Gewerk wurde nicht gefunden.");
-        trade.active = active;
-        persist();
+        const current = findByName(name);
+        const response = await request(`/${encodeURIComponent(current.id)}/${active ? "activate" : "deactivate"}`, { method: "POST" });
+        const updated = normalizeTrade(response || { ...current, active });
+        trades[trades.indexOf(current)] = updated;
+        changed();
+        return clone(updated);
     }
 
     return { list, add, remove, setActive, setColor, colorFor, colors: TRADE_COLORS };

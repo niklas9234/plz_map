@@ -1,5 +1,5 @@
-const COMPANY_DATA_URL = "./companies.json";
-const COMPANY_STORAGE_KEY = "plz-map.companies.v1";
+const COMPANY_API_URL = "/api/companies";
+const LEGACY_COMPANY_STORAGE_KEY = "plz-map.companies.v1";
 
 const companyStore = (() => {
     let companies;
@@ -20,35 +20,60 @@ const companyStore = (() => {
 
         return {
             id: String(company.id || company.ppsNumber || `company-${index}`),
-            name: company.name.trim(),
-            ppsNumber: company.ppsNumber.trim(),
-            trade: company.trade.trim(),
+            name: String(company.name || "").trim(),
+            ppsNumber: String(company.ppsNumber || "").trim(),
+            trade: String(company.trade || "").trim(),
             territories: normalizedTerritories,
             information: Array.isArray(company.information)
                 ? company.information.map((item) => ({ category: String(item.category), value: String(item.value) }))
                 : [],
-            active: company.active !== false
+            active: company.active !== undefined ? company.active !== false : company.status !== "inactive"
         };
+    }
+
+    function errorMessage(status, details) {
+        const suffix = details?.message ? ` ${details.message}` : "";
+        if (status === 400 || status === 422) return `Die Unternehmensdaten sind ungültig.${suffix}`;
+        if (status === 409) return `Konflikt beim Speichern der Unternehmensdaten.${suffix}`;
+        if (status === 404) return `Das Unternehmen wurde nicht gefunden.${suffix}`;
+        return `Das Backend konnte die Unternehmensanfrage nicht verarbeiten (${status}).${suffix}`;
+    }
+
+    async function request(path = "", options = {}) {
+        let response;
+        try {
+            response = await fetch(`${COMPANY_API_URL}${path}`, {
+                ...options,
+                headers: { "Content-Type": "application/json", Accept: "application/json", ...options.headers }
+            });
+        } catch (_) {
+            throw new Error("Das Backend ist nicht erreichbar. Bitte prüfen Sie die Verbindung und versuchen Sie es erneut.");
+        }
+
+        let body = null;
+        if (response.status !== 204) {
+            try { body = await response.json(); } catch (_) { /* Eine Fehlerantwort darf leer sein. */ }
+        }
+        if (!response.ok) throw new Error(errorMessage(response.status, body));
+        return body;
+    }
+
+    function clearLegacyData() {
+        // Erst nach einer erfolgreichen Backend-Antwort löschen. Die alten Daten
+        // werden nie als Fallback verwendet; ab jetzt ist ausschließlich die API maßgeblich.
+        try { localStorage.removeItem(LEGACY_COMPANY_STORAGE_KEY); } catch (_) { /* Storage kann gesperrt sein. */ }
     }
 
     async function initialize() {
         if (companies) return;
-
-        const storedCompanies = localStorage.getItem(COMPANY_STORAGE_KEY);
-        if (storedCompanies) {
-            companies = JSON.parse(storedCompanies).map(normalizeCompany);
-            return;
-        }
-
-        const response = await fetch(COMPANY_DATA_URL);
-        if (!response.ok) {
-            throw new Error(`Unternehmensdaten konnten nicht geladen werden (${response.status}).`);
-        }
-        companies = (await response.json()).map(normalizeCompany);
+        const result = await request();
+        const items = Array.isArray(result) ? result : result?.items;
+        if (!Array.isArray(items)) throw new Error("Das Backend hat ungültige Unternehmensdaten geliefert.");
+        companies = items.map(normalizeCompany);
+        clearLegacyData();
     }
 
-    function persist() {
-        localStorage.setItem(COMPANY_STORAGE_KEY, JSON.stringify(companies));
+    function changed() {
         window.dispatchEvent(new CustomEvent("companies:changed"));
     }
 
@@ -59,61 +84,43 @@ const companyStore = (() => {
 
     async function save(company) {
         await initialize();
-        const duplicate = companies.find((item) =>
-            item.ppsNumber.toLocaleLowerCase("de-DE") === company.ppsNumber.trim().toLocaleLowerCase("de-DE") &&
-            item.id !== company.id
-        );
-        if (duplicate) throw new Error("Diese PPS-Nummer wird bereits verwendet.");
-
+        const isExisting = Boolean(company.id && companies.some((item) => item.id === company.id));
         const candidate = normalizeCompany(company);
-        const primaryTerritories = candidate.territories.filter((territory) => territory.role === "primary");
-        const primaryConflict = primaryTerritories.find((territory) => companies.some((item) =>
-            item.id !== company.id &&
-            item.trade === candidate.trade &&
-            item.territories.some((assignment) =>
-                assignment.postalCode === territory.postalCode && assignment.role === "primary"
-            )
-        ));
-        if (primaryConflict) {
-            const existingPrimary = companies.find((item) =>
-                item.id !== company.id &&
-                item.trade === candidate.trade &&
-                item.territories.some((assignment) =>
-                    assignment.postalCode === primaryConflict.postalCode && assignment.role === "primary"
-                )
-            );
-            throw new Error(
-                `Für das PLZ-Gebiet ${primaryConflict.postalCode} und das Gewerk ${candidate.trade} ` +
-                `ist bereits ${existingPrimary.name} als Vorzugsdienstleister eingetragen.`
-            );
-        }
-
-        const existingIndex = companies.findIndex((item) => item.id === company.id);
-        const normalized = normalizeCompany({
-            ...(existingIndex === -1 ? {} : companies[existingIndex]),
-            ...company,
-            id: company.id || (crypto.randomUUID ? crypto.randomUUID() : `company-${Date.now()}`)
+        const payload = {
+            name: candidate.name,
+            ppsNumber: candidate.ppsNumber,
+            trade: candidate.trade,
+            territories: candidate.territories,
+            information: candidate.information
+        };
+        const saved = await request(isExisting ? `/${encodeURIComponent(company.id)}` : "", {
+            method: isExisting ? "PATCH" : "POST",
+            body: JSON.stringify(payload)
         });
-
+        if (!saved) throw new Error("Das Backend hat das gespeicherte Unternehmen nicht zurückgegeben.");
+        const normalized = normalizeCompany(saved);
+        const existingIndex = companies.findIndex((item) => item.id === normalized.id);
         if (existingIndex === -1) companies.push(normalized);
         else companies[existingIndex] = normalized;
-        persist();
+        changed();
         return clone(normalized);
     }
 
     async function remove(id) {
         await initialize();
+        await request(`/${encodeURIComponent(id)}`, { method: "DELETE" });
         companies = companies.filter((company) => company.id !== id);
-        persist();
+        changed();
     }
 
     async function setActive(id, active) {
         await initialize();
-        const company = companies.find((item) => item.id === id);
-        if (!company) throw new Error("Das Unternehmen wurde nicht gefunden.");
-        company.active = active;
-        persist();
-        return clone(company);
+        const updated = await request(`/${encodeURIComponent(id)}/${active ? "activate" : "deactivate"}`, { method: "POST" });
+        const normalized = normalizeCompany(updated || { ...companies.find((item) => item.id === id), active });
+        const index = companies.findIndex((item) => item.id === id);
+        if (index !== -1) companies[index] = normalized;
+        changed();
+        return clone(normalized);
     }
 
     return { list, save, remove, setActive };
