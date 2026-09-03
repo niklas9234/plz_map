@@ -77,6 +77,11 @@ def initialize(connection: sqlite3.Connection) -> None:
             value TEXT NOT NULL,
             PRIMARY KEY (company_id, position)
         );
+        CREATE TABLE IF NOT EXISTS application_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
 
         -- SQLite cannot express this cross-table uniqueness rule as an index.
         CREATE TRIGGER IF NOT EXISTS territories_primary_insert

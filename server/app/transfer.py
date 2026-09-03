@@ -175,17 +175,22 @@ def import_data(connection: sqlite3.Connection, document: Any, mode: str = "empt
         connection.execute("BEGIN IMMEDIATE")
         if any(connection.execute(f"SELECT EXISTS(SELECT 1 FROM {table})").fetchone()[0] for table in ("trades", "companies")):
             raise ImportValidationError(["Die Zieldatenbank ist nicht leer."])
-        for trade in data["trades"]:
-            connection.execute("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?)", (trade["id"], trade["name"], trade["status"], trade["color"], trade["createdAt"], trade["updatedAt"]))
-        for company in data["companies"]:
-            connection.execute("INSERT INTO companies VALUES (?, ?, ?, ?, ?, ?, ?)", (company["id"], company["name"], company["ppsNumber"], company["tradeId"], company["status"], company["createdAt"], company["updatedAt"]))
-            connection.executemany("INSERT INTO territories VALUES (?, ?, ?)", ((company["id"], item["postalCode"], item["role"]) for item in company["territories"]))
-            connection.executemany("INSERT INTO company_information VALUES (?, ?, ?, ?)", ((company["id"], pos, item["category"], item["value"]) for pos, item in enumerate(company["information"])))
+        write_validated_data(connection, data)
         connection.commit()
     except Exception:
         connection.rollback()
         raise
     return {**counts, "written": True}
+
+
+def write_validated_data(connection: sqlite3.Connection, data: dict[str, Any]) -> None:
+    """Write validated records without controlling the caller's transaction."""
+    for trade in data["trades"]:
+        connection.execute("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?)", (trade["id"], trade["name"], trade["status"], trade["color"], trade["createdAt"], trade["updatedAt"]))
+    for company in data["companies"]:
+        connection.execute("INSERT INTO companies VALUES (?, ?, ?, ?, ?, ?, ?)", (company["id"], company["name"], company["ppsNumber"], company["tradeId"], company["status"], company["createdAt"], company["updatedAt"]))
+        connection.executemany("INSERT INTO territories VALUES (?, ?, ?)", ((company["id"], item["postalCode"], item["role"]) for item in company["territories"]))
+        connection.executemany("INSERT INTO company_information VALUES (?, ?, ?, ?)", ((company["id"], pos, item["category"], item["value"]) for pos, item in enumerate(company["information"])))
 
 
 def dumps(connection: sqlite3.Connection) -> bytes:
