@@ -106,3 +106,13 @@ Eindeutigkeitskonflikte werden unabhängig von vorherigen Anwendungsprüfungen a
 den Datenbank-Constraints in `409 Conflict` übersetzt. Listenendpunkte müssen
 vor dem Import großer Datenmengen um Pagination ergänzt werden; das konkrete
 Verfahren wird mit der Backend-Technologie festgelegt.
+
+## Administrationstransfer
+
+| Methode und Pfad | Verhalten |
+| --- | --- |
+| `GET /api/admin/export` | Vollständigen JSON-Export herunterladen. |
+| `POST /api/admin/import?mode=validate` | Export prüfen, ohne zu schreiben. |
+| `POST /api/admin/import?mode=empty` | Export atomar in eine leere Datenbank übernehmen. |
+
+Details beschreibt das [`Exportformat`](export-format.md).

@@ -80,7 +80,8 @@ const tradeStore = (() => {
         }
         trades.push(normalizeTrade({ name: normalizedName, color: availableColor(color), status: "active" }));
         trades.sort((left, right) => left.name.localeCompare(right.name, "de"));
-        persist();
+        changed();
+        return clone(created);
     }
 
     async function setColor(id, color) {

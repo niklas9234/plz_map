@@ -94,9 +94,16 @@ function initializeCompanyManagement() {
     }
 
     async function refresh() {
-        [companies, trades] = await Promise.all([companyStore.list(), tradeStore.list()]);
-        populateTradeOptions();
-        renderCompanies();
+        try {
+            [companies, trades] = await Promise.all([companyStore.list(), tradeStore.list()]);
+            populateTradeOptions();
+            renderCompanies();
+            return true;
+        } catch (error) {
+            resultStatus.textContent = error.message;
+            tableBody.replaceChildren();
+            return false;
+        }
     }
 
     function formState() {
@@ -418,18 +425,18 @@ function initializeCompanyManagement() {
         }
     }
 
-    function showList() {
+    function showList(shouldRender = true) {
         currentCompany = null;
         detailView?.remove();
         detailView = null;
         header.hidden = false;
         listElements.forEach((element) => { element.hidden = false; });
-        renderCompanies();
+        if (shouldRender) renderCompanies();
     }
 
     document.getElementById("open-company-management").addEventListener("click", async () => {
-        await refresh();
-        showList();
+        const loaded = await refresh();
+        showList(loaded);
         dialog.showModal();
         searchInput.focus();
     });
@@ -444,6 +451,9 @@ function initializeCompanyManagement() {
             deleteConfirmation.close();
             await refresh();
             showList();
+        } catch (deleteError) {
+            resultStatus.textContent = deleteError.message;
+            deleteConfirmation.close();
         } finally {
             confirmCompanyDelete.disabled = false;
         }
@@ -578,9 +588,15 @@ function initializeTradeManagement() {
         }
     });
     document.getElementById("open-trade-management").addEventListener("click", async () => {
-        await render();
         dialog.showModal();
-        nameInput.focus();
+        try {
+            await render();
+            error.hidden = true;
+            nameInput.focus();
+        } catch (loadError) {
+            error.textContent = loadError.message;
+            error.hidden = false;
+        }
     });
     document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
     document.addEventListener("click", (event) => {

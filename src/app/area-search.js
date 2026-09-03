@@ -100,11 +100,5 @@ async function initializeAreaSearch(map, postalCodeData) {
     window.addEventListener("companies:changed", refreshData);
     window.addEventListener("trades:changed", refreshData);
 
-    try {
-        await refreshData();
-    } catch (error) {
-        results.textContent = error.message;
-        postalCodeInput.disabled = true;
-        tradeSelect.disabled = true;
-    }
+    await refreshData();
 }
