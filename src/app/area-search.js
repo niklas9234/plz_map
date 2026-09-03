@@ -75,14 +75,22 @@ async function initializeAreaSearch(map, postalCodeData) {
     }
 
     async function refreshData() {
-        trades = (await tradeStore.list()).filter((trade) => trade.active);
-        const activeTradeNames = new Set(trades.map((trade) => trade.name));
-        companies = (await companyStore.list()).filter((company) => company.active && activeTradeNames.has(company.trade));
-        const selectedTrade = tradeSelect.value;
-        tradeSelect.replaceChildren(new Option("Gewerk auswählen", ""));
-        trades.forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
-        if (activeTradeNames.has(selectedTrade)) tradeSelect.value = selectedTrade;
-        await search();
+        try {
+            trades = (await tradeStore.list()).filter((trade) => trade.active);
+            const activeTradeNames = new Set(trades.map((trade) => trade.name));
+            companies = (await companyStore.list()).filter((company) => company.active && activeTradeNames.has(company.trade));
+            const selectedTrade = tradeSelect.value;
+            tradeSelect.replaceChildren(new Option("Gewerk auswählen", ""));
+            trades.forEach((trade) => tradeSelect.add(new Option(trade.name, trade.name)));
+            if (activeTradeNames.has(selectedTrade)) tradeSelect.value = selectedTrade;
+            postalCodeInput.disabled = false;
+            tradeSelect.disabled = false;
+            await search();
+        } catch (error) {
+            results.textContent = error.message;
+            postalCodeInput.disabled = true;
+            tradeSelect.disabled = true;
+        }
     }
 
     companyTab.addEventListener("click", () => activateTab(companyTab));
@@ -100,11 +108,5 @@ async function initializeAreaSearch(map, postalCodeData) {
     window.addEventListener("companies:changed", refreshData);
     window.addEventListener("trades:changed", refreshData);
 
-    try {
-        await refreshData();
-    } catch (error) {
-        results.textContent = error.message;
-        postalCodeInput.disabled = true;
-        tradeSelect.disabled = true;
-    }
+    await refreshData();
 }

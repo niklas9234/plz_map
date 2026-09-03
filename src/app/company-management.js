@@ -94,9 +94,16 @@ function initializeCompanyManagement() {
     }
 
     async function refresh() {
-        [companies, trades] = await Promise.all([companyStore.list(), tradeStore.list()]);
-        populateTradeOptions();
-        renderCompanies();
+        try {
+            [companies, trades] = await Promise.all([companyStore.list(), tradeStore.list()]);
+            populateTradeOptions();
+            renderCompanies();
+            return true;
+        } catch (error) {
+            resultStatus.textContent = error.message;
+            tableBody.replaceChildren();
+            return false;
+        }
     }
 
     function formState() {
@@ -418,18 +425,18 @@ function initializeCompanyManagement() {
         }
     }
 
-    function showList() {
+    function showList(shouldRender = true) {
         currentCompany = null;
         detailView?.remove();
         detailView = null;
         header.hidden = false;
         listElements.forEach((element) => { element.hidden = false; });
-        renderCompanies();
+        if (shouldRender) renderCompanies();
     }
 
     document.getElementById("open-company-management").addEventListener("click", async () => {
-        await refresh();
-        showList();
+        const loaded = await refresh();
+        showList(loaded);
         dialog.showModal();
         searchInput.focus();
     });
@@ -444,6 +451,9 @@ function initializeCompanyManagement() {
             deleteConfirmation.close();
             await refresh();
             showList();
+        } catch (deleteError) {
+            resultStatus.textContent = deleteError.message;
+            deleteConfirmation.close();
         } finally {
             confirmCompanyDelete.disabled = false;
         }
@@ -536,15 +546,30 @@ function initializeTradeManagement() {
             name.textContent = trade.name;
             const colors = createColorPicker(trade.color, trade.name);
             colors.addEventListener("colorchange", async (event) => {
-                await tradeStore.setColor(trade.name, event.detail.color);
-                await render();
+                try {
+                    await tradeStore.setColor(trade.name, event.detail.color);
+                    error.hidden = true;
+                    await render();
+                } catch (updateError) {
+                    error.textContent = updateError.message;
+                    error.hidden = false;
+                }
             });
             const activeLabel = document.createElement("label");
             activeLabel.className = "trade-active";
             const active = document.createElement("input");
             active.type = "checkbox";
             active.checked = trade.active;
-            active.addEventListener("change", () => tradeStore.setActive(trade.name, active.checked));
+            active.addEventListener("change", async () => {
+                try {
+                    await tradeStore.setActive(trade.name, active.checked);
+                    error.hidden = true;
+                } catch (updateError) {
+                    active.checked = !active.checked;
+                    error.textContent = updateError.message;
+                    error.hidden = false;
+                }
+            });
             activeLabel.append(active, " Aktiv");
             const remove = document.createElement("button");
             remove.type = "button";
@@ -553,8 +578,14 @@ function initializeTradeManagement() {
             remove.setAttribute("aria-label", `${trade.name} löschen`);
             remove.addEventListener("click", async () => {
                 if (!window.confirm(`Gewerk „${trade.name}“ wirklich löschen?`)) return;
-                await tradeStore.remove(trade.name);
-                await render();
+                try {
+                    await tradeStore.remove(trade.name);
+                    error.hidden = true;
+                    await render();
+                } catch (removeError) {
+                    error.textContent = removeError.message;
+                    error.hidden = false;
+                }
             });
             const actions = document.createElement("div");
             actions.className = "trade-list__actions";
@@ -578,9 +609,15 @@ function initializeTradeManagement() {
         }
     });
     document.getElementById("open-trade-management").addEventListener("click", async () => {
-        await render();
         dialog.showModal();
-        nameInput.focus();
+        try {
+            await render();
+            error.hidden = true;
+            nameInput.focus();
+        } catch (loadError) {
+            error.textContent = loadError.message;
+            error.hidden = false;
+        }
     });
     document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
     document.addEventListener("click", (event) => {
