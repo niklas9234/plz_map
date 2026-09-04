@@ -48,11 +48,13 @@ den Python-Interpreter, das Backend und das Frontend; auf dem Zielrechner werden
 weder Docker noch eine Python-Installation benötigt.
 
 1. `PLZ-Karte-1.0.0-Setup.exe` ausführen und den Installationsdialog abschließen.
-2. Über **PLZ-Karte starten** im Startmenü starten. Diese Verknüpfung öffnet den
-   Standardbrowser. Die optionale Desktop-Verknüpfung tut dasselbe.
-3. Vor Abmeldung, Neustart oder Update **PLZ-Karte beenden** im Startmenü wählen.
-   Dadurch werden laufende Datenbankoperationen kontrolliert abgeschlossen. Es
-   ist keine Eingabeaufforderung erforderlich.
+2. Über **PLZ-Karte starten** im Startmenü starten. Die Karte läuft in einem
+   eigenen App-Fenster und öffnet kein Browserfenster. Das App-Fenster stellt
+   keine Entwicklertools bereit; auch F12 und die üblichen Tastenkombinationen
+   zum Öffnen der Entwicklertools sind deaktiviert.
+3. Das App-Fenster normal schließen. Dabei wird auch der lokale Server sauber
+   beendet. Falls eine Instanz ohne Fenster beendet werden muss, steht weiterhin
+   **PLZ-Karte beenden** im Startmenü zur Verfügung.
 
 Ein Update wird durch Ausführen des neueren Setups in dasselbe Verzeichnis
 installiert. Vorher ist die Anwendung über **PLZ-Karte beenden** zu schließen.
@@ -72,7 +74,8 @@ anschließend im Explorer gelöscht werden.
 Auf einem Windows-Buildrechner werden Python 3.12, PowerShell und Inno Setup 6
 benötigt. `packaging\windows\build.ps1` installiert mit demselben
 Python-Interpreter die Laufzeitabhängigkeiten aus `server\requirements.txt` und
-die Buildabhängigkeiten aus `packaging\windows\requirements-build.txt`, erzeugt
+die Buildabhängigkeiten einschließlich der nativen WebView aus
+`packaging\windows\requirements-build.txt`, erzeugt
 die eigenständige Anwendung und anschließend das Setup in `dist-installer\`.
 Vor dem Build muss die nicht versionierte
 PMTiles-Datei in `src\app\data\pmtiles\` liegen, wenn sie Teil des Installers

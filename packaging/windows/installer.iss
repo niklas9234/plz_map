@@ -17,20 +17,21 @@ Compression=lzma2
 SolidCompression=yes
 CloseApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
+SetupIconFile=..\..\PLZ-Karte.ico
 
 [Files]
 Source: "..\..\dist\PLZ-Karte\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--open-browser"; WorkingDir: "{app}"
+Name: "{group}\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\PLZ-Karte beenden"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; WorkingDir: "{app}"
-Name: "{autodesktop}\PLZ-Karte"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--open-browser"; Tasks: desktopicon
+Name: "{autodesktop}\PLZ-Karte"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Desktop-Verknüpfung erstellen"; GroupDescription: "Zusätzliche Symbole:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Parameters: "--open-browser"; Description: "PLZ-Karte jetzt starten"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "PLZ-Karte jetzt starten"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; Flags: runhidden waituntilterminated skipifdoesntexist
