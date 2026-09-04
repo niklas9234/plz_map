@@ -266,7 +266,7 @@ def run_desktop() -> int:
     window_api = DesktopWindowApi(maximized=True)
     window = webview.create_window(
         "PLZ-Karte",
-        URL,
+        f"{URL}?desktop=1",
         width=1440,
         height=900,
         min_size=(1024, 700),
