@@ -255,9 +255,9 @@ async function initializeCompanySearch(map, postalCodeData) {
             }
             if (event.key !== "Enter") return;
 
-            const activeButton = suggestionButtons()[activeSuggestionIndex];
-            const company = activeButton
-                ? companies.find((item) => item.ppsNumber === activeButton.dataset.ppsNumber)
+            const selectedButton = suggestionButtons()[activeSuggestionIndex] || suggestionButtons()[0];
+            const company = selectedButton
+                ? companies.find((item) => item.ppsNumber === selectedButton.dataset.ppsNumber)
                 : findCompany(companies, input.value);
             if (company) {
                 event.preventDefault();
