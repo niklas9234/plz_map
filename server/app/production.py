@@ -60,6 +60,7 @@ def parse_byte_range(value: str, size: int) -> tuple[int, int] | None:
 
 def static_application(frontend: Path, shutdown_token: str, request_shutdown):
     frontend = frontend.resolve()
+    development_icon = frontend.parents[1] / "PLZ-Karte.ico"
 
     def app(environ, start_response):
         path = environ.get("PATH_INFO", "/")
@@ -79,7 +80,14 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown):
             return [b""]
         relative = "index.html" if path == "/" else path.lstrip("/")
         candidate = (frontend / relative).resolve()
-        if frontend not in candidate.parents or not candidate.is_file():
+        if (
+            relative == "PLZ-Karte.ico"
+            and not candidate.is_file()
+            and development_icon.is_file()
+        ):
+            candidate = development_icon
+        outside_frontend = frontend not in candidate.parents and candidate != development_icon
+        if outside_frontend or not candidate.is_file():
             start_response("404 Not Found", [("Content-Length", "0")])
             return [b""]
         size = candidate.stat().st_size
@@ -197,6 +205,27 @@ def run() -> int:
     return 0
 
 
+class DesktopWindowApi:
+    """Actions exposed exclusively to the local desktop frontend."""
+
+    def __init__(self):
+        self.window = None
+        self._maximized = False
+
+    def minimize(self):
+        self.window.minimize()
+
+    def toggle_maximize(self):
+        if self._maximized:
+            self.window.restore()
+        else:
+            self.window.maximize()
+        self._maximized = not self._maximized
+
+    def close(self):
+        self.window.destroy()
+
+
 def run_desktop() -> int:
     """Run the local server inside a native Windows webview window."""
     import webview
@@ -207,13 +236,18 @@ def run_desktop() -> int:
     )
     server_thread.start()
 
+    window_api = DesktopWindowApi()
     window = webview.create_window(
         "PLZ-Karte",
         URL,
         width=1440,
         height=900,
         min_size=(1024, 700),
+        frameless=True,
+        easy_drag=False,
+        js_api=window_api,
     )
+    window_api.window = window
 
     def stop_server():
         if server_thread.is_alive():
