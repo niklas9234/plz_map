@@ -27,9 +27,20 @@ def data_directory() -> Path:
     return base / APPLICATION_NAME
 
 
+def log_directory() -> Path:
+    """Return the log location, using the requested shared Windows folder."""
+    override = os.environ.get("PLZ_MAP_LOG_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    if sys.platform == "win32":
+        drive = os.environ.get("SystemDrive", "C:")
+        return Path(f"{drive}\\") / "Logs" / APPLICATION_NAME
+    return data_directory() / "logs"
+
+
 def prepare_data_directories() -> dict[str, Path]:
     root = data_directory()
-    paths = {"root": root, "backups": root / "backups", "logs": root / "logs"}
+    paths = {"root": root, "backups": root / "backups", "logs": log_directory()}
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
     return paths

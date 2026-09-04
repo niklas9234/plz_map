@@ -43,7 +43,9 @@ sind in `CONFIGURATION.md` beschrieben.
 
 ## Windows-Installation (ohne Docker und Python)
 
-Das konkrete Paketierungsziel ist **Windows 10/11 (64 Bit)**. Das Setup enthält
+Das konkrete Paketierungsziel ist **Windows 10/11 (64 Bit)**. Das Setup benötigt
+Administratorrechte, damit es das gemeinsame Logverzeichnis anlegen und für
+Benutzer beschreibbar machen kann. Es enthält
 den Python-Interpreter, das Backend und das Frontend; auf dem Zielrechner werden
 weder Docker noch eine Python-Installation benötigt.
 
@@ -59,8 +61,9 @@ weder Docker noch eine Python-Installation benötigt.
 Ein Update wird durch Ausführen des neueren Setups in dasselbe Verzeichnis
 installiert. Vorher ist die Anwendung über **PLZ-Karte beenden** zu schließen.
 Das Setup ersetzt ausschließlich unveränderliche Programmdateien unter
-`%LOCALAPPDATA%\Programs\PLZ-Karte`; Datenbank, Backups und Logs bleiben separat
-unter `%LOCALAPPDATA%\PLZ-Karte` erhalten.
+`%LOCALAPPDATA%\Programs\PLZ-Karte`; Datenbank und Backups bleiben separat
+unter `%LOCALAPPDATA%\PLZ-Karte` erhalten. Die Logs bleiben unter
+`C:\Logs\PLZ-Karte` erhalten.
 
 Zur Deinstallation in den Windows-Einstellungen **Apps > Installierte Apps >
 PLZ-Karte > Deinstallieren** wählen. Der Deinstaller beendet zunächst den

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import mimetypes
 import re
@@ -18,10 +19,15 @@ from wsgiref.simple_server import WSGIRequestHandler, make_server
 
 from .application import application as api_application
 from .database import create_database_engine, database_url, initialize, prepare_data_directories
+from .logging_config import configure_logging
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
 BYTE_RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
+MAX_FRONTEND_LOG_SIZE = 16 * 1024
+frontend_logger = logging.getLogger("plz_map.frontend")
+backend_logger = logging.getLogger("plz_map.backend")
+general_logger = logging.getLogger("plz_map.general")
 
 
 def frontend_directory() -> Path:
@@ -65,6 +71,28 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown):
     def app(environ, start_response):
         path = environ.get("PATH_INFO", "/")
         method = environ.get("REQUEST_METHOD", "GET")
+        if path == "/api/logs/frontend" and method == "POST":
+            try:
+                length = int(environ.get("CONTENT_LENGTH") or 0)
+                if length <= 0 or length > MAX_FRONTEND_LOG_SIZE:
+                    raise ValueError("invalid content length")
+                payload = json.loads(environ["wsgi.input"].read(length))
+                if not isinstance(payload, dict):
+                    raise ValueError("invalid log entry")
+                level = str(payload.get("level", "info")).lower()
+                message = (
+                    str(payload.get("message", ""))
+                    .replace("\r", " ")
+                    .replace("\n", " ")[:4000]
+                )
+                if not message or level not in {"info", "warning", "error"}:
+                    raise ValueError("invalid log entry")
+                getattr(frontend_logger, level)(message)
+                start_response("204 No Content", [("Content-Length", "0")])
+                return [b""]
+            except (ValueError, TypeError, json.JSONDecodeError):
+                start_response("400 Bad Request", [("Content-Length", "0")])
+                return [b""]
         if path.startswith("/api/"):
             if path == "/api/system/shutdown" and method == "POST":
                 supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
@@ -74,6 +102,7 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown):
                 threading.Thread(target=request_shutdown, daemon=True).start()
                 start_response("204 No Content", [("Content-Length", "0")])
                 return [b""]
+            backend_logger.info("API-Anfrage: %s %s", method, path)
             return api_application(environ, start_response)
         if method not in {"GET", "HEAD"}:
             start_response("405 Method Not Allowed", [("Allow", "GET, HEAD"), ("Content-Length", "0")])
@@ -146,6 +175,7 @@ def backup_database(database: Path, backup_dir: Path, keep: int = 10) -> None:
         source.close()
     for old in sorted(backup_dir.glob("plz_map-*.sqlite3"), reverse=True)[keep:]:
         old.unlink()
+    general_logger.info("Datenbanksicherung erstellt: %s", target)
 
 
 def request_running_server_stop(control_file: Path) -> bool:
@@ -164,12 +194,9 @@ def request_running_server_stop(control_file: Path) -> bool:
 def _prepare_server():
     """Initialize persistent state and return the configured local server."""
     paths = prepare_data_directories()
+    configure_logging(paths["logs"])
     url = database_url()
     control_file = paths["root"] / "server.token"
-    logging.basicConfig(
-        filename=paths["logs"] / "plz-map.log", level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8",
-    )
     if url.startswith("sqlite:///") and not url.endswith(":memory:"):
         backup_database(Path(url.removeprefix("sqlite:///")), paths["backups"])
     engine = create_database_engine(url)
@@ -180,7 +207,7 @@ def _prepare_server():
     server = make_server(HOST, PORT, lambda *_: [], handler_class=WSGIRequestHandler)
     server.set_app(static_application(frontend_directory(), token, server.shutdown))
     control_file.write_text(token, encoding="utf-8")
-    logging.info("Server gestartet: %s", URL)
+    general_logger.info("Anwendung gestartet; Server: %s; Logs: %s", URL, paths["logs"])
 
     def stop_on_signal(_signum, _frame):
         threading.Thread(target=server.shutdown, daemon=True).start()
@@ -196,7 +223,7 @@ def _serve(server, control_file: Path) -> None:
     finally:
         server.server_close()
         control_file.unlink(missing_ok=True)
-        logging.info("Server sauber beendet")
+        general_logger.info("Server sauber beendet")
 
 
 def run() -> int:

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date
 from http import HTTPStatus
 from urllib.parse import parse_qs
 
 from .database import create_database_engine, initialize
 from .transfer import ImportValidationError, SCHEMA_VERSION, dumps, import_data
+
+logger = logging.getLogger("plz_map.backend")
 
 
 def _json(start_response, status: HTTPStatus, payload: object):
@@ -28,6 +31,7 @@ def create_application(engine=None):
         try:
             if path == "/api/admin/export" and method == "GET":
                 body = dumps(connection)
+                logger.info("Stammdaten exportiert")
                 filename = f"plz-map-export-{date.today().isoformat()}-schema-v{SCHEMA_VERSION}.json"
                 start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"),
                                           ("Content-Disposition", f'attachment; filename="{filename}"'),
@@ -38,10 +42,14 @@ def create_application(engine=None):
                     length = int(environ.get("CONTENT_LENGTH") or 0)
                     document = json.loads(environ["wsgi.input"].read(length))
                     mode = parse_qs(environ.get("QUERY_STRING", "")).get("mode", ["empty"])[0]
-                    return _json(start_response, HTTPStatus.OK, import_data(connection, document, mode))
+                    result = import_data(connection, document, mode)
+                    logger.info("Stammdatenimport abgeschlossen; Modus: %s", mode)
+                    return _json(start_response, HTTPStatus.OK, result)
                 except (json.JSONDecodeError, UnicodeDecodeError):
+                    logger.warning("Stammdatenimport wegen ungültigem JSON abgelehnt")
                     return _json(start_response, HTTPStatus.BAD_REQUEST, {"code": "invalid_json", "message": "Ungültiges JSON."})
                 except ImportValidationError as error:
+                    logger.warning("Stammdatenimport wegen Validierungsfehlern abgelehnt")
                     return _json(start_response, HTTPStatus.UNPROCESSABLE_ENTITY,
                                  {"code": "invalid_import", "message": "Import wurde abgelehnt.", "fields": error.errors})
             return _json(start_response, HTTPStatus.NOT_FOUND, {"code": "not_found", "message": "Endpunkt nicht gefunden."})
