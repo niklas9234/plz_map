@@ -59,10 +59,10 @@ async function initializeAreaSearch(map, postalCodeData) {
     }
 
     async function search() {
-        const postalCode = postalCodeInput.value.trim();
+        const postalCode = postalCodeInput.value.trim().toUpperCase();
         const trade = tradeSelect.value;
         results.replaceChildren();
-        if (!/^\d{2}$/.test(postalCode) || !trade) return;
+        if (!/^(?:\d{2}|LUX)$/.test(postalCode) || !trade) return;
 
         const partners = findAreaPartners(companies, postalCode, trade);
         results.append(
@@ -93,7 +93,10 @@ async function initializeAreaSearch(map, postalCodeData) {
         activateTab(tab === companyTab ? areaTab : companyTab);
     }));
     postalCodeInput.addEventListener("input", () => {
-        postalCodeInput.value = postalCodeInput.value.replace(/\D/g, "").slice(0, 2);
+        const value = postalCodeInput.value.replace(/[^a-z\d]/gi, "").toUpperCase();
+        postalCodeInput.value = /^\d/.test(value)
+            ? value.replace(/\D/g, "").slice(0, 2)
+            : value.replace(/[^A-Z]/g, "").slice(0, 3);
         search();
     });
     tradeSelect.addEventListener("change", search);
