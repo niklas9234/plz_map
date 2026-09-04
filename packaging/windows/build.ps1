@@ -19,6 +19,6 @@ function Invoke-CheckedPython {
 
 Invoke-CheckedPython @("-m", "pip", "install", "-r", "server\requirements.txt")
 Invoke-CheckedPython @("-m", "pip", "install", "-r", "packaging\windows\requirements-build.txt")
-Invoke-CheckedPython @("-c", "import sqlalchemy; import alembic; import psycopg")
+Invoke-CheckedPython @("-c", "import sqlalchemy; import alembic; import psycopg; import webview")
 Invoke-CheckedPython @("-m", "PyInstaller", "--noconfirm", "--clean", "packaging\windows\plz-map.spec")
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging\windows\installer.iss

@@ -22,5 +22,6 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=str(root / "PLZ-Karte.ico"),
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=True, name="PLZ-Karte")

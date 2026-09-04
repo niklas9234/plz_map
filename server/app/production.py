@@ -12,7 +12,6 @@ import sys
 import threading
 import urllib.error
 import urllib.request
-import webbrowser
 from datetime import datetime
 from pathlib import Path
 from wsgiref.simple_server import WSGIRequestHandler, make_server
@@ -154,7 +153,8 @@ def request_running_server_stop(control_file: Path) -> bool:
         return False
 
 
-def run(open_browser: bool = False) -> int:
+def _prepare_server():
+    """Initialize persistent state and return the configured local server."""
     paths = prepare_data_directories()
     url = database_url()
     control_file = paths["root"] / "server.token"
@@ -179,26 +179,82 @@ def run(open_browser: bool = False) -> int:
 
     signal.signal(signal.SIGTERM, stop_on_signal)
     signal.signal(signal.SIGINT, stop_on_signal)
-    if open_browser:
-        threading.Timer(0.4, webbrowser.open, args=(URL,)).start()
+    return server, control_file
+
+
+def _serve(server, control_file: Path) -> None:
     try:
         server.serve_forever()
     finally:
         server.server_close()
         control_file.unlink(missing_ok=True)
         logging.info("Server sauber beendet")
+
+
+def run() -> int:
+    server, control_file = _prepare_server()
+    _serve(server, control_file)
+    return 0
+
+
+def run_desktop() -> int:
+    """Run the local server inside a native Windows webview window."""
+    import webview
+
+    server, control_file = _prepare_server()
+    server_thread = threading.Thread(
+        target=_serve, args=(server, control_file), name="plz-map-server", daemon=True
+    )
+    server_thread.start()
+
+    window = webview.create_window(
+        "PLZ-Karte",
+        URL,
+        width=1440,
+        height=900,
+        min_size=(1024, 700),
+    )
+
+    def stop_server():
+        if server_thread.is_alive():
+            threading.Thread(target=server.shutdown, daemon=True).start()
+
+    def disable_inspection_shortcuts():
+        window.evaluate_js(
+            """
+            window.addEventListener('keydown', event => {
+              const inspectionShortcut = event.key === 'F12' ||
+                ((event.ctrlKey || event.metaKey) && event.shiftKey &&
+                 ['I', 'J', 'C'].includes(event.key.toUpperCase()));
+              if (inspectionShortcut) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+              }
+            }, true);
+            """
+        )
+
+    window.events.closed += stop_server
+    window.events.loaded += disable_inspection_shortcuts
+    try:
+        # debug=False prevents pywebview from exposing its developer tools.
+        webview.start(gui="edgechromium", debug=False, private_mode=True)
+    finally:
+        if server_thread.is_alive():
+            server.shutdown()
+        server_thread.join(timeout=5)
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Lokaler Produktionsserver der PLZ-Karte")
-    parser.add_argument("--open-browser", action="store_true", help="Standardbrowser beim Start öffnen")
+    parser = argparse.ArgumentParser(description="Desktopanwendung der PLZ-Karte")
+    parser.add_argument("--server", action="store_true", help="nur den lokalen HTTP-Server starten")
     parser.add_argument("--shutdown", action="store_true", help="laufenden Server sauber beenden")
     args = parser.parse_args()
     control = prepare_data_directories()["root"] / "server.token"
     if args.shutdown:
         return 0 if request_running_server_stop(control) else 1
-    return run(args.open_browser)
+    return run() if args.server else run_desktop()
 
 
 if __name__ == "__main__":

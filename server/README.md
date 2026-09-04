@@ -16,11 +16,12 @@ Produktionsstart bindet ausschließlich an `127.0.0.1:8080` und liefert das
 Frontend aus `src/app/` mit aus. Start aus dem Repository-Wurzelverzeichnis:
 
 ```sh
-PYTHONPATH=server python server/run.py
+PYTHONPATH=server python server/run.py --server
 ```
 
-Mit `--open-browser` wird zusätzlich der Standardbrowser geöffnet. Mit
-`--shutdown` wird eine laufende Instanz kontrolliert beendet. Der Server nimmt
+Ohne `--server` startet das Programm als eigenständige Desktopanwendung in einer
+nativen WebView (dafür wird `pywebview` aus den Windows-Buildabhängigkeiten
+benötigt). Mit `--shutdown` wird eine laufende Instanz kontrolliert beendet. Der Server nimmt
 dann keine neuen Anfragen mehr an, beendet die aktuelle Anfrage und schließt
 erst danach Server und Datenbankverbindungen.
 
