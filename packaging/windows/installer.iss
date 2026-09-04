@@ -8,7 +8,7 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 DefaultDirName={localappdata}\Programs\PLZ-Karte
 DefaultGroupName=PLZ-Karte
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\..\dist-installer
@@ -21,6 +21,9 @@ SetupIconFile=..\..\PLZ-Karte.ico
 
 [Files]
 Source: "..\..\dist\PLZ-Karte\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Dirs]
+Name: "C:\Logs\PLZ-Karte"; Permissions: users-modify
 
 [Icons]
 Name: "{group}\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"

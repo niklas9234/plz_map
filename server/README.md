@@ -41,13 +41,15 @@ Umfang und abgelehnte Datensätze werden in das Anwendungslog geschrieben.
 ## Veränderliche Daten
 
 Programmdateien und Benutzerdaten sind strikt getrennt. Ohne explizite
-Konfiguration liegen Datenbank, Start-Backups und Logs unter Windows in
-`%LOCALAPPDATA%\PLZ-Karte\` (unter Linux in
-`$XDG_DATA_HOME/PLZ-Karte/`, sonst `~/.local/share/PLZ-Karte/`). Eine vorhandene
+Konfiguration liegen Datenbank und Start-Backups unter Windows in
+`%LOCALAPPDATA%\PLZ-Karte\`. Die getrennten Dateien `general.log`, `backend.log`
+und `frontend.log` werden unter `C:\Logs\PLZ-Karte\` angelegt. Unter Linux liegen
+alle veränderlichen Daten in `$XDG_DATA_HOME/PLZ-Karte/`, sonst in
+`~/.local/share/PLZ-Karte/`. Eine vorhandene
 Datenbank wird bei jedem Start mit der SQLite-Backup-API konsistent nach
 `backups/` gesichert; die zehn jüngsten Sicherungen bleiben erhalten. Logs
-liegen in `logs/`. Für Tests oder Administration kann das gesamte Stammverzeichnis
-mit `PLZ_MAP_DATA_DIR` überschrieben werden. Die Datenbank wird einheitlich über
+liegen in `logs/`. Für Tests oder Administration können das Stammverzeichnis
+mit `PLZ_MAP_DATA_DIR` und das Logverzeichnis mit `PLZ_MAP_LOG_DIR` überschrieben werden. Die Datenbank wird einheitlich über
 `DATABASE_URL` konfiguriert, beispielsweise `sqlite:////tmp/plz-map.sqlite3`
 oder `postgresql+psycopg://user:password@host/database`. Ohne Variable wird die
 beschriebene lokale SQLite-Datei verwendet. `PLZ_MAP_DATABASE` wird für bestehende

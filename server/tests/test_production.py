@@ -1,17 +1,25 @@
 import io
+import json
 from pathlib import Path
 
+from app import production
 from app.production import DesktopWindowApi, static_application
 
 
-def request(app, path, method="GET", range_header=None):
+def request(app, path, method="GET", range_header=None, payload=None):
     response = {}
 
     def start_response(status, headers):
         response["status"] = status
         response["headers"] = dict(headers)
 
-    environ = {"PATH_INFO": path, "REQUEST_METHOD": method, "wsgi.input": io.BytesIO()}
+    body = json.dumps(payload).encode("utf-8") if payload is not None else b""
+    environ = {
+        "PATH_INFO": path,
+        "REQUEST_METHOD": method,
+        "CONTENT_LENGTH": str(len(body)),
+        "wsgi.input": io.BytesIO(body),
+    }
     if range_header is not None:
         environ["HTTP_RANGE"] = range_header
     body = b"".join(app(environ, start_response))
@@ -137,6 +145,36 @@ def test_shutdown_requires_token(tmp_path):
     response, _ = request(app, "/api/system/shutdown", "POST")
     assert response["status"] == "403 Forbidden"
     assert not called
+
+
+def test_frontend_log_endpoint_records_messages(tmp_path, monkeypatch):
+    app = static_application(tmp_path, "secret", lambda: None)
+    messages = []
+    monkeypatch.setattr(production.frontend_logger, "info", messages.append)
+
+    response, body = request(
+        app,
+        "/api/logs/frontend",
+        "POST",
+        payload={"level": "info", "message": "Frontend geladen"},
+    )
+
+    assert response["status"] == "204 No Content"
+    assert body == b""
+    assert messages == ["Frontend geladen"]
+
+
+def test_frontend_log_endpoint_rejects_invalid_entries(tmp_path):
+    app = static_application(tmp_path, "secret", lambda: None)
+
+    response, _ = request(
+        app,
+        "/api/logs/frontend",
+        "POST",
+        payload={"level": "debug", "message": "not permitted"},
+    )
+
+    assert response["status"] == "400 Bad Request"
 
 
 def test_desktop_window_api_controls_window():
