@@ -235,9 +235,9 @@ def run() -> int:
 class DesktopWindowApi:
     """Actions exposed exclusively to the local desktop frontend."""
 
-    def __init__(self):
+    def __init__(self, maximized: bool = False):
         self.window = None
-        self._maximized = False
+        self._maximized = maximized
 
     def minimize(self):
         self.window.minimize()
@@ -263,13 +263,14 @@ def run_desktop() -> int:
     )
     server_thread.start()
 
-    window_api = DesktopWindowApi()
+    window_api = DesktopWindowApi(maximized=True)
     window = webview.create_window(
         "PLZ-Karte",
         URL,
         width=1440,
         height=900,
         min_size=(1024, 700),
+        maximized=True,
         frameless=True,
         easy_drag=False,
         js_api=window_api,

@@ -18,7 +18,7 @@ body {
   right: 0;
   left: 0;
   display: block;
-  height: 7px;
+  height: 12px;
 }
 
 .desktop-window .desktop-titlebar {
@@ -35,7 +35,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-100%);
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition: opacity 400ms ease, transform 400ms ease;
 }
 
 .desktop-window .desktop-titlebar.is-visible {
