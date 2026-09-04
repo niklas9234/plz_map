@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import mimetypes
+import re
 import secrets
 import signal
 import sys
@@ -21,12 +22,41 @@ from .database import create_database_engine, database_url, initialize, prepare_
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
+BYTE_RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
 
 
 def frontend_directory() -> Path:
     if getattr(sys, "frozen", False):
         return Path(getattr(sys, "_MEIPASS")) / "frontend"
     return Path(__file__).resolve().parents[2] / "src" / "app"
+
+
+def parse_byte_range(value: str, size: int) -> tuple[int, int] | None:
+    """Return the inclusive bounds for one satisfiable HTTP byte range."""
+    match = BYTE_RANGE_RE.fullmatch(value)
+    if match is None:
+        return None
+    first, last = match.groups()
+    if not first and not last:
+        return None
+    try:
+        if first:
+            start = int(first)
+            if start >= size:
+                return None
+            end = min(int(last), size - 1) if last else size - 1
+            if start > end:
+                return None
+            return start, end
+
+        suffix_length = int(last)
+        if suffix_length == 0 or size == 0:
+            return None
+        return max(size - suffix_length, 0), size - 1
+    except ValueError:
+        # Python limits conversion of extremely long integer strings. Such a
+        # header cannot describe a range satisfiable by a local file anyway.
+        return None
 
 
 def static_application(frontend: Path, shutdown_token: str, request_shutdown):
@@ -53,11 +83,43 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown):
         if frontend not in candidate.parents or not candidate.is_file():
             start_response("404 Not Found", [("Content-Length", "0")])
             return [b""]
-        body = candidate.read_bytes()
+        size = candidate.stat().st_size
         content_type = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
-        headers = [("Content-Type", content_type), ("Content-Length", str(len(body)))]
+        range_value = environ.get("HTTP_RANGE")
+        if range_value is not None:
+            bounds = parse_byte_range(range_value, size)
+            if bounds is None:
+                start_response(
+                    "416 Range Not Satisfiable",
+                    [
+                        ("Accept-Ranges", "bytes"),
+                        ("Content-Range", f"bytes */{size}"),
+                        ("Content-Length", "0"),
+                    ],
+                )
+                return [b""]
+            start, end = bounds
+            content_length = end - start + 1
+            headers = [
+                ("Content-Type", content_type),
+                ("Accept-Ranges", "bytes"),
+                ("Content-Range", f"bytes {start}-{end}/{size}"),
+                ("Content-Length", str(content_length)),
+            ]
+            start_response("206 Partial Content", headers)
+            if method == "HEAD":
+                return []
+            with candidate.open("rb") as static_file:
+                static_file.seek(start)
+                return [static_file.read(content_length)]
+
+        headers = [
+            ("Content-Type", content_type),
+            ("Accept-Ranges", "bytes"),
+            ("Content-Length", str(size)),
+        ]
         start_response("200 OK", headers)
-        return [] if method == "HEAD" else [body]
+        return [] if method == "HEAD" else [candidate.read_bytes()]
 
     return app
 
