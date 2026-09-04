@@ -1,7 +1,7 @@
 import io
 from pathlib import Path
 
-from app.production import static_application
+from app.production import DesktopWindowApi, static_application
 
 
 def request(app, path, method="GET", range_header=None):
@@ -118,9 +118,41 @@ def test_static_frontend_rejects_traversal(tmp_path):
     assert response["status"] == "404 Not Found"
 
 
+def test_static_frontend_serves_development_icon_without_copy(tmp_path):
+    frontend = tmp_path / "src" / "app"
+    frontend.mkdir(parents=True)
+    (tmp_path / "PLZ-Karte.ico").write_bytes(b"icon")
+    app = static_application(frontend, "secret", lambda: None)
+
+    response, body = request(app, "/PLZ-Karte.ico")
+
+    assert response["status"] == "200 OK"
+    assert response["headers"]["Content-Type"] == "image/vnd.microsoft.icon"
+    assert body == b"icon"
+
+
 def test_shutdown_requires_token(tmp_path):
     called = []
     app = static_application(tmp_path, "secret", lambda: called.append(True))
     response, _ = request(app, "/api/system/shutdown", "POST")
     assert response["status"] == "403 Forbidden"
     assert not called
+
+
+def test_desktop_window_api_controls_window():
+    calls = []
+
+    class Window:
+        def minimize(self): calls.append("minimize")
+        def maximize(self): calls.append("maximize")
+        def restore(self): calls.append("restore")
+        def destroy(self): calls.append("destroy")
+
+    api = DesktopWindowApi()
+    api.window = Window()
+    api.minimize()
+    api.toggle_maximize()
+    api.toggle_maximize()
+    api.close()
+
+    assert calls == ["minimize", "maximize", "restore", "destroy"]

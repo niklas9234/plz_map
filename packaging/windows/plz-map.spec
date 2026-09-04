@@ -7,7 +7,10 @@ a = Analysis(
     [str(root / "server" / "run.py")],
     pathex=[str(root / "server")],
     binaries=[],
-    datas=[(str(root / "src" / "app"), "frontend")],
+    datas=[
+        (str(root / "src" / "app"), "frontend"),
+        (str(root / "PLZ-Karte.ico"), "frontend"),
+    ],
     hiddenimports=[],
 )
 pyz = PYZ(a.pure)
