@@ -194,3 +194,16 @@ def test_desktop_window_api_controls_window():
     api.close()
 
     assert calls == ["minimize", "maximize", "restore", "destroy"]
+
+
+def test_desktop_window_api_restores_an_initially_maximized_window():
+    calls = []
+
+    class Window:
+        def restore(self): calls.append("restore")
+
+    api = DesktopWindowApi(maximized=True)
+    api.window = Window()
+    api.toggle_maximize()
+
+    assert calls == ["restore"]

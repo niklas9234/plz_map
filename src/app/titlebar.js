@@ -5,18 +5,22 @@
     const trigger = document.getElementById("desktop-titlebar-trigger");
     if (!titlebar || !trigger) return;
 
+    const visibleDuration = 5000;
     let hideTimer;
 
-    function showTitlebar() {
-        window.clearTimeout(hideTimer);
-        titlebar.classList.add("is-visible");
+    function hideTitlebar() {
+        titlebar.classList.remove("is-visible");
     }
 
     function scheduleHide() {
         window.clearTimeout(hideTimer);
-        hideTimer = window.setTimeout(() => {
-            titlebar.classList.remove("is-visible");
-        }, 3000);
+        hideTimer = window.setTimeout(hideTitlebar, visibleDuration);
+    }
+
+    function showTitlebar() {
+        window.clearTimeout(hideTimer);
+        titlebar.classList.add("is-visible");
+        scheduleHide();
     }
 
     async function callWindowAction(action) {
@@ -24,16 +28,21 @@
         if (api && typeof api[action] === "function") await api[action]();
     }
 
-    window.addEventListener("pywebviewready", () => {
+    function enableTitlebar() {
         document.documentElement.classList.add("desktop-window");
         titlebar.hidden = false;
         trigger.hidden = false;
-    });
+    }
+
+    // Depending on the webview engine, the bridge can be ready before the last
+    // page scripts execute. Support both that case and the regular ready event.
+    if (window.pywebview) enableTitlebar();
+    window.addEventListener("pywebviewready", enableTitlebar);
 
     trigger.addEventListener("mouseenter", showTitlebar);
-    titlebar.addEventListener("mouseenter", showTitlebar);
+    titlebar.addEventListener("mouseenter", () => window.clearTimeout(hideTimer));
     titlebar.addEventListener("mouseleave", scheduleHide);
-    titlebar.addEventListener("focusin", showTitlebar);
+    titlebar.addEventListener("focusin", () => window.clearTimeout(hideTimer));
     titlebar.addEventListener("focusout", event => {
         if (!titlebar.contains(event.relatedTarget)) scheduleHide();
     });
