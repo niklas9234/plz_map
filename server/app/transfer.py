@@ -210,5 +210,19 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
     return {**counts, "written": True}
 
 
+def write_validated_data(connection, data: dict[str, Any]) -> None:
+    """Write already validated seed data through the legacy SQLite connection."""
+    for trade in data["trades"]:
+        connection.execute("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?)",
+                           (trade["id"], trade["name"], trade["status"], trade["color"], trade["createdAt"], trade["updatedAt"]))
+    for company in data["companies"]:
+        connection.execute("INSERT INTO companies VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           (company["id"], company["name"], company["ppsNumber"], company["tradeId"], company["status"], company["createdAt"], company["updatedAt"]))
+        connection.executemany("INSERT INTO territories VALUES (?, ?, ?, ?)",
+                               [(company["id"], item["postalCode"], company["tradeId"], item["role"]) for item in company["territories"]])
+        connection.executemany("INSERT INTO company_information VALUES (?, ?, ?, ?)",
+                               [(company["id"], position, item["category"], item["value"]) for position, item in enumerate(company["information"])])
+
+
 def dumps(connection: Connection) -> bytes:
     return json.dumps(export_data(connection), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
