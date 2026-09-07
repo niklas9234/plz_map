@@ -25,6 +25,7 @@ from alembic.config import Config
 from .application import application as api_application, create_application
 from .database import create_database_engine, data_directory, initialize, prepare_data_directories
 from .logging_config import configure_logging
+from .initial_seed import import_initial_seed
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
