@@ -8,6 +8,16 @@ class Base(DeclarativeBase):
     pass
 
 
+class ApplicationMetadata(Base):
+    """Internal markers for one-time application maintenance tasks."""
+
+    __tablename__ = "application_metadata"
+
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(35), nullable=False)
+
+
 class Trade(Base):
     __tablename__ = "trades"
     __table_args__ = (

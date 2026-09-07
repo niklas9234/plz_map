@@ -27,6 +27,21 @@ Standard. Für Tests oder Administration lassen sich diese Orte mit
 wird eine vorhandene SQLite-Datenbank gesichert; zehn Sicherungen bleiben
 erhalten.
 
+### Lokaler Browserbetrieb für die Entwicklung
+
+Ohne Desktopfenster lässt sich dieselbe vollständige Anwendung im Browser
+starten:
+
+```sh
+pip install -r server/requirements.txt
+PYTHONPATH=server python server/run.py --local-server
+```
+
+Danach ist sie unter `http://127.0.0.1:8080` erreichbar. Anders als ein reiner
+statischer Entwicklungsserver liefert dieser Prozess auch `/api/companies` und
+`/api/trades` aus. Statische Server wie `python -m http.server` oder
+`http-server` können diese API-Endpunkte nicht bedienen und liefern dort 404.
+
 ## Zentraler Mehrbenutzerbetrieb (Server)
 
 Das ausdrücklich gewählte Serverprofil wird so gestartet:
