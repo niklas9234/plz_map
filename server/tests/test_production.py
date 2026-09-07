@@ -94,6 +94,24 @@ def test_local_server_can_leave_browser_closed(monkeypatch):
     assert production.run_local_server(open_browser=False) == 0
 
 
+def test_default_start_opens_local_application_in_browser(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sys, "argv", ["run.py"])
+    monkeypatch.setattr(
+        production,
+        "run_local_server",
+        lambda **options: calls.append(options) or 0,
+    )
+    monkeypatch.setattr(
+        production,
+        "run_desktop",
+        lambda: (_ for _ in ()).throw(AssertionError("Desktopfenster wurde geöffnet")),
+    )
+
+    assert production.main() == 0
+    assert calls == [{}]
+
+
 def test_prepare_server_disposes_engine_when_port_binding_fails(monkeypatch):
     config = production.ProductionConfig(
         "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:", None,

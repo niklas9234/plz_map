@@ -3,7 +3,7 @@
 Das Backend hält die gemeinsam genutzten Stammdaten und liefert die API aus. Es
 unterstützt zwei bewusst getrennte Betriebsprofile.
 
-## Lokaler Pilotbetrieb (Desktop)
+## Lokaler Pilotbetrieb im Browser
 
 Der Standardstart ist für einen einzelnen Arbeitsplatz gedacht:
 
@@ -15,7 +15,7 @@ python server/run.py
 Dafür sind weder `.env` noch PostgreSQL oder eine manuell gesetzte
 `DATABASE_URL` erforderlich. Der Start verwendet SQLite und bindet den
 integrierten HTTP-Server fest und ausschließlich an `127.0.0.1:8080`.
-`pywebview` öffnet die Anwendung als Desktopfenster. Daten, Sicherungen und Logs
+Die Anwendung öffnet sich automatisch im Standardbrowser. Daten, Sicherungen und Logs
 werden über `prepare_data_directories()` in den plattformspezifischen lokalen
 Verzeichnissen angelegt. `--shutdown` beendet diese lokale Instanz kontrolliert.
 
@@ -27,10 +27,10 @@ Standard. Für Tests oder Administration lassen sich diese Orte mit
 wird eine vorhandene SQLite-Datenbank gesichert; zehn Sicherungen bleiben
 erhalten.
 
-### Lokaler Browserbetrieb für die Entwicklung
+### Expliziter lokaler Browserbetrieb
 
-Ohne Desktopfenster lässt sich dieselbe vollständige Anwendung im Browser
-starten:
+Für Entwicklung und Skripte kann der Browserbetrieb auch ausdrücklich
+gestartet werden:
 
 ```sh
 pip install -r server/requirements.txt
