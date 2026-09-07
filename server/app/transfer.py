@@ -17,6 +17,10 @@ SCHEMA_VERSION = 1
 STATUS = {"active", "inactive"}
 ROLES = {"primary", "alternative"}
 POSTAL_CODE = re.compile(r"^\d{2}$")
+# This is deliberately an explicit allow-list.  Exporting database metadata or
+# whole SQLite files would also copy logs, temporary tables and host-specific
+# paths and would make the transfer format dependent on one database product.
+MUTABLE_TABLES = ("trades", "companies", "territories", "company_information")
 
 
 class ImportValidationError(ValueError):
@@ -99,7 +103,11 @@ def validate_import(document: Any) -> dict[str, Any]:
     if document.get("format") != FORMAT:
         errors.append(f"format: erwartet '{FORMAT}'")
     if document.get("schemaVersion") != SCHEMA_VERSION:
-        errors.append(f"schemaVersion: unterstützt wird nur {SCHEMA_VERSION}")
+        errors.append(
+            "schemaVersion: Exportversion "
+            f"{document.get('schemaVersion')!r} ist inkompatibel; unterstützt wird nur Version "
+            f"{SCHEMA_VERSION}"
+        )
     # Reject an incompatible envelope before interpreting payload records.
     if errors:
         raise ImportValidationError(errors)
@@ -182,8 +190,15 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
         if connection.in_transaction():
             connection.commit()
         transaction = connection.begin()
-        if any(connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table})")).scalar() for table in ("trades", "companies")):
-            raise ImportValidationError(["Die Zieldatenbank ist nicht leer."])
+        occupied_tables = [
+            table for table in MUTABLE_TABLES
+            if connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table})")).scalar()
+        ]
+        if occupied_tables:
+            raise ImportValidationError([
+                "Die Zieldatenbank ist nicht vollständig leer (Daten in: "
+                f"{', '.join(occupied_tables)})."
+            ])
         for trade in data["trades"]:
             connection.execute(text("INSERT INTO trades (id, name, status, color, created_at, updated_at) VALUES (:id, :name, :status, :color, :created_at, :updated_at)"), {
                 "id": trade["id"], "name": trade["name"],
@@ -210,18 +225,35 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
     return {**counts, "written": True}
 
 
-def write_validated_data(connection, data: dict[str, Any]) -> None:
-    """Write already validated seed data through the legacy SQLite connection."""
+def write_validated_data(connection: Any, data: dict[str, Any]) -> None:
+    """Write validated transfer data through the legacy sqlite DB-API path.
+
+    Initial seeding owns its surrounding ``BEGIN IMMEDIATE`` transaction.  The
+    normal cross-database import above remains the only public transfer path.
+    """
     for trade in data["trades"]:
-        connection.execute("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?)",
-                           (trade["id"], trade["name"], trade["status"], trade["color"], trade["createdAt"], trade["updatedAt"]))
+        connection.execute(
+            "INSERT INTO trades (id,name,status,color,created_at,updated_at) VALUES (?,?,?,?,?,?)",
+            (trade["id"], trade["name"], trade["status"], trade["color"],
+             trade["createdAt"], trade["updatedAt"]),
+        )
     for company in data["companies"]:
-        connection.execute("INSERT INTO companies VALUES (?, ?, ?, ?, ?, ?, ?)",
-                           (company["id"], company["name"], company["ppsNumber"], company["tradeId"], company["status"], company["createdAt"], company["updatedAt"]))
-        connection.executemany("INSERT INTO territories VALUES (?, ?, ?, ?)",
-                               [(company["id"], item["postalCode"], company["tradeId"], item["role"]) for item in company["territories"]])
-        connection.executemany("INSERT INTO company_information VALUES (?, ?, ?, ?)",
-                               [(company["id"], position, item["category"], item["value"]) for position, item in enumerate(company["information"])])
+        connection.execute(
+            "INSERT INTO companies (id,name,pps_number,trade_id,status,created_at,updated_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (company["id"], company["name"], company["ppsNumber"], company["tradeId"],
+             company["status"], company["createdAt"], company["updatedAt"]),
+        )
+        connection.executemany(
+            "INSERT INTO territories (company_id,postal_code,trade_id,role) VALUES (?,?,?,?)",
+            [(company["id"], item["postalCode"], company["tradeId"], item["role"])
+             for item in company["territories"]],
+        )
+        connection.executemany(
+            "INSERT INTO company_information (company_id,position,category,value) VALUES (?,?,?,?)",
+            [(company["id"], position, item["category"], item["value"])
+             for position, item in enumerate(company["information"])],
+        )
 
 
 def dumps(connection: Connection) -> bytes:

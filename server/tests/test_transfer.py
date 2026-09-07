@@ -2,10 +2,12 @@ import copy
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import create_engine
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.transfer import FORMAT, ImportValidationError, SCHEMA_VERSION, export_data, import_data
+from app.models import Base
 
 
 def document():
@@ -29,6 +31,64 @@ def test_round_trip_and_validate_mode_on_every_database(database_engine):
         exported = export_data(db)
     for key in ("trades", "companies"):
         assert exported[key] == source[key]
+
+
+def test_sqlite_export_populates_a_separate_empty_database(database_engine):
+    """Exercise the actual pilot hand-off: SQLite file -> JSON -> clean target."""
+    source_document = document()
+    sqlite = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(sqlite)
+    try:
+        with sqlite.connect() as source:
+            import_data(source, source_document)
+            exported = export_data(source)
+
+        with database_engine.connect() as target:
+            assert import_data(target, exported) == {
+                "trades": 1, "companies": 1, "written": True,
+            }
+            imported = export_data(target)
+
+            assert target.execute(text("SELECT company_id, postal_code, trade_id, role FROM territories")).one() == (
+                source_document["companies"][0]["id"], "08",
+                source_document["trades"][0]["id"], "primary",
+            )
+            assert target.execute(text("SELECT company_id, position, category, value FROM company_information")).one() == (
+                source_document["companies"][0]["id"], 0, "phone", "123",
+            )
+
+        assert imported["trades"] == exported["trades"]
+        assert imported["companies"] == exported["companies"]
+    finally:
+        sqlite.dispose()
+
+
+def test_incompatible_schema_version_has_an_actionable_error():
+    incompatible = document()
+    incompatible["schemaVersion"] = SCHEMA_VERSION + 1
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    try:
+        with engine.connect() as connection:
+            with pytest.raises(ImportValidationError, match=r"inkompatibel.*unterstützt wird nur Version"):
+                import_data(connection, incompatible, "validate")
+    finally:
+        engine.dispose()
+
+
+def test_export_contract_does_not_expose_machine_specific_metadata(database_engine):
+    with database_engine.connect() as db:
+        import_data(db, document())
+        exported = export_data(db)
+
+    assert set(exported) == {
+        "format", "schemaVersion", "exportedAt", "applicationVersion", "trades", "companies",
+    }
+    serialized = str(exported).lower()
+    assert "sqlite" not in serialized
+    assert "postgres" not in serialized
+    assert "log" not in serialized
+    assert "tmp" not in serialized
 
 
 def test_invalid_late_record_is_atomic_on_every_database(database_engine):
