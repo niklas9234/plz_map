@@ -999,7 +999,14 @@ dialog::backdrop {
 
 .information-delete {
   color: #8e2424;
-  font-size: 19px;
+}
+
+.information-delete img,
+.table-action--delete img {
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: auto;
 }
 
 .information-add {

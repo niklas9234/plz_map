@@ -161,7 +161,11 @@ function initializeCompanyManagement() {
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "information-delete";
-        remove.innerHTML = "&#128465;";
+        const removeIcon = document.createElement("img");
+        removeIcon.src = "./assets/trash-bold.svg";
+        removeIcon.alt = "";
+        removeIcon.setAttribute("aria-hidden", "true");
+        remove.append(removeIcon);
         remove.setAttribute("aria-label", "Information löschen");
         remove.addEventListener("click", () => { row.remove(); updateInformationEmptyState(); updateDirtyState(); });
         row.append(select, input, remove);
@@ -559,7 +563,11 @@ function initializeTradeManagement() {
             const remove = document.createElement("button");
             remove.type = "button";
             remove.className = "table-action table-action--delete";
-            remove.textContent = "×";
+            const removeIcon = document.createElement("img");
+            removeIcon.src = "./assets/trash-bold.svg";
+            removeIcon.alt = "";
+            removeIcon.setAttribute("aria-hidden", "true");
+            remove.append(removeIcon);
             remove.setAttribute("aria-label", `${trade.name} löschen`);
             remove.addEventListener("click", async () => {
                 if (!window.confirm(`Gewerk „${trade.name}“ wirklich löschen?`)) return;
