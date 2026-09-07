@@ -3,7 +3,11 @@ import json
 import sys
 from pathlib import Path
 
+from sqlalchemy import inspect, text
+
 from app import production
+from app.database import create_database_engine
+from app.models import Base
 from app.production import static_application
 
 
@@ -50,6 +54,20 @@ def test_server_profile_requires_database_url(monkeypatch):
         assert "DATABASE_URL" in str(error)
     else:
         raise AssertionError("server profile accepted a missing DATABASE_URL")
+
+
+def test_local_server_uses_complete_local_profile(monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:", None,
+    )
+    resources = (object(), None, object())
+    calls = []
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(production, "prepare_server", lambda value: calls.append(value) or resources)
+    monkeypatch.setattr(production, "_serve", lambda *values: calls.append(values))
+
+    assert production.run_local_server() == 0
+    assert calls == [config, resources]
 
 
 def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypatch):
@@ -102,6 +120,60 @@ def test_initialize_database_imports_seed_for_desktop_profile(tmp_path, monkeypa
         assert imported == [1]
     finally:
         engine.dispose()
+
+
+def test_initialize_database_creates_seed_metadata_and_imports_bundled_data(tmp_path):
+    database = tmp_path / "plz-map.sqlite3"
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, f"sqlite:///{database}",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+
+    engine = production.initialize_database(config)
+
+    try:
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql(
+                "SELECT value FROM application_metadata WHERE key = 'initial_seed'"
+            ).scalar_one() == production.INITIAL_SEED_ID
+            assert connection.exec_driver_sql("SELECT count(*) FROM trades").scalar_one() > 0
+            assert connection.exec_driver_sql("SELECT count(*) FROM companies").scalar_one() > 0
+    finally:
+        engine.dispose()
+
+
+def test_migrations_adopt_an_unversioned_legacy_schema(tmp_path):
+    database = tmp_path / "legacy.sqlite3"
+    url = f"sqlite:///{database}"
+    legacy_engine = create_database_engine(url)
+    Base.metadata.create_all(legacy_engine)
+    with legacy_engine.begin() as connection:
+        # Alembic creates this table before executing 0001. SQLite can leave it
+        # empty when that migration then fails on a pre-existing legacy table.
+        connection.execute(text(
+            "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"
+        ))
+        connection.execute(text(
+            "INSERT INTO application_metadata (key, value, created_at) "
+            "VALUES ('legacy', 'preserved', '2026-01-01T00:00:00Z')"
+        ))
+    legacy_engine.dispose()
+
+    production.run_database_migrations(url)
+
+    migrated_engine = create_database_engine(url)
+    try:
+        assert set(inspect(migrated_engine).get_table_names()) >= {
+            "alembic_version", "application_metadata", "trades", "companies",
+            "territories", "company_information",
+        }
+        with migrated_engine.connect() as connection:
+            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002"
+            assert connection.execute(text(
+                "SELECT value FROM application_metadata WHERE key = 'legacy'"
+            )).scalar_one() == "preserved"
+    finally:
+        migrated_engine.dispose()
 
 
 def test_initialize_database_does_not_seed_server_profile(monkeypatch):

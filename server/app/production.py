@@ -21,11 +21,12 @@ from wsgiref.simple_server import WSGIRequestHandler, make_server
 
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import inspect, text
 
 from .application import application as api_application, create_application
 from .database import create_database_engine, data_directory, initialize, prepare_data_directories
 from .logging_config import configure_logging
-from .initial_seed import import_initial_seed
+from .initial_seed import INITIAL_SEED_ID, import_initial_seed
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
@@ -247,6 +248,25 @@ def run_database_migrations(database: str) -> None:
     alembic_config = Config(str(server_root / "alembic.ini"))
     alembic_config.set_main_option("script_location", str(server_root / "migrations"))
     alembic_config.attributes["runtime_database_url"] = database
+    # Releases before Alembic support created the complete domain schema with
+    # SQLAlchemy's create_all(). Such databases have no migration revision (or
+    # an empty alembic_version table after a failed first upgrade), so replaying
+    # 0001 would try to create their existing tables. Adopt that known legacy
+    # schema at 0001; subsequent migrations remain responsible for upgrades.
+    probe = create_database_engine(database)
+    try:
+        tables = set(inspect(probe).get_table_names())
+        domain_tables = {"trades", "companies", "territories", "company_information"}
+        revision = None
+        if "alembic_version" in tables:
+            with probe.connect() as connection:
+                revision = connection.execute(
+                    text("SELECT version_num FROM alembic_version LIMIT 1")
+                ).scalar_one_or_none()
+        if domain_tables.issubset(tables) and revision is None:
+            command.stamp(alembic_config, "0001")
+    finally:
+        probe.dispose()
     command.upgrade(alembic_config, "head")
 
 
@@ -333,6 +353,13 @@ def run_server() -> int:
     return 0
 
 
+def run_local_server() -> int:
+    """Serve the complete local application without opening a desktop window."""
+    server, control_file, engine = prepare_server(local_desktop_config())
+    _serve(server, control_file, engine)
+    return 0
+
+
 def run_desktop() -> int:
     """Run the local server inside a native Windows webview window."""
     import webview
@@ -388,12 +415,23 @@ def run_desktop() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Desktopanwendung der PLZ-Karte")
     parser.add_argument("--server", action="store_true", help="zentralen Server aus Umgebungsvariablen starten")
+    parser.add_argument(
+        "--local-server",
+        action="store_true",
+        help="lokale Anwendung samt API ohne Desktopfenster starten",
+    )
     parser.add_argument("--shutdown", action="store_true", help="laufenden Server sauber beenden")
     args = parser.parse_args()
     if args.shutdown:
         control = data_directory() / "server.token"
         return 0 if request_running_server_stop(control) else 1
-    return run_server() if args.server else run_desktop()
+    if args.server and args.local_server:
+        parser.error("--server und --local-server können nicht kombiniert werden")
+    if args.server:
+        return run_server()
+    if args.local_server:
+        return run_local_server()
+    return run_desktop()
 
 
 if __name__ == "__main__":

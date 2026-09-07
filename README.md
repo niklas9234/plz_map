@@ -23,20 +23,26 @@ Das Frontend bleibt ohne Build-Schritt ausführbar. Das Verzeichnis `server/`
 bildet die Grenze für das geplante Python-Backend; es enthält bewusst noch
 keine Framework- oder Datenbankentscheidung.
 
-## Lokaler Start des Frontends
+## Lokaler Start der Anwendung
 
 1. Die Datei `germany-luxembourg.pmtiles` nach
    `src/app/data/pmtiles/` kopieren.
-2. Einen statischen Webserver im Projektverzeichnis starten:
+2. Abhängigkeiten installieren und den integrierten lokalen Server starten:
 
    ```sh
-   python -m http.server 8000
+   python -m pip install -r server/requirements.txt
+   python server/run.py --local-server
    ```
 
-3. `http://localhost:8000` im Browser öffnen. Die Startseite im
-   Projektverzeichnis leitet automatisch zur Anwendung unter `src/app/`
-   weiter. Dadurch funktioniert der Einstieg auch bei statischen Hosts, die
-   das Repository-Verzeichnis als Dokumentenwurzel verwenden.
+   Der Befehl funktioniert unverändert in PowerShell, der Windows-
+   Eingabeaufforderung und in Unix-Shells. `PYTHONPATH=server` muss nicht gesetzt
+   werden; diese Schreibweise wäre in PowerShell kein gültiger Befehl.
+
+3. `http://127.0.0.1:8080` im Browser öffnen. Dieser Server liefert sowohl das
+   Frontend als auch die Endpunkte unter `/api/` aus und importiert beim ersten
+   Start die gebündelten Unternehmen und Gewerke. Ein reiner statischer Server
+   wie `python -m http.server` oder `http-server` reicht nicht aus: Er beantwortet
+   API-Aufrufe mit 404, sodass keine Stammdaten angezeigt werden.
 
 Die PMTiles-Datei wird nicht in Git aufgenommen. Weitere Karteneinstellungen
 sind in `CONFIGURATION.md` beschrieben.
