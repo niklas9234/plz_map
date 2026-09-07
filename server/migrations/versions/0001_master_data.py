@@ -10,6 +10,10 @@ depends_on = None
 
 
 def upgrade():
+    op.create_table("application_metadata",
+        sa.Column("key", sa.String(255), primary_key=True),
+        sa.Column("value", sa.String(255), nullable=False),
+        sa.Column("created_at", sa.String(35), nullable=False))
     op.create_table("trades",
         sa.Column("id", sa.String(36), primary_key=True), sa.Column("name", sa.String(255), nullable=False),
         sa.Column("status", sa.String(8), nullable=False),
@@ -48,3 +52,4 @@ def downgrade():
     op.drop_table("companies")
     op.drop_index("uq_trades_name_case_insensitive", table_name="trades")
     op.drop_table("trades")
+    op.drop_table("application_metadata")
