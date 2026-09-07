@@ -11,7 +11,11 @@ from app.models import Base
 config = context.config
 if config.config_file_name:
     fileConfig(config.config_file_name)
-config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+runtime_url = config.attributes.get("runtime_database_url")
+if runtime_url:
+    config.set_main_option("sqlalchemy.url", runtime_url.replace("%", "%%"))
+else:
+    config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"].replace("%", "%%"))
 target_metadata = Base.metadata
 
 

@@ -32,3 +32,32 @@ bleibt durch `.gitignore` von Git ausgeschlossen.
 Nach einem frischen Checkout muss die PMTiles-Datei manuell in dieses
 Verzeichnis kopiert werden. Weitere Hinweise stehen in
 `src/app/data/pmtiles/README.md`.
+
+# Backend-Betriebsprofile
+
+## Lokaler Pilotbetrieb
+
+Der Desktopstart benötigt keine `.env`-Datei. Er verwendet unabhängig von einer
+möglicherweise gesetzten Serverkonfiguration die lokale SQLite-Datei und lauscht
+nur auf `127.0.0.1:8080`. Optional können `PLZ_MAP_DATA_DIR` und
+`PLZ_MAP_LOG_DIR` die lokalen Daten- und Logverzeichnisse überschreiben.
+
+```sh
+PYTHONPATH=server python server/run.py
+```
+
+## Zentraler Mehrbenutzerbetrieb
+
+Der Serverstart wird bewusst mit `--server` gewählt. Er erwartet
+`DATABASE_URL`; `PLZ_MAP_HOST` und `PLZ_MAP_PORT` bestimmen die Bind-Adresse und
+den Port. Geheimnisse gehören ausschließlich in die Laufzeitumgebung oder eine
+nicht eingecheckte `.env`-Datei.
+
+| Variable | Serverprofil | Beispiel ohne Zugangsdaten |
+| --- | --- | --- |
+| `DATABASE_URL` | erforderlich | `postgresql+psycopg://USER:PASSWORD@DBHOST/DBNAME` |
+| `PLZ_MAP_HOST` | optional, Standard `0.0.0.0` | `127.0.0.1` |
+| `PLZ_MAP_PORT` | optional, Standard `8000` | `8000` |
+
+Die Kartenanzeige-Einstellungen darunter sind davon unabhängig und bleiben
+öffentlich im Browser verfügbar.

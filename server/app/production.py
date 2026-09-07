@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import mimetypes
+import os
 import re
 import secrets
 import signal
@@ -14,11 +15,15 @@ import threading
 import urllib.error
 import urllib.request
 from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from wsgiref.simple_server import WSGIRequestHandler, make_server
 
-from .application import application as api_application
-from .database import create_database_engine, database_url, initialize, prepare_data_directories
+from alembic import command
+from alembic.config import Config
+
+from .application import application as api_application, create_application
+from .database import create_database_engine, data_directory, initialize, prepare_data_directories
 from .logging_config import configure_logging
 from .initial_seed import import_initial_seed
 
@@ -29,6 +34,49 @@ MAX_FRONTEND_LOG_SIZE = 16 * 1024
 frontend_logger = logging.getLogger("plz_map.frontend")
 backend_logger = logging.getLogger("plz_map.backend")
 general_logger = logging.getLogger("plz_map.general")
+
+
+@dataclass(frozen=True)
+class ProductionConfig:
+    """Complete configuration for one explicit production start profile."""
+
+    profile: str
+    host: str
+    port: int
+    database_url: str
+    data_paths: dict[str, Path] | None = None
+
+    @property
+    def url(self) -> str:
+        return f"http://{self.host}:{self.port}/"
+
+
+def local_desktop_config() -> ProductionConfig:
+    """Build the safe, zero-configuration desktop profile."""
+    paths = prepare_data_directories()
+    return ProductionConfig(
+        profile="local-desktop",
+        host=HOST,
+        port=PORT,
+        database_url=f"sqlite:///{paths['root'] / 'plz_map.sqlite3'}",
+        data_paths=paths,
+    )
+
+
+def server_config() -> ProductionConfig:
+    """Build the central server profile exclusively from environment settings."""
+    try:
+        database = os.environ["DATABASE_URL"]
+    except KeyError as error:
+        raise RuntimeError("DATABASE_URL muss für das Serverprofil gesetzt sein") from error
+    host = os.environ.get("PLZ_MAP_HOST", "0.0.0.0")
+    try:
+        port = int(os.environ.get("PLZ_MAP_PORT", "8000"))
+    except ValueError as error:
+        raise RuntimeError("PLZ_MAP_PORT muss eine ganze Zahl sein") from error
+    if not 1 <= port <= 65535:
+        raise RuntimeError("PLZ_MAP_PORT muss zwischen 1 und 65535 liegen")
+    return ProductionConfig("server", host, port, database)
 
 
 def frontend_directory() -> Path:
@@ -65,9 +113,10 @@ def parse_byte_range(value: str, size: int) -> tuple[int, int] | None:
         return None
 
 
-def static_application(frontend: Path, shutdown_token: str, request_shutdown):
+def static_application(frontend: Path, shutdown_token: str, request_shutdown, api_app=None):
     frontend = frontend.resolve()
     development_icon = frontend.parents[1] / "PLZ-Karte.ico"
+    configured_api = api_app or api_application
 
     def app(environ, start_response):
         path = environ.get("PATH_INFO", "/")
@@ -104,7 +153,7 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown):
                 start_response("204 No Content", [("Content-Length", "0")])
                 return [b""]
             backend_logger.info("API-Anfrage: %s %s", method, path)
-            return api_application(environ, start_response)
+            return configured_api(environ, start_response)
         if method not in {"GET", "HEAD"}:
             start_response("405 Method Not Allowed", [("Allow", "GET, HEAD"), ("Content-Length", "0")])
             return [b""]
@@ -192,52 +241,79 @@ def request_running_server_stop(control_file: Path) -> bool:
         return False
 
 
-def _prepare_server():
-    """Initialize persistent state and return the configured local server."""
-    paths = prepare_data_directories()
-    configure_logging(paths["logs"])
-    url = database_url()
-    control_file = paths["root"] / "server.token"
-    if url.startswith("sqlite:///") and not url.endswith(":memory:"):
-        backup_database(Path(url.removeprefix("sqlite:///")), paths["backups"])
-    engine = create_database_engine(url)
+def run_database_migrations(database: str) -> None:
+    """Upgrade either profile's database to the bundled Alembic revision."""
+    server_root = Path(__file__).resolve().parents[1]
+    alembic_config = Config(str(server_root / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(server_root / "migrations"))
+    alembic_config.attributes["runtime_database_url"] = database
+    command.upgrade(alembic_config, "head")
+
+
+def initialize_database(config: ProductionConfig):
+    """Run the shared database migration and schema initialization step."""
+    if config.data_paths and config.database_url.startswith("sqlite:///"):
+        backup_database(
+            Path(config.database_url.removeprefix("sqlite:///")),
+            config.data_paths["backups"],
+        )
+    run_database_migrations(config.database_url)
+    engine = create_database_engine(config.database_url)
     initialize(engine)
-    engine.dispose()
-    if url.startswith("sqlite:///") and not url.endswith(":memory:"):
-        import sqlite3
-        seed_connection = sqlite3.connect(Path(url.removeprefix("sqlite:///")))
-        try:
-            seed_connection.execute("PRAGMA foreign_keys = ON")
-            import_initial_seed(seed_connection)
-        finally:
-            seed_connection.close()
+    return engine
+
+
+def initialize_logging(config: ProductionConfig) -> None:
+    """Configure persistent desktop logs or standard server logging."""
+    if config.data_paths:
+        configure_logging(config.data_paths["logs"])
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+
+def create_wsgi_application(config: ProductionConfig, engine, shutdown_token: str, request_shutdown):
+    """Build the shared static/API WSGI application."""
+    return static_application(
+        frontend_directory(), shutdown_token, request_shutdown, create_application(engine)
+    )
+
+
+def prepare_server(config: ProductionConfig):
+    """Initialize logging, database and WSGI, then bind the configured server."""
+    initialize_logging(config)
+    engine = initialize_database(config)
 
     token = secrets.token_urlsafe(32)
-    server = make_server(HOST, PORT, lambda *_: [], handler_class=WSGIRequestHandler)
-    server.set_app(static_application(frontend_directory(), token, server.shutdown))
-    control_file.write_text(token, encoding="utf-8")
-    general_logger.info("Anwendung gestartet; Server: %s; Logs: %s", URL, paths["logs"])
+    server = make_server(config.host, config.port, lambda *_: [], handler_class=WSGIRequestHandler)
+    server.set_app(create_wsgi_application(config, engine, token, server.shutdown))
+    control_file = config.data_paths["root"] / "server.token" if config.data_paths else None
+    if control_file:
+        control_file.write_text(token, encoding="utf-8")
+    general_logger.info("Anwendung gestartet; Server: %s", config.url)
 
     def stop_on_signal(_signum, _frame):
         threading.Thread(target=server.shutdown, daemon=True).start()
 
     signal.signal(signal.SIGTERM, stop_on_signal)
     signal.signal(signal.SIGINT, stop_on_signal)
-    return server, control_file
+    return server, control_file, engine
 
 
-def _serve(server, control_file: Path) -> None:
+def _serve(server, control_file: Path | None, engine) -> None:
     try:
         server.serve_forever()
     finally:
         server.server_close()
-        control_file.unlink(missing_ok=True)
+        if control_file:
+            control_file.unlink(missing_ok=True)
+        engine.dispose()
         general_logger.info("Server sauber beendet")
 
 
-def run() -> int:
-    server, control_file = _prepare_server()
-    _serve(server, control_file)
+def run_server() -> int:
+    """Start the central, environment-configured multi-user server."""
+    server, control_file, engine = prepare_server(server_config())
+    _serve(server, control_file, engine)
     return 0
 
 
@@ -245,15 +321,16 @@ def run_desktop() -> int:
     """Run the local server inside a native Windows webview window."""
     import webview
 
-    server, control_file = _prepare_server()
+    config = local_desktop_config()
+    server, control_file, engine = prepare_server(config)
     server_thread = threading.Thread(
-        target=_serve, args=(server, control_file), name="plz-map-server", daemon=True
+        target=_serve, args=(server, control_file, engine), name="plz-map-server", daemon=True
     )
     server_thread.start()
 
     window = webview.create_window(
         "PLZ-Karte",
-        f"{URL}?desktop=1",
+        f"{config.url}?desktop=1",
         width=1440,
         height=900,
         min_size=(1024, 700),
@@ -294,13 +371,13 @@ def run_desktop() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Desktopanwendung der PLZ-Karte")
-    parser.add_argument("--server", action="store_true", help="nur den lokalen HTTP-Server starten")
+    parser.add_argument("--server", action="store_true", help="zentralen Server aus Umgebungsvariablen starten")
     parser.add_argument("--shutdown", action="store_true", help="laufenden Server sauber beenden")
     args = parser.parse_args()
-    control = prepare_data_directories()["root"] / "server.token"
     if args.shutdown:
+        control = data_directory() / "server.token"
         return 0 if request_running_server_stop(control) else 1
-    return run() if args.server else run_desktop()
+    return run_server() if args.server else run_desktop()
 
 
 if __name__ == "__main__":
