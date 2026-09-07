@@ -52,6 +52,20 @@ def test_server_profile_requires_database_url(monkeypatch):
         raise AssertionError("server profile accepted a missing DATABASE_URL")
 
 
+def test_local_server_uses_complete_local_profile(monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:", None,
+    )
+    resources = (object(), None, object())
+    calls = []
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(production, "prepare_server", lambda value: calls.append(value) or resources)
+    monkeypatch.setattr(production, "_serve", lambda *values: calls.append(values))
+
+    assert production.run_local_server() == 0
+    assert calls == [config, resources]
+
+
 def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypatch):
     config = production.ProductionConfig(
         "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:",
@@ -100,6 +114,26 @@ def test_initialize_database_imports_seed_for_desktop_profile(tmp_path, monkeypa
 
     try:
         assert imported == [1]
+    finally:
+        engine.dispose()
+
+
+def test_initialize_database_creates_seed_metadata_and_imports_bundled_data(tmp_path):
+    database = tmp_path / "plz-map.sqlite3"
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, f"sqlite:///{database}",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+
+    engine = production.initialize_database(config)
+
+    try:
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql(
+                "SELECT value FROM application_metadata WHERE key = 'initial_seed'"
+            ).scalar_one() == production.INITIAL_SEED_ID
+            assert connection.exec_driver_sql("SELECT count(*) FROM trades").scalar_one() > 0
+            assert connection.exec_driver_sql("SELECT count(*) FROM companies").scalar_one() > 0
     finally:
         engine.dispose()
 
