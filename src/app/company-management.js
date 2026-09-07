@@ -494,7 +494,11 @@ function initializeTradeManagement() {
     const list = document.getElementById("trade-list");
     const error = document.getElementById("trade-error");
     const newColorPicker = document.getElementById("new-trade-color-picker");
+    const deleteConfirmation = document.getElementById("delete-trade-confirmation");
+    const deleteTradeName = document.getElementById("delete-trade-name");
+    const confirmTradeDelete = document.getElementById("confirm-trade-delete");
     let trades = [];
+    let tradeToDelete = null;
 
     function createColorPicker(selected, currentTrade = "") {
         const picker = document.createElement("div");
@@ -569,10 +573,10 @@ function initializeTradeManagement() {
             removeIcon.setAttribute("aria-hidden", "true");
             remove.append(removeIcon);
             remove.setAttribute("aria-label", `${trade.name} löschen`);
-            remove.addEventListener("click", async () => {
-                if (!window.confirm(`Gewerk „${trade.name}“ wirklich löschen?`)) return;
-                await tradeStore.remove(trade.id);
-                await render();
+            remove.addEventListener("click", () => {
+                tradeToDelete = trade;
+                deleteTradeName.textContent = trade.name;
+                deleteConfirmation.showModal();
             });
             const actions = document.createElement("div");
             actions.className = "trade-list__actions";
@@ -607,6 +611,25 @@ function initializeTradeManagement() {
         }
     });
     document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
+    document.getElementById("cancel-trade-delete").addEventListener("click", () => deleteConfirmation.close());
+    deleteConfirmation.addEventListener("close", () => { tradeToDelete = null; });
+    confirmTradeDelete.addEventListener("click", async () => {
+        if (!tradeToDelete) return;
+        const tradeId = tradeToDelete.id;
+        confirmTradeDelete.disabled = true;
+        try {
+            await tradeStore.remove(tradeId);
+            deleteConfirmation.close();
+            error.hidden = true;
+            await render();
+        } catch (deleteError) {
+            deleteConfirmation.close();
+            error.textContent = deleteError.message;
+            error.hidden = false;
+        } finally {
+            confirmTradeDelete.disabled = false;
+        }
+    });
     document.addEventListener("click", (event) => {
         if (event.target.closest(".color-picker__control")) return;
         document.querySelectorAll(".color-picker__overlay:not([hidden])").forEach((overlay) => {
