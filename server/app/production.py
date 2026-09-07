@@ -239,17 +239,17 @@ class DesktopWindowApi:
         self.window = None
         self._maximized = maximized
 
-    def minimize(self):
+    def window_minimize(self):
         self.window.minimize()
 
-    def toggle_maximize(self):
+    def window_toggle_maximize(self):
         if self._maximized:
             self.window.restore()
         else:
             self.window.maximize()
         self._maximized = not self._maximized
 
-    def close(self):
+    def window_close(self):
         self.window.destroy()
 
 

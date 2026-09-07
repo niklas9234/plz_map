@@ -1,7 +1,13 @@
 (function initializeDesktopTitlebar() {
     "use strict";
 
-    const HIDE_DELAY_MS = 5000;
+    const HIDE_DELAY_MS = 2000;
+
+    const WINDOW_ACTIONS = {
+        minimize: "window_minimize",
+        maximize: "window_toggle_maximize",
+        close: "window_close",
+    };
 
     function createController(titlebar, trigger, timers = window) {
         let hideTimer;
@@ -44,7 +50,9 @@
 
     async function callWindowAction(action) {
         const api = window.pywebview && window.pywebview.api;
-        if (api && typeof api[action] === "function") await api[action]();
+        const method = WINDOW_ACTIONS[action];
+        if (!api || typeof api[method] !== "function") return;
+        await api[method]();
     }
 
     function enableTitlebar() {
@@ -64,7 +72,7 @@
     createController(titlebar, trigger);
 
     document.getElementById("window-minimize").addEventListener("click", () => callWindowAction("minimize"));
-    document.getElementById("window-maximize").addEventListener("click", () => callWindowAction("toggle_maximize"));
+    document.getElementById("window-maximize").addEventListener("click", () => callWindowAction("maximize"));
     document.getElementById("window-close").addEventListener("click", () => callWindowAction("close"));
 
 }());
