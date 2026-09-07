@@ -9,7 +9,7 @@ Der Standardstart ist für einen einzelnen Arbeitsplatz gedacht:
 
 ```sh
 pip install -r server/requirements.txt
-PYTHONPATH=server python server/run.py
+python server/run.py
 ```
 
 Dafür sind weder `.env` noch PostgreSQL oder eine manuell gesetzte
@@ -34,13 +34,16 @@ starten:
 
 ```sh
 pip install -r server/requirements.txt
-PYTHONPATH=server python server/run.py --local-server
+python server/run.py --local-server
 ```
 
 Danach ist sie unter `http://127.0.0.1:8080` erreichbar. Anders als ein reiner
 statischer Entwicklungsserver liefert dieser Prozess auch `/api/companies` und
 `/api/trades` aus. Statische Server wie `python -m http.server` oder
 `http-server` können diese API-Endpunkte nicht bedienen und liefern dort 404.
+Der Startbefehl funktioniert auch direkt in PowerShell; eine Unix-artige
+`PYTHONPATH=server`-Zuweisung ist weder erforderlich noch unter PowerShell
+gültig.
 
 ## Zentraler Mehrbenutzerbetrieb (Server)
 
@@ -49,7 +52,7 @@ Das ausdrücklich gewählte Serverprofil wird so gestartet:
 ```sh
 DATABASE_URL='postgresql+psycopg://USER:PASSWORD@DBHOST/DBNAME' \
 PLZ_MAP_HOST='0.0.0.0' PLZ_MAP_PORT='8000' \
-PYTHONPATH=server python server/run.py --server
+python server/run.py --server
 ```
 
 `DATABASE_URL` ist in diesem Profil verpflichtend. Bind-Adresse und Port stammen

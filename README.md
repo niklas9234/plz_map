@@ -31,8 +31,12 @@ keine Framework- oder Datenbankentscheidung.
 
    ```sh
    python -m pip install -r server/requirements.txt
-   PYTHONPATH=server python server/run.py --local-server
+   python server/run.py --local-server
    ```
+
+   Der Befehl funktioniert unverändert in PowerShell, der Windows-
+   Eingabeaufforderung und in Unix-Shells. `PYTHONPATH=server` muss nicht gesetzt
+   werden; diese Schreibweise wäre in PowerShell kein gültiger Befehl.
 
 3. `http://127.0.0.1:8080` im Browser öffnen. Dieser Server liefert sowohl das
    Frontend als auch die Endpunkte unter `/api/` aus und importiert beim ersten

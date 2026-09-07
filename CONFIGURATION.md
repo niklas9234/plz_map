@@ -43,7 +43,7 @@ nur auf `127.0.0.1:8080`. Optional können `PLZ_MAP_DATA_DIR` und
 `PLZ_MAP_LOG_DIR` die lokalen Daten- und Logverzeichnisse überschreiben.
 
 ```sh
-PYTHONPATH=server python server/run.py
+python server/run.py
 ```
 
 ## Zentraler Mehrbenutzerbetrieb
