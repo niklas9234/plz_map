@@ -80,6 +80,45 @@ def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypat
         engine.dispose()
 
 
+def test_initialize_database_imports_seed_for_desktop_profile(tmp_path, monkeypatch):
+    database = tmp_path / "plz-map.sqlite3"
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, f"sqlite:///{database}",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+    imported = []
+    monkeypatch.setattr(production, "run_database_migrations", lambda _url: None)
+    monkeypatch.setattr(
+        production,
+        "import_initial_seed",
+        lambda connection: imported.append(
+            connection.execute("PRAGMA foreign_keys").fetchone()[0]
+        ),
+    )
+
+    engine = production.initialize_database(config)
+
+    try:
+        assert imported == [1]
+    finally:
+        engine.dispose()
+
+
+def test_initialize_database_does_not_seed_server_profile(monkeypatch):
+    config = production.ProductionConfig(
+        "server", "0.0.0.0", 8000, "sqlite:///:memory:", None,
+    )
+    monkeypatch.setattr(production, "run_database_migrations", lambda _url: None)
+    monkeypatch.setattr(
+        production, "import_initial_seed",
+        lambda _connection: (_ for _ in ()).throw(AssertionError("server profile was seeded")),
+    )
+
+    engine = production.initialize_database(config)
+
+    engine.dispose()
+
+
 def request(app, path, method="GET", range_header=None, payload=None):
     response = {}
 
@@ -113,6 +152,23 @@ def test_static_frontend_root_and_head(tmp_path):
     assert body == b""
     assert response["headers"]["Accept-Ranges"] == "bytes"
     assert response["headers"]["Content-Length"] == "5"
+
+
+def test_static_application_forwards_master_data_routes(tmp_path):
+    calls = []
+
+    def api_app(environ, start_response):
+        calls.append((environ["REQUEST_METHOD"], environ["PATH_INFO"]))
+        start_response("200 OK", [("Content-Type", "application/json")])
+        return [b"[]"]
+
+    app = static_application(tmp_path, "secret", lambda: None, api_app)
+
+    for path in ("/api/companies", "/api/trades"):
+        response, body = request(app, path)
+        assert response["status"] == "200 OK"
+        assert body == b"[]"
+    assert calls == [("GET", "/api/companies"), ("GET", "/api/trades")]
 
 
 def test_static_frontend_byte_ranges(tmp_path):

@@ -252,7 +252,8 @@ def run_database_migrations(database: str) -> None:
 
 def initialize_database(config: ProductionConfig):
     """Run the shared database migration and schema initialization step."""
-    if config.data_paths and config.database_url.startswith("sqlite:///"):
+    if (config.data_paths and config.database_url.startswith("sqlite:///")
+            and not config.database_url.endswith(":memory:")):
         backup_database(
             Path(config.database_url.removeprefix("sqlite:///")),
             config.data_paths["backups"],
@@ -260,6 +261,21 @@ def initialize_database(config: ProductionConfig):
     run_database_migrations(config.database_url)
     engine = create_database_engine(config.database_url)
     initialize(engine)
+    # The desktop edition starts with the bundled pilot data.  This step used
+    # to live in the old desktop-only startup function and was accidentally
+    # dropped when the desktop and server startup paths were merged.  Keep it
+    # deliberately limited to the managed local SQLite database: centrally
+    # operated databases are populated through the documented import process.
+    if (config.data_paths and config.database_url.startswith("sqlite:///")
+            and not config.database_url.endswith(":memory:")):
+        import sqlite3
+        database = Path(config.database_url.removeprefix("sqlite:///"))
+        seed_connection = sqlite3.connect(database)
+        try:
+            seed_connection.execute("PRAGMA foreign_keys = ON")
+            import_initial_seed(seed_connection)
+        finally:
+            seed_connection.close()
     return engine
 
 
