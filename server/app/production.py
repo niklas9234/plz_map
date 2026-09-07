@@ -21,6 +21,7 @@ from wsgiref.simple_server import WSGIRequestHandler, make_server
 
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import inspect, text
 
 from .application import application as api_application, create_application
 from .database import create_database_engine, data_directory, initialize, prepare_data_directories
@@ -247,6 +248,25 @@ def run_database_migrations(database: str) -> None:
     alembic_config = Config(str(server_root / "alembic.ini"))
     alembic_config.set_main_option("script_location", str(server_root / "migrations"))
     alembic_config.attributes["runtime_database_url"] = database
+    # Releases before Alembic support created the complete domain schema with
+    # SQLAlchemy's create_all(). Such databases have no migration revision (or
+    # an empty alembic_version table after a failed first upgrade), so replaying
+    # 0001 would try to create their existing tables. Adopt that known legacy
+    # schema at 0001; subsequent migrations remain responsible for upgrades.
+    probe = create_database_engine(database)
+    try:
+        tables = set(inspect(probe).get_table_names())
+        domain_tables = {"trades", "companies", "territories", "company_information"}
+        revision = None
+        if "alembic_version" in tables:
+            with probe.connect() as connection:
+                revision = connection.execute(
+                    text("SELECT version_num FROM alembic_version LIMIT 1")
+                ).scalar_one_or_none()
+        if domain_tables.issubset(tables) and revision is None:
+            command.stamp(alembic_config, "0001")
+    finally:
+        probe.dispose()
     command.upgrade(alembic_config, "head")
 
 

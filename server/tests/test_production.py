@@ -3,7 +3,11 @@ import json
 import sys
 from pathlib import Path
 
+from sqlalchemy import inspect, text
+
 from app import production
+from app.database import create_database_engine
+from app.models import Base
 from app.production import static_application
 
 
@@ -136,6 +140,40 @@ def test_initialize_database_creates_seed_metadata_and_imports_bundled_data(tmp_
             assert connection.exec_driver_sql("SELECT count(*) FROM companies").scalar_one() > 0
     finally:
         engine.dispose()
+
+
+def test_migrations_adopt_an_unversioned_legacy_schema(tmp_path):
+    database = tmp_path / "legacy.sqlite3"
+    url = f"sqlite:///{database}"
+    legacy_engine = create_database_engine(url)
+    Base.metadata.create_all(legacy_engine)
+    with legacy_engine.begin() as connection:
+        # Alembic creates this table before executing 0001. SQLite can leave it
+        # empty when that migration then fails on a pre-existing legacy table.
+        connection.execute(text(
+            "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL PRIMARY KEY)"
+        ))
+        connection.execute(text(
+            "INSERT INTO application_metadata (key, value, created_at) "
+            "VALUES ('legacy', 'preserved', '2026-01-01T00:00:00Z')"
+        ))
+    legacy_engine.dispose()
+
+    production.run_database_migrations(url)
+
+    migrated_engine = create_database_engine(url)
+    try:
+        assert set(inspect(migrated_engine).get_table_names()) >= {
+            "alembic_version", "application_metadata", "trades", "companies",
+            "territories", "company_information",
+        }
+        with migrated_engine.connect() as connection:
+            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002"
+            assert connection.execute(text(
+                "SELECT value FROM application_metadata WHERE key = 'legacy'"
+            )).scalar_one() == "preserved"
+    finally:
+        migrated_engine.dispose()
 
 
 def test_initialize_database_does_not_seed_server_profile(monkeypatch):
