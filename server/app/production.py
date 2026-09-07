@@ -232,27 +232,6 @@ def run() -> int:
     return 0
 
 
-class DesktopWindowApi:
-    """Actions exposed exclusively to the local desktop frontend."""
-
-    def __init__(self, maximized: bool = False):
-        self.window = None
-        self._maximized = maximized
-
-    def window_minimize(self):
-        self.window.minimize()
-
-    def window_toggle_maximize(self):
-        if self._maximized:
-            self.window.restore()
-        else:
-            self.window.maximize()
-        self._maximized = not self._maximized
-
-    def window_close(self):
-        self.window.destroy()
-
-
 def run_desktop() -> int:
     """Run the local server inside a native Windows webview window."""
     import webview
@@ -263,7 +242,6 @@ def run_desktop() -> int:
     )
     server_thread.start()
 
-    window_api = DesktopWindowApi(maximized=True)
     window = webview.create_window(
         "PLZ-Karte",
         f"{URL}?desktop=1",
@@ -271,11 +249,8 @@ def run_desktop() -> int:
         height=900,
         min_size=(1024, 700),
         maximized=True,
-        frameless=True,
-        easy_drag=False,
-        js_api=window_api,
+        frameless=False,
     )
-    window_api.window = window
 
     def stop_server():
         if server_thread.is_alive():

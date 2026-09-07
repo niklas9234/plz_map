@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from app import production
-from app.production import DesktopWindowApi, static_application
+from app.production import static_application
 
 
 def request(app, path, method="GET", range_header=None, payload=None):
@@ -175,35 +175,3 @@ def test_frontend_log_endpoint_rejects_invalid_entries(tmp_path):
     )
 
     assert response["status"] == "400 Bad Request"
-
-
-def test_desktop_window_api_controls_window():
-    calls = []
-
-    class Window:
-        def minimize(self): calls.append("minimize")
-        def maximize(self): calls.append("maximize")
-        def restore(self): calls.append("restore")
-        def destroy(self): calls.append("destroy")
-
-    api = DesktopWindowApi()
-    api.window = Window()
-    api.window_minimize()
-    api.window_toggle_maximize()
-    api.window_toggle_maximize()
-    api.window_close()
-
-    assert calls == ["minimize", "maximize", "restore", "destroy"]
-
-
-def test_desktop_window_api_restores_an_initially_maximized_window():
-    calls = []
-
-    class Window:
-        def restore(self): calls.append("restore")
-
-    api = DesktopWindowApi(maximized=True)
-    api.window = Window()
-    api.window_toggle_maximize()
-
-    assert calls == ["restore"]
