@@ -428,7 +428,7 @@ def run_desktop() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Desktopanwendung der PLZ-Karte")
+    parser = argparse.ArgumentParser(description="Lokale PLZ-Karte")
     parser.add_argument("--server", action="store_true", help="zentralen Server aus Umgebungsvariablen starten")
     parser.add_argument(
         "--local-server",
@@ -453,7 +453,11 @@ def main() -> int:
         return run_server()
     if args.local_server:
         return run_local_server(open_browser=not args.no_browser)
-    return run_desktop()
+    # The installed Windows shortcut starts the executable without arguments.
+    # Keep that default aligned with the intended browser-based user experience;
+    # run_desktop remains available internally for now, but is not the packaged
+    # application's default entry point.
+    return run_local_server()
 
 
 if __name__ == "__main__":

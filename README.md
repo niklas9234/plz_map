@@ -58,13 +58,9 @@ den Python-Interpreter, das Backend und das Frontend; auf dem Zielrechner werden
 weder Docker noch eine Python-Installation benötigt.
 
 1. `PLZ-Karte-1.0.0-Setup.exe` ausführen und den Installationsdialog abschließen.
-2. Über **PLZ-Karte starten** im Startmenü starten. Die Karte läuft in einem
-   eigenen App-Fenster und öffnet kein Browserfenster. Das App-Fenster stellt
-   keine Entwicklertools bereit; auch F12 und die üblichen Tastenkombinationen
-   zum Öffnen der Entwicklertools sind deaktiviert.
-3. Das App-Fenster normal schließen. Dabei wird auch der lokale Server sauber
-   beendet. Falls eine Instanz ohne Fenster beendet werden muss, steht weiterhin
-   **PLZ-Karte beenden** im Startmenü zur Verfügung.
+2. Über **PLZ-Karte starten** im Startmenü starten. Der lokale Server startet
+   im Hintergrund und öffnet die Karte automatisch im Standardbrowser.
+3. Zum Beenden der lokalen Instanz **PLZ-Karte beenden** im Startmenü verwenden.
 
 Ein Update wird durch Ausführen des neueren Setups in dasselbe Verzeichnis
 installiert. Vorher ist die Anwendung über **PLZ-Karte beenden** zu schließen.
