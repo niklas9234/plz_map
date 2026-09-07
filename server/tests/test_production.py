@@ -1,9 +1,83 @@
 import io
 import json
+import sys
 from pathlib import Path
 
 from app import production
 from app.production import static_application
+
+
+def test_local_desktop_profile_is_loopback_sqlite_without_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv("PLZ_MAP_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", "postgresql://must/not/be/used")
+
+    config = production.local_desktop_config()
+
+    assert config.profile == "local-desktop"
+    assert config.host == "127.0.0.1"
+    assert config.port == 8080
+    assert config.database_url == f"sqlite:///{tmp_path / 'plz_map.sqlite3'}"
+    assert config.data_paths == {
+        "root": tmp_path,
+        "backups": tmp_path / "backups",
+        "logs": tmp_path / "logs",
+    }
+    assert all(path.is_dir() for path in config.data_paths.values())
+
+
+def test_server_profile_reads_environment_and_does_not_import_webview(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://plz_map@example/plz_map")
+    monkeypatch.setenv("PLZ_MAP_HOST", "10.20.30.40")
+    monkeypatch.setenv("PLZ_MAP_PORT", "9000")
+    sys.modules.pop("webview", None)
+
+    config = production.server_config()
+
+    assert config.profile == "server"
+    assert config.host == "10.20.30.40"
+    assert config.port == 9000
+    assert config.database_url == "postgresql+psycopg://plz_map@example/plz_map"
+    assert config.data_paths is None
+    assert "webview" not in sys.modules
+
+
+def test_server_profile_requires_database_url(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    try:
+        production.server_config()
+    except RuntimeError as error:
+        assert "DATABASE_URL" in str(error)
+    else:
+        raise AssertionError("server profile accepted a missing DATABASE_URL")
+
+
+def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+    captured = {}
+
+    class FakeServer:
+        shutdown = staticmethod(lambda: None)
+
+        def set_app(self, app):
+            self.app = app
+
+    def fake_make_server(host, port, app, handler_class):
+        captured.update(host=host, port=port)
+        return FakeServer()
+
+    monkeypatch.setattr(production, "make_server", fake_make_server)
+    monkeypatch.setattr(production, "initialize_logging", lambda _config: None)
+    server, control, engine = production.prepare_server(config)
+    try:
+        assert captured == {"host": "127.0.0.1", "port": 8080}
+        assert server.app is not None
+        assert control == tmp_path / "server.token"
+    finally:
+        engine.dispose()
 
 
 def request(app, path, method="GET", range_header=None, payload=None):

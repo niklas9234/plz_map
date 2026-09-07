@@ -1,60 +1,56 @@
 # Python-Backend
 
-Dieses Verzeichnis ist für die geplante gemeinsame Datenhaltung vorgesehen.
-Das bestehende Frontend bleibt davon getrennt unter `src/app`.
+Das Backend hält die gemeinsam genutzten Stammdaten und liefert die API aus. Es
+unterstützt zwei bewusst getrennte Betriebsprofile.
 
-## Vorgesehene Verantwortlichkeiten
+## Lokaler Pilotbetrieb (Desktop)
 
-- `app/api/`: HTTP-Endpunkte, zum Beispiel `/api/companies`
-- `app/models/`: persistente Datenbankmodelle
-- `app/schemas/`: validierte API-Ein- und Ausgaben
-- `migrations/`: versionierte Änderungen am Datenbankschema
-- `tests/`: automatisierte Backendtests
-
-Das Backend verwendet SQLAlchemy und bleibt mit SQLite sowie PostgreSQL kompatibel. Der lokale
-Produktionsstart bindet ausschließlich an `127.0.0.1:8080` und liefert das
-Frontend aus `src/app/` mit aus. Start aus dem Repository-Wurzelverzeichnis:
+Der Standardstart ist für einen einzelnen Arbeitsplatz gedacht:
 
 ```sh
+pip install -r server/requirements.txt
+PYTHONPATH=server python server/run.py
+```
+
+Dafür sind weder `.env` noch PostgreSQL oder eine manuell gesetzte
+`DATABASE_URL` erforderlich. Der Start verwendet SQLite und bindet den
+integrierten HTTP-Server fest und ausschließlich an `127.0.0.1:8080`.
+`pywebview` öffnet die Anwendung als Desktopfenster. Daten, Sicherungen und Logs
+werden über `prepare_data_directories()` in den plattformspezifischen lokalen
+Verzeichnissen angelegt. `--shutdown` beendet diese lokale Instanz kontrolliert.
+
+Unter Windows liegen Daten und Backups standardmäßig in
+`%LOCALAPPDATA%\PLZ-Karte\`, Logs in `C:\Logs\PLZ-Karte\`. Unter Linux ist
+`$XDG_DATA_HOME/PLZ-Karte/` beziehungsweise `~/.local/share/PLZ-Karte/` der
+Standard. Für Tests oder Administration lassen sich diese Orte mit
+`PLZ_MAP_DATA_DIR` und `PLZ_MAP_LOG_DIR` überschreiben. Vor jedem lokalen Start
+wird eine vorhandene SQLite-Datenbank gesichert; zehn Sicherungen bleiben
+erhalten.
+
+## Zentraler Mehrbenutzerbetrieb (Server)
+
+Das ausdrücklich gewählte Serverprofil wird so gestartet:
+
+```sh
+DATABASE_URL='postgresql+psycopg://USER:PASSWORD@DBHOST/DBNAME' \
+PLZ_MAP_HOST='0.0.0.0' PLZ_MAP_PORT='8000' \
 PYTHONPATH=server python server/run.py --server
 ```
 
-Ohne `--server` startet das Programm als eigenständige Desktopanwendung in einer
-nativen WebView (dafür wird `pywebview` aus den Windows-Buildabhängigkeiten
-benötigt). Mit `--shutdown` wird eine laufende Instanz kontrolliert beendet. Der Server nimmt
-dann keine neuen Anfragen mehr an, beendet die aktuelle Anfrage und schließt
-erst danach Server und Datenbankverbindungen.
+`DATABASE_URL` ist in diesem Profil verpflichtend. Bind-Adresse und Port stammen
+aus `PLZ_MAP_HOST` und `PLZ_MAP_PORT` (Standardwerte `0.0.0.0` und `8000`). Das
+Serverprofil importiert oder initialisiert `pywebview` nicht. Für einen
+containerisierten Betrieb mit PostgreSQL und Reverse Proxy siehe
+[`deploy/server/README.md`](../deploy/server/README.md).
 
-Die Python-Abhängigkeiten werden mit `pip install -r server/requirements.txt`
-installiert. `GET /api/admin/export` lädt den vollständigen Export herunter. Ein Import wird
-als JSON-Body an `POST /api/admin/import?mode=validate` (nur prüfen) oder
-`POST /api/admin/import?mode=empty` (in eine leere Datenbank übernehmen)
-gesendet. Die Datenbankverbindung kann mit `DATABASE_URL` gesetzt werden.
+## Gemeinsame Backendfunktionen
 
-Beim ersten Start einer leeren Datenbank importiert das Backend die gebündelten
-Stammdaten aus `src/app/companies.json`. Import und Versionsmarkierung werden in
-einer gemeinsamen Transaktion geschrieben. Die dauerhafte Markierung verhindert
-auch nach einem Programmupdate oder nach dem Löschen aller Fachdaten einen
-erneuten Seed-Import; vorhandene Datenbanken werden grundsätzlich nicht befüllt.
-Umfang und abgelehnte Datensätze werden in das Anwendungslog geschrieben.
+Beide Profile verwenden dieselben Funktionen zur Logging-Konfiguration,
+Datenbank-/Schema-Initialisierung und Erstellung der WSGI-Anwendung in
+`app/production.py`. Das Frontend liegt weiterhin getrennt in `src/app/`.
+API-Endpunkte sind unter anderem `GET /api/admin/export` und
+`POST /api/admin/import?mode=validate|empty`.
 
-## Veränderliche Daten
-
-Programmdateien und Benutzerdaten sind strikt getrennt. Ohne explizite
-Konfiguration liegen Datenbank und Start-Backups unter Windows in
-`%LOCALAPPDATA%\PLZ-Karte\`. Die getrennten Dateien `general.log`, `backend.log`
-und `frontend.log` werden unter `C:\Logs\PLZ-Karte\` angelegt. Unter Linux liegen
-alle veränderlichen Daten in `$XDG_DATA_HOME/PLZ-Karte/`, sonst in
-`~/.local/share/PLZ-Karte/`. Eine vorhandene
-Datenbank wird bei jedem Start mit der SQLite-Backup-API konsistent nach
-`backups/` gesichert; die zehn jüngsten Sicherungen bleiben erhalten. Logs
-liegen in `logs/`. Für Tests oder Administration können das Stammverzeichnis
-mit `PLZ_MAP_DATA_DIR` und das Logverzeichnis mit `PLZ_MAP_LOG_DIR` überschrieben werden. Die Datenbank wird einheitlich über
-`DATABASE_URL` konfiguriert, beispielsweise `sqlite:////tmp/plz-map.sqlite3`
-oder `postgresql+psycopg://user:password@host/database`. Ohne Variable wird die
-beschriebene lokale SQLite-Datei verwendet. `PLZ_MAP_DATABASE` wird für bestehende
-lokale Installationen vorläufig weiterhin als SQLite-Pfad akzeptiert.
-
-Die vollständig getrennte Containerkonfiguration für den Serverbetrieb liegt
-unter `deploy/server/`; die lokale Installation benötigt weder Docker noch
-PostgreSQL.
+Beim ersten Start einer leeren Datenbank werden die gebündelten Stammdaten aus
+`src/app/companies.json` importiert. Import und Versionsmarkierung erfolgen in
+einer Transaktion; eine bestehende Datenbank wird nicht erneut befüllt.
