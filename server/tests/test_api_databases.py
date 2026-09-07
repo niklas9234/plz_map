@@ -2,6 +2,7 @@ import io
 import json
 
 from app.application import create_application
+from app.transfer import SCHEMA_VERSION
 from test_transfer import document
 
 
@@ -22,3 +23,18 @@ def test_import_and_export_api_on_every_database(database_engine):
     response, body = request(app, "/api/admin/export")
     assert response["status"] == "200 OK"
     assert json.loads(body)["companies"][0]["ppsNumber"] == "PPS-01"
+    assert response["headers"]["Content-Disposition"].endswith(
+        f"-schema-v{SCHEMA_VERSION}.json\""
+    )
+
+
+def test_import_api_explains_incompatible_schema(database_engine):
+    payload = document()
+    payload["schemaVersion"] = SCHEMA_VERSION + 1
+
+    response, body = request(
+        create_application(database_engine), "/api/admin/import?mode=validate", "POST", payload
+    )
+
+    assert response["status"] == "422 Unprocessable Entity"
+    assert "inkompatibel" in json.loads(body)["fields"][0]
