@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -51,8 +52,7 @@ def database_url() -> str:
     configured = os.environ.get("DATABASE_URL")
     if configured:
         return configured
-    legacy = os.environ.get("PLZ_MAP_DATABASE")
-    path = Path(legacy).expanduser() if legacy else data_directory() / "plz_map.sqlite3"
+    path = data_directory() / "plz_map.sqlite3"
     return f"sqlite:///{path}"
 
 
@@ -73,4 +73,12 @@ def create_database_engine(url: str | None = None) -> Engine:
 
 def initialize(engine: Engine) -> None:
     """Create a fresh schema; deployed databases are upgraded with Alembic."""
+    if isinstance(engine, sqlite3.Connection):
+        # Kept for the one-time importer used by existing local installations.
+        # SQLAlchemy cannot emit a whole metadata collection through a raw DBAPI
+        # connection, so use a temporary Engine around that exact connection.
+        wrapper = create_engine("sqlite://", creator=lambda: engine)
+        Base.metadata.create_all(wrapper)
+        engine.execute("CREATE TABLE IF NOT EXISTS application_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL, created_at TEXT NOT NULL)")
+        return
     Base.metadata.create_all(engine)
