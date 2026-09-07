@@ -293,11 +293,17 @@ select {
 }
 
 .button {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
   min-height: 38px;
   padding: 8px 14px;
   border: 1px solid transparent;
   border-radius: 7px;
   font-weight: 650;
+  line-height: 1.2;
+  text-decoration: none;
   cursor: pointer;
 }
 
