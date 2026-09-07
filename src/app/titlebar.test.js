@@ -47,12 +47,13 @@ test("shows only after entering the top-edge trigger", () => {
     assert.equal(pending.size, 0);
 });
 
-test("stays visible for five seconds after the pointer leaves", () => {
+test("stays visible for two seconds after the pointer leaves", () => {
     const { titlebar, trigger, pending } = fixture();
     trigger.dispatchEvent(new Event("mouseenter"));
     titlebar.dispatchEvent(new Event("mouseleave"));
 
     const timer = [...pending.values()][0];
+    assert.equal(HIDE_DELAY_MS, 2000);
     assert.equal(timer.delay, HIDE_DELAY_MS);
     assert.equal(titlebar.classList.contains("is-visible"), true);
 
