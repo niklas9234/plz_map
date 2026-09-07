@@ -17,7 +17,9 @@ a = Analysis(
         (str(root / "server" / "alembic.ini"), "."),
         (str(root / "server" / "migrations"), "migrations"),
     ],
-    hiddenimports=[],
+    # Alembic loads migrations/env.py dynamically, so PyInstaller cannot see
+    # imports that are only referenced from that file during static analysis.
+    hiddenimports=["logging.config"],
 )
 pyz = PYZ(a.pure)
 exe = EXE(
