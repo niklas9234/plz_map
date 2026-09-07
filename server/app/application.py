@@ -9,6 +9,7 @@ from http import HTTPStatus
 from urllib.parse import parse_qs
 
 from .database import create_database_engine, initialize
+from .api.master_data import ApiError, handle_master_data
 from .transfer import ImportValidationError, SCHEMA_VERSION, dumps, import_data
 
 logger = logging.getLogger("plz_map.backend")
@@ -29,6 +30,21 @@ def create_application(engine=None):
         path, method = environ.get("PATH_INFO", ""), environ.get("REQUEST_METHOD", "GET")
         connection = configured_engine.connect()
         try:
+            try:
+                length = int(environ.get("CONTENT_LENGTH") or 0)
+                payload = json.loads(environ["wsgi.input"].read(length)) if length else None
+            except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+                return _json(start_response, HTTPStatus.BAD_REQUEST, {"code": "invalid_json", "message": "Ungültiges JSON."})
+            try:
+                handled = handle_master_data(configured_engine, path, method, environ.get("QUERY_STRING", ""), payload)
+                if handled:
+                    status, result = handled
+                    if status == HTTPStatus.NO_CONTENT:
+                        start_response("204 No Content", [("Content-Length", "0")])
+                        return [b""]
+                    return _json(start_response, status, result)
+            except ApiError as error:
+                return _json(start_response, error.status, error.payload())
             if path == "/api/admin/export" and method == "GET":
                 body = dumps(connection)
                 logger.info("Stammdaten exportiert")
@@ -39,8 +55,7 @@ def create_application(engine=None):
                 return [body]
             if path == "/api/admin/import" and method == "POST":
                 try:
-                    length = int(environ.get("CONTENT_LENGTH") or 0)
-                    document = json.loads(environ["wsgi.input"].read(length))
+                    document = payload
                     mode = parse_qs(environ.get("QUERY_STRING", "")).get("mode", ["empty"])[0]
                     result = import_data(connection, document, mode)
                     logger.info("Stammdatenimport abgeschlossen; Modus: %s", mode)

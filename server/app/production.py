@@ -20,6 +20,7 @@ from wsgiref.simple_server import WSGIRequestHandler, make_server
 from .application import application as api_application
 from .database import create_database_engine, database_url, initialize, prepare_data_directories
 from .logging_config import configure_logging
+from .initial_seed import import_initial_seed
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
@@ -202,6 +203,14 @@ def _prepare_server():
     engine = create_database_engine(url)
     initialize(engine)
     engine.dispose()
+    if url.startswith("sqlite:///") and not url.endswith(":memory:"):
+        import sqlite3
+        seed_connection = sqlite3.connect(Path(url.removeprefix("sqlite:///")))
+        try:
+            seed_connection.execute("PRAGMA foreign_keys = ON")
+            import_initial_seed(seed_connection)
+        finally:
+            seed_connection.close()
 
     token = secrets.token_urlsafe(32)
     server = make_server(HOST, PORT, lambda *_: [], handler_class=WSGIRequestHandler)

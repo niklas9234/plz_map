@@ -29,7 +29,10 @@ Die Python-Abhängigkeiten werden mit `pip install -r server/requirements.txt`
 installiert. `GET /api/admin/export` lädt den vollständigen Export herunter. Ein Import wird
 als JSON-Body an `POST /api/admin/import?mode=validate` (nur prüfen) oder
 `POST /api/admin/import?mode=empty` (in eine leere Datenbank übernehmen)
-gesendet. Die Datenbankverbindung kann mit `DATABASE_URL` gesetzt werden.
+gesendet. Die Datenbankverbindung kann mit `DATABASE_URL` gesetzt werden. Das
+Frontend greift für alle veränderlichen Unternehmens- und Gewerkdaten
+ausschließlich über `/api/companies` und `/api/trades` zu; GeoJSON-Dateien
+bleiben statische Kartengrundlagen.
 
 Beim ersten Start einer leeren Datenbank importiert das Backend die gebündelten
 Stammdaten aus `src/app/companies.json`. Import und Versionsmarkierung werden in
@@ -52,8 +55,7 @@ liegen in `logs/`. Für Tests oder Administration können das Stammverzeichnis
 mit `PLZ_MAP_DATA_DIR` und das Logverzeichnis mit `PLZ_MAP_LOG_DIR` überschrieben werden. Die Datenbank wird einheitlich über
 `DATABASE_URL` konfiguriert, beispielsweise `sqlite:////tmp/plz-map.sqlite3`
 oder `postgresql+psycopg://user:password@host/database`. Ohne Variable wird die
-beschriebene lokale SQLite-Datei verwendet. `PLZ_MAP_DATABASE` wird für bestehende
-lokale Installationen vorläufig weiterhin als SQLite-Pfad akzeptiert.
+beschriebene lokale SQLite-Datei verwendet.
 
 Die vollständig getrennte Containerkonfiguration für den Serverbetrieb liegt
 unter `deploy/server/`; die lokale Installation benötigt weder Docker noch

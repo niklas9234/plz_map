@@ -208,7 +208,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
     try {
         let activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
-        let companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTrades.has(company.tradeId));
+        let companies = (await companyStore.list({ status: "active" })).filter((company) => activeTrades.has(company.tradeId));
 
         status.replaceChildren();
 
@@ -271,7 +271,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
         window.addEventListener("companies:changed", async () => {
             activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
-            companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTrades.has(company.tradeId));
+            companies = (await companyStore.list({ status: "active" })).filter((company) => activeTrades.has(company.tradeId));
             const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
             if (updatedSelection) selectCompany(updatedSelection);
             else {
@@ -283,7 +283,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
         window.addEventListener("trades:changed", async () => {
             activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
-            companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTrades.has(company.tradeId));
+            companies = (await companyStore.list({ status: "active" })).filter((company) => activeTrades.has(company.tradeId));
             const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
             if (updatedSelection) selectCompany(updatedSelection);
             else {
