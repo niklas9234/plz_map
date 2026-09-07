@@ -260,7 +260,7 @@ function initializeCompanyManagement() {
         function updatePostalCodeSelection() {
             const primaryCount = detailView.querySelectorAll('.postal-code-tile[data-role="primary"]:not(:disabled)').length;
             const alternativeCount = detailView.querySelectorAll('.postal-code-tile[data-role="alternative"]:not(:disabled)').length;
-            selectionStatus.textContent = `${primaryCount} Vorzug, ${alternativeCount} alternativ`;
+            selectionStatus.textContent = `Vorzug: ${primaryCount}, Alternativ: ${alternativeCount}`;
             clearSelection.disabled = primaryCount + alternativeCount === 0;
         }
 
