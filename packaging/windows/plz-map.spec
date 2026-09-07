@@ -10,6 +10,12 @@ a = Analysis(
     datas=[
         (str(root / "src" / "app"), "frontend"),
         (str(root / "PLZ-Karte.ico"), "frontend"),
+        # production.run_database_migrations() resolves these paths relative
+        # to the bundled server root (sys._MEIPASS in a PyInstaller build).
+        # Alembic cannot discover or run the revisions when only its Python
+        # package is collected.
+        (str(root / "server" / "alembic.ini"), "."),
+        (str(root / "server" / "migrations"), "migrations"),
     ],
     hiddenimports=[],
 )
