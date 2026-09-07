@@ -60,14 +60,66 @@ def test_local_server_uses_complete_local_profile(monkeypatch):
     config = production.ProductionConfig(
         "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:", None,
     )
-    resources = (object(), None, object())
+    class FakeServer:
+        server_address = ("127.0.0.1", 8080)
+
+    resources = (FakeServer(), None, object())
     calls = []
     monkeypatch.setattr(production, "local_desktop_config", lambda: config)
     monkeypatch.setattr(production, "prepare_server", lambda value: calls.append(value) or resources)
     monkeypatch.setattr(production, "_serve", lambda *values: calls.append(values))
+    monkeypatch.setattr(production.webbrowser, "open", lambda url: calls.append(url) or True)
 
     assert production.run_local_server() == 0
-    assert calls == [config, resources]
+    assert calls == [config, "http://127.0.0.1:8080/", resources]
+
+
+def test_local_server_can_leave_browser_closed(monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:", None,
+    )
+
+    class FakeServer:
+        server_address = ("127.0.0.1", 8080)
+
+    resources = (FakeServer(), None, object())
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(production, "prepare_server", lambda _config: resources)
+    monkeypatch.setattr(production, "_serve", lambda *_values: None)
+    monkeypatch.setattr(
+        production.webbrowser, "open",
+        lambda _url: (_ for _ in ()).throw(AssertionError("Browser wurde geöffnet")),
+    )
+
+    assert production.run_local_server(open_browser=False) == 0
+
+
+def test_prepare_server_disposes_engine_when_port_binding_fails(monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, "sqlite:///:memory:", None,
+    )
+
+    class FakeEngine:
+        disposed = False
+
+        def dispose(self):
+            self.disposed = True
+
+    engine = FakeEngine()
+    monkeypatch.setattr(production, "initialize_logging", lambda _config: None)
+    monkeypatch.setattr(production, "initialize_database", lambda _config: engine)
+    monkeypatch.setattr(
+        production, "make_server",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("Port belegt")),
+    )
+
+    try:
+        production.prepare_server(config)
+    except OSError as error:
+        assert str(error) == "Port belegt"
+    else:
+        raise AssertionError("Fehler beim Binden wurde verschluckt")
+    assert engine.disposed is True
 
 
 def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypatch):

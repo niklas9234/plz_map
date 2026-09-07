@@ -37,7 +37,9 @@ pip install -r server/requirements.txt
 python server/run.py --local-server
 ```
 
-Danach ist sie unter `http://127.0.0.1:8080` erreichbar. Anders als ein reiner
+Danach öffnet sie automatisch `http://127.0.0.1:8080` im Standardbrowser und
+zeigt die Adresse im Terminal an. Für einen Start ohne automatisches Öffnen
+steht `python server/run.py --local-server --no-browser` bereit. Anders als ein reiner
 statischer Entwicklungsserver liefert dieser Prozess auch `/api/companies` und
 `/api/trades` aus. Statische Server wie `python -m http.server` oder
 `http-server` können diese API-Endpunkte nicht bedienen und liefern dort 404.

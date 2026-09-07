@@ -14,6 +14,7 @@ import sys
 import threading
 import urllib.error
 import urllib.request
+import webbrowser
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -320,7 +321,16 @@ def prepare_server(config: ProductionConfig):
     engine = initialize_database(config)
 
     token = secrets.token_urlsafe(32)
-    server = make_server(config.host, config.port, lambda *_: [], handler_class=WSGIRequestHandler)
+    try:
+        server = make_server(
+            config.host, config.port, lambda *_: [], handler_class=WSGIRequestHandler
+        )
+    except Exception:
+        # Database initialization happens before binding the socket. Do not
+        # retain its connection pool when the port is already occupied (or
+        # binding fails for another reason).
+        engine.dispose()
+        raise
     server.set_app(create_wsgi_application(config, engine, token, server.shutdown))
     control_file = config.data_paths["root"] / "server.token" if config.data_paths else None
     if control_file:
@@ -353,9 +363,14 @@ def run_server() -> int:
     return 0
 
 
-def run_local_server() -> int:
-    """Serve the complete local application without opening a desktop window."""
+def run_local_server(*, open_browser: bool = True) -> int:
+    """Serve the complete local application in the user's browser."""
     server, control_file, engine = prepare_server(local_desktop_config())
+    url = f"http://{server.server_address[0]}:{server.server_address[1]}/"
+    print(f"PLZ-Karte läuft unter {url}", flush=True)
+    print("Zum Beenden Strg+C drücken.", flush=True)
+    if open_browser:
+        webbrowser.open(url)
     _serve(server, control_file, engine)
     return 0
 
@@ -418,7 +433,12 @@ def main() -> int:
     parser.add_argument(
         "--local-server",
         action="store_true",
-        help="lokale Anwendung samt API ohne Desktopfenster starten",
+        help="lokale Anwendung samt API im Browser starten",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="mit --local-server keinen Browser automatisch öffnen",
     )
     parser.add_argument("--shutdown", action="store_true", help="laufenden Server sauber beenden")
     args = parser.parse_args()
@@ -427,10 +447,12 @@ def main() -> int:
         return 0 if request_running_server_stop(control) else 1
     if args.server and args.local_server:
         parser.error("--server und --local-server können nicht kombiniert werden")
+    if args.no_browser and not args.local_server:
+        parser.error("--no-browser kann nur mit --local-server verwendet werden")
     if args.server:
         return run_server()
     if args.local_server:
-        return run_local_server()
+        return run_local_server(open_browser=not args.no_browser)
     return run_desktop()
 
 
