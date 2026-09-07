@@ -621,9 +621,10 @@ dialog::backdrop {
 }
 
 .trade-list li {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   min-height: 42px;
   padding: 7px 10px 7px 14px;
   border: 1px solid #d8e0da;
