@@ -38,7 +38,9 @@ keine Framework- oder Datenbankentscheidung.
    Eingabeaufforderung und in Unix-Shells. `PYTHONPATH=server` muss nicht gesetzt
    werden; diese Schreibweise wäre in PowerShell kein gültiger Befehl.
 
-3. `http://127.0.0.1:8080` im Browser öffnen. Dieser Server liefert sowohl das
+3. Die Anwendung öffnet automatisch `http://127.0.0.1:8080` im Browser und der
+   laufende Prozess zeigt die Adresse im Terminal an. Mit `--no-browser` lässt
+   sich das automatische Öffnen abschalten. Dieser Server liefert sowohl das
    Frontend als auch die Endpunkte unter `/api/` aus und importiert beim ersten
    Start die gebündelten Unternehmen und Gewerke. Ein reiner statischer Server
    wie `python -m http.server` oder `http-server` reicht nicht aus: Er beantwortet
