@@ -15,7 +15,9 @@ OutputDir=..\..\dist-installer
 OutputBaseFilename=PLZ-Karte-{#MyAppVersion}-Setup
 Compression=lzma2
 SolidCompression=yes
-CloseApplications=no
+CloseApplications=yes
+CloseApplicationsFilter={#MyAppExeName}
+RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
 SetupIconFile=..\..\PLZ-Karte.ico
 
@@ -38,3 +40,21 @@ Filename: "{app}\{#MyAppExeName}"; Description: "PLZ-Karte jetzt starten"; Flags
 
 [UninstallRun]
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; Flags: runhidden waituntilterminated skipifdoesntexist
+
+[Code]
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+  InstalledExecutable: String;
+begin
+  Result := '';
+  InstalledExecutable := ExpandConstant('{app}\{#MyAppExeName}');
+  if FileExists(InstalledExecutable) then
+  begin
+    { Ask an already running local server to release the executable before }
+    { Restart Manager performs its final files-in-use check. }
+    Exec(InstalledExecutable, '--shutdown', '', SW_HIDE,
+      ewWaitUntilTerminated, ResultCode);
+    Sleep(1000);
+  end;
+end;

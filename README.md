@@ -63,7 +63,8 @@ weder Docker noch eine Python-Installation benötigt.
 3. Zum Beenden der lokalen Instanz **PLZ-Karte beenden** im Startmenü verwenden.
 
 Ein Update wird durch Ausführen des neueren Setups in dasselbe Verzeichnis
-installiert. Vorher ist die Anwendung über **PLZ-Karte beenden** zu schließen.
+installiert. Das Setup beendet eine noch laufende lokale Instanz automatisch,
+bevor es die Programmdateien ersetzt.
 Das Setup ersetzt ausschließlich unveränderliche Programmdateien unter
 `%LOCALAPPDATA%\Programs\PLZ-Karte`; Datenbank und Backups bleiben separat
 unter `%LOCALAPPDATA%\PLZ-Karte` erhalten. Die Logs bleiben unter
