@@ -57,11 +57,13 @@ def _company_json(company: Company) -> dict[str, Any]:
 
 def _site_manager_json(site_manager: SiteManager) -> dict[str, Any]:
     return {
-        "id": site_manager.id, "name": site_manager.name,
-        "territories": [item.postal_code for item in sorted(
+        "id": site_manager.id,
+        "name": site_manager.name,
+        "territories": [{"postalCode": item.postal_code} for item in sorted(
             site_manager.territories, key=lambda item: item.postal_code
         )],
-        "status": site_manager.status, "createdAt": site_manager.created_at,
+        "status": site_manager.status,
+        "createdAt": site_manager.created_at,
         "updatedAt": site_manager.updated_at,
     }
 
@@ -144,20 +146,26 @@ def _site_manager_parts(payload: dict[str, Any], site_manager: SiteManager | Non
     status = _status(payload, site_manager.status if site_manager else "active")
     territories = payload.get("territories")
     if territories is None and site_manager:
-        territories = [item.postal_code for item in site_manager.territories]
+        territories = [{"postalCode": item.postal_code} for item in site_manager.territories]
     errors: list[str] = []
     if not isinstance(territories, list) or not territories:
         errors.append("territories")
         territories = []
+    codes: list[str] = []
     seen: set[str] = set()
-    for index, code in enumerate(territories):
-        if not isinstance(code, str) or not (len(code) == 2 and code.isdigit() or code == "LUX") or code in seen:
+    for index, item in enumerate(territories):
+        # Accept plain strings as well, so older UI builds remain compatible.
+        code = item if isinstance(item, str) else item.get("postalCode") if isinstance(item, dict) else None
+        valid_fields = isinstance(item, str) or isinstance(item, dict) and set(item) == {"postalCode"}
+        if not valid_fields or not isinstance(code, str) or not (len(code) == 2 and code.isdigit() or code == "LUX") or code in seen:
             errors.append(f"territories[{index}]")
+        else:
+            codes.append(code)
         if isinstance(code, str):
             seen.add(code)
     if errors:
         raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Validierung fehlgeschlagen.", errors)
-    return name, status, territories
+    return name, status, codes
 
 
 def _commit(session: Session, conflict_message: str) -> None:
@@ -211,31 +219,35 @@ def _site_managers(session: Session, rest: list[str], method: str, query_string:
         data = _body(payload, SITE_MANAGER_WRITE_FIELDS)
         name, status, territories = _site_manager_parts(data)
         timestamp = _now()
-        manager = SiteManager(id=str(uuid4()), name=name, status=status, created_at=timestamp, updated_at=timestamp)
-        manager.territories = [SiteManagerTerritory(postal_code=code) for code in territories]
-        session.add(manager)
-        _commit(session, "Der Bauleiter konnte nicht angelegt werden.")
-        return HTTPStatus.CREATED, _site_manager_json(manager)
+        site_manager = SiteManager(id=str(uuid4()), name=name, status=status,
+                                   created_at=timestamp, updated_at=timestamp)
+        site_manager.territories = [SiteManagerTerritory(postal_code=code) for code in territories]
+        session.add(site_manager)
+        _commit(session, "Der Bauleiter konnte nicht gespeichert werden.")
+        return HTTPStatus.CREATED, _site_manager_json(site_manager)
     if not rest:
         return None
-    manager = session.scalar(select(SiteManager).options(*eager).where(SiteManager.id == rest[0]))
-    if not manager:
+    site_manager = session.scalar(select(SiteManager).options(*eager).where(SiteManager.id == rest[0]))
+    if not site_manager:
         raise ApiError(HTTPStatus.NOT_FOUND, "not_found", "Der Bauleiter wurde nicht gefunden.")
     if len(rest) == 1 and method == "GET":
-        return HTTPStatus.OK, _site_manager_json(manager)
+        return HTTPStatus.OK, _site_manager_json(site_manager)
     if len(rest) == 1 and method == "PATCH":
         data = _body(payload, SITE_MANAGER_WRITE_FIELDS, True)
-        name, status, territories = _site_manager_parts(data, manager)
-        manager.name, manager.status, manager.updated_at = name, status, _now()
-        manager.territories = [SiteManagerTerritory(postal_code=code) for code in territories]
-        _commit(session, "Der Bauleiter konnte nicht geändert werden.")
-        return HTTPStatus.OK, _site_manager_json(manager)
+        name, status, territories = _site_manager_parts(data, site_manager)
+        site_manager.name, site_manager.status, site_manager.updated_at = name, status, _now()
+        site_manager.territories = [SiteManagerTerritory(postal_code=code) for code in territories]
+        _commit(session, "Der Bauleiter konnte nicht gespeichert werden.")
+        return HTTPStatus.OK, _site_manager_json(site_manager)
     if len(rest) == 1 and method == "DELETE":
-        session.delete(manager); session.commit(); return HTTPStatus.NO_CONTENT, None
+        session.delete(site_manager)
+        session.commit()
+        return HTTPStatus.NO_CONTENT, None
     if len(rest) == 2 and method == "POST" and rest[1] in {"activate", "deactivate"}:
-        manager.status = "active" if rest[1] == "activate" else "inactive"
-        manager.updated_at = _now(); session.commit()
-        return HTTPStatus.OK, _site_manager_json(manager)
+        site_manager.status = "active" if rest[1] == "activate" else "inactive"
+        site_manager.updated_at = _now()
+        session.commit()
+        return HTTPStatus.OK, _site_manager_json(site_manager)
     return None
 
 

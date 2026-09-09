@@ -45,21 +45,37 @@ def test_validation_and_conflicts_are_database_independent(database_engine):
     assert response["status"] == "400 Bad Request"
 
 
-def test_site_manager_crud_filters_and_shared_territories(database_engine):
+def test_site_manager_crud_and_filters_work_on_every_database(database_engine):
     app = create_application(database_engine)
-    first = call(app, "/api/site-managers", "POST", {"name": "Alex Bau", "territories": ["08", "LUX"], "status": "active"}, "201 Created")
-    second = call(app, "/api/site-managers", "POST", {"name": "Sam Leitung", "territories": ["08"], "status": "inactive"}, "201 Created")
-    assert call(app, "/api/site-managers?postalCode=08") == [first, second]
-    assert call(app, "/api/site-managers?query=alex&status=active") == [first]
-    assert call(app, "/api/site-managers?query=LUX") == []
-    changed = call(app, f"/api/site-managers/{first['id']}", "PATCH", {"territories": ["82"]})
-    assert changed["territories"] == ["82"]
-    assert call(app, f"/api/site-managers/{first['id']}/deactivate", "POST")["status"] == "inactive"
-    call(app, f"/api/site-managers/{first['id']}", "DELETE", expected="204 No Content")
+    payload = {
+        "name": "Anna Beispiel",
+        "territories": [{"postalCode": "08"}, {"postalCode": "LUX"}],
+        "status": "active",
+    }
+    site_manager = call(app, "/api/site-managers", "POST", payload, "201 Created")
+    assert site_manager["territories"] == payload["territories"]
+    assert call(app, f"/api/site-managers/{site_manager['id']}") == site_manager
+    assert call(app, "/api/site-managers?status=active&query=beispiel&postalCode=08") == [site_manager]
+    assert call(app, "/api/site-managers?query=PPS") == []
+
+    changed = call(app, f"/api/site-managers/{site_manager['id']}", "PATCH", {
+        "name": "Anna Neu", "territories": ["10"],
+    })
+    assert changed["territories"] == [{"postalCode": "10"}]
+    assert changed["createdAt"] == site_manager["createdAt"]
+    assert call(app, f"/api/site-managers/{site_manager['id']}/deactivate", "POST")["status"] == "inactive"
+    assert call(app, "/api/site-managers?status=active") == []
+    call(app, f"/api/site-managers/{site_manager['id']}", "DELETE", expected="204 No Content")
 
 
-@pytest.mark.parametrize("territories", [[], ["8"], ["082"], [8], ["08", "08"]])
-def test_site_manager_rejects_invalid_territories(database_engine, territories):
+@pytest.mark.parametrize("payload", [
+    {"name": "", "territories": [{"postalCode": "08"}]},
+    {"name": "Anna", "territories": []},
+    {"name": "Anna", "territories": [{"postalCode": "8"}]},
+    {"name": "Anna", "territories": [{"postalCode": "08"}, {"postalCode": "08"}]},
+    {"name": "Anna", "territories": [{"postalCode": "08", "role": "primary"}]},
+])
+def test_site_manager_validation_rejects_invalid_payload(database_engine, payload):
     app = create_application(database_engine)
-    response, _ = request(app, "/api/site-managers", "POST", {"name": "Alex", "territories": territories})
+    response, _ = request(app, "/api/site-managers", "POST", payload)
     assert response["status"] == "422 Unprocessable Entity"

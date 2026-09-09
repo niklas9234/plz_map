@@ -234,9 +234,9 @@ def test_migrations_adopt_an_unversioned_legacy_schema(tmp_path):
     migrated_engine = create_database_engine(url)
     try:
         assert set(inspect(migrated_engine).get_table_names()) >= {
-                "alembic_version", "application_metadata", "trades", "companies",
-                "territories", "company_information", "site_managers",
-                "site_manager_territories",
+            "alembic_version", "application_metadata", "trades", "companies",
+            "territories", "company_information", "site_managers",
+            "site_manager_territories",
         }
         with migrated_engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003"

@@ -1,4 +1,4 @@
-"""Add site managers and their many-to-many territory coverage."""
+"""Add site managers and their postal-code territories."""
 
 from alembic import op
 import sqlalchemy as sa
@@ -10,8 +10,10 @@ depends_on = None
 
 
 def upgrade():
-    tables = set(sa.inspect(op.get_bind()).get_table_names())
-    if "site_managers" not in tables:
+    existing = set(sa.inspect(op.get_bind()).get_table_names())
+    # Desktop databases may already contain tables created through create_all
+    # before Alembic adopts the unversioned schema.
+    if "site_managers" not in existing:
         op.create_table(
             "site_managers",
             sa.Column("id", sa.String(36), primary_key=True),
@@ -21,7 +23,7 @@ def upgrade():
             sa.Column("updated_at", sa.String(35), nullable=False),
             sa.CheckConstraint("status IN ('active', 'inactive')", name="ck_site_managers_status"),
         )
-    if "site_manager_territories" not in tables:
+    if "site_manager_territories" not in existing:
         op.create_table(
             "site_manager_territories",
             sa.Column("site_manager_id", sa.String(36), nullable=False),
@@ -32,8 +34,5 @@ def upgrade():
 
 
 def downgrade():
-    tables = set(sa.inspect(op.get_bind()).get_table_names())
-    if "site_manager_territories" in tables:
-        op.drop_table("site_manager_territories")
-    if "site_managers" in tables:
-        op.drop_table("site_managers")
+    op.drop_table("site_manager_territories")
+    op.drop_table("site_managers")
