@@ -43,6 +43,23 @@ Datenmodell. `id`, `createdAt` und `updatedAt` werden bei regulären POST- und
 PATCH-Aufrufen serverseitig verwaltet und dürfen vom Client nicht überschrieben
 werden. Eine PATCH-Antwort enthält stets die vollständige aktuelle Ressource.
 
+## Bauleiter
+
+| Methode und Pfad | Verhalten |
+| --- | --- |
+| `GET /api/site-managers` | Bauleiter auflisten; Filter: `query` (nur Name), `status` und `postalCode`. |
+| `GET /api/site-managers/{id}` | Einen Bauleiter laden. |
+| `POST /api/site-managers` | Einen Bauleiter anlegen. |
+| `PATCH /api/site-managers/{id}` | Name, Gebiete oder Status ändern. |
+| `POST /api/site-managers/{id}/deactivate` | Bauleiter deaktivieren. |
+| `POST /api/site-managers/{id}/activate` | Bauleiter reaktivieren. |
+| `DELETE /api/site-managers/{id}` | Bauleiter endgültig löschen. |
+
+Bauleiter besitzen keine PPS-Nummer und kein Gewerk. `territories` enthält
+Objekte mit genau einem `postalCode`. Schreiboperationen akzeptieren zur
+Kompatibilität außerdem eine Liste aus PLZ-Strings; Antworten verwenden immer
+die Objektform.
+
 ## Gewerke
 
 | Methode und Pfad | Verhalten |

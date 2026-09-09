@@ -80,6 +80,29 @@ class CompanyInformation(Base):
     value: Mapped[str] = mapped_column(String, nullable=False)
 
 
+class SiteManager(Base):
+    __tablename__ = "site_managers"
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'inactive')", name="ck_site_managers_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(8), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(35), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(35), nullable=False)
+    territories: Mapped[list["SiteManagerTerritory"]] = relationship(cascade="all, delete-orphan")
+
+
+class SiteManagerTerritory(Base):
+    __tablename__ = "site_manager_territories"
+
+    site_manager_id: Mapped[str] = mapped_column(
+        ForeignKey("site_managers.id", ondelete="CASCADE"), primary_key=True
+    )
+    postal_code: Mapped[str] = mapped_column(String(3), primary_key=True)
+
+
 Index("uq_trades_name_case_insensitive", func.lower(Trade.name), unique=True)
 
 # SQLAlchemy renders the filtered index using each dialect's syntax. The
