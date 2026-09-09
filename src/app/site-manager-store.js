@@ -17,8 +17,25 @@ const siteManagerStore = (() => {
         return request(manager.id ? `${SITE_MANAGER_API_URL}/${manager.id}` : SITE_MANAGER_API_URL, {
             method: manager.id ? "PATCH" : "POST",
             body: JSON.stringify(fields)
+        }).then((result) => {
+            window.dispatchEvent(new CustomEvent("site-managers:changed"));
+            return result;
         });
     }
 
-    return { list, save };
+    function remove(id) {
+        return request(`${SITE_MANAGER_API_URL}/${id}`, { method: "DELETE" }).then(() => {
+            window.dispatchEvent(new CustomEvent("site-managers:changed"));
+        });
+    }
+
+    function setActive(id, active) {
+        return request(`${SITE_MANAGER_API_URL}/${id}/${active ? "activate" : "deactivate"}`, { method: "POST" })
+            .then((result) => {
+                window.dispatchEvent(new CustomEvent("site-managers:changed"));
+                return result;
+            });
+    }
+
+    return { list, save, remove, setActive };
 })();
