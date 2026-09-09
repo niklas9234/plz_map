@@ -48,12 +48,13 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
     }
 
     function selectSiteManager(siteManager) {
+        const postalCodes = siteManagerPostalCodes(siteManager.territories);
         selectedSiteManager = siteManager;
         input.value = "";
         closeSuggestions();
-        setVisiblePostalCodes(map, siteManager.territories);
-        zoomToPostalCodes(map, siteManager.territories, postalCodeData);
-        status.textContent = `${siteManager.name}: ${siteManager.territories.join(", ") || "Keine PLZ-Gebiete"}`;
+        setVisiblePostalCodes(map, postalCodes);
+        zoomToPostalCodes(map, postalCodes, postalCodeData);
+        status.textContent = `${siteManager.name}: ${postalCodes.join(", ") || "Keine PLZ-Gebiete"}`;
         input.focus();
     }
 

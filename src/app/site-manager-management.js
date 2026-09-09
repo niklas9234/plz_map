@@ -50,7 +50,7 @@ function initializeSiteManagerManagement() {
             }
             const territories = row.insertCell();
             territories.className = "company-table__postal-codes";
-            territories.textContent = manager.territories.join(", ");
+            territories.textContent = siteManagerPostalCodes(manager.territories).join(", ");
             row.addEventListener("click", () => openManager(manager));
             row.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
