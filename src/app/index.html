@@ -89,20 +89,29 @@
     </div>
   </dialog>
 
-  <dialog id="company-management" class="management-dialog" aria-labelledby="management-title">
+  <dialog id="master-data-management" class="management-dialog master-data-management company-management" aria-labelledby="management-title">
     <div class="management-dialog__header">
       <div>
         <p class="eyebrow">Stammdaten</p>
-        <h2 id="management-title">Unternehmen verwalten</h2>
+        <h2 id="management-title">Stammdaten verwalten</h2>
       </div>
       <div class="management-dialog__header-actions">
         <a id="export-master-data" class="button button--secondary" href="/api/admin/export" download>Daten exportieren</a>
-        <button id="create-company" class="button button--primary" type="button">+ Neues Unternehmen</button>
-        <button id="open-trade-management" class="button button--secondary" type="button">Gewerkedaten</button>
+        <button id="create-master-data-entry" class="button button--primary" type="button">+ Neues Unternehmen</button>
         <button id="close-company-management" class="icon-button" type="button" aria-label="Verwaltung schließen">&times;</button>
       </div>
     </div>
 
+    <div class="management-tabs" role="tablist" aria-label="Stammdatenbereiche">
+      <button id="company-management-tab" class="management-tabs__tab is-active" type="button" role="tab"
+        aria-selected="true" aria-controls="company-management-panel">Unternehmen</button>
+      <button id="site-manager-management-tab" class="management-tabs__tab" type="button" role="tab"
+        aria-selected="false" aria-controls="site-manager-management-panel" tabindex="-1">Bauleiter</button>
+      <button id="open-trade-management" class="management-tabs__tab" type="button" role="tab"
+        aria-selected="false" aria-controls="trade-management-panel" tabindex="-1">Gewerke</button>
+    </div>
+
+    <section id="company-management-panel" class="management-panel" role="tabpanel" aria-labelledby="company-management-tab">
     <div class="management-toolbar">
       <label class="form-field management-toolbar__search">
         <span>Unternehmen suchen</span>
@@ -118,7 +127,7 @@
 
     <p id="management-result-status" class="management-result-status" role="status" aria-live="polite"></p>
     <div class="company-table-wrapper">
-      <table class="company-table">
+      <table class="management-table company-table">
         <colgroup>
           <col class="company-table__column--company">
           <col class="company-table__column--trade">
@@ -136,20 +145,44 @@
         <tbody id="company-table-body"></tbody>
       </table>
     </div>
+    </section>
+
+    <section id="site-manager-management-panel" class="management-panel" role="tabpanel" aria-labelledby="site-manager-management-tab" hidden>
+      <div class="management-toolbar management-toolbar--single">
+        <label class="form-field management-toolbar__search">
+          <span>Bauleiter suchen</span>
+          <input id="site-manager-management-search" type="search" placeholder="Name" autocomplete="off">
+        </label>
+      </div>
+      <p id="site-manager-management-result-status" class="management-result-status" role="status" aria-live="polite"></p>
+      <div class="company-table-wrapper">
+        <table class="management-table site-manager-table">
+          <colgroup><col class="site-manager-table__column--name"><col></colgroup>
+          <thead><tr><th scope="col">Name</th><th scope="col">PLZ-Gebiete</th></tr></thead>
+          <tbody id="site-manager-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="trade-management-panel" class="management-panel trade-dialog" role="tabpanel" aria-labelledby="open-trade-management" hidden>
+      <h3 id="trade-title" class="management-panel__title">Gewerke verwalten</h3>
+      <form id="trade-form" class="trade-form">
+        <label class="form-field"><span>Neues Gewerk</span><input id="trade-name" required maxlength="80" placeholder="Name des Gewerks"></label>
+        <div id="new-trade-color-picker" class="color-picker"></div>
+        <button class="button button--primary" type="submit">Hinzufügen</button>
+      </form>
+      <p id="trade-error" class="form-error trade-error" role="alert" hidden></p>
+      <ul id="trade-list" class="trade-list"></ul>
+    </section>
   </dialog>
 
-  <dialog id="trade-management" class="management-dialog trade-dialog" aria-labelledby="trade-title">
-    <div class="management-dialog__header">
-      <div><p class="eyebrow">Stammdaten</p><h2 id="trade-title">Gewerkedaten verwalten</h2></div>
-      <button id="close-trade-management" class="icon-button" type="button" aria-label="Gewerkedaten schließen">&times;</button>
+  <dialog id="delete-site-manager-confirmation" class="confirm-dialog" aria-labelledby="delete-site-manager-title" aria-describedby="delete-site-manager-description">
+    <h2 id="delete-site-manager-title">Bauleiter löschen?</h2>
+    <p id="delete-site-manager-description">Möchten Sie <strong id="delete-site-manager-name"></strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    <div class="dialog-actions">
+      <button id="cancel-site-manager-delete" class="button button--secondary" type="button">Abbrechen</button>
+      <button id="confirm-site-manager-delete" class="button button--danger" type="button">Bauleiter löschen</button>
     </div>
-    <form id="trade-form" class="trade-form">
-      <label class="form-field"><span>Neues Gewerk</span><input id="trade-name" required maxlength="80" placeholder="Name des Gewerks"></label>
-      <div id="new-trade-color-picker" class="color-picker"></div>
-      <button class="button button--primary" type="submit">Hinzufügen</button>
-    </form>
-    <p id="trade-error" class="form-error trade-error" role="alert" hidden></p>
-    <ul id="trade-list" class="trade-list"></ul>
   </dialog>
 
   <dialog id="delete-company-confirmation" class="confirm-dialog" aria-labelledby="delete-company-title" aria-describedby="delete-company-description">
@@ -180,11 +213,15 @@
 <script src="lux-layer.js"></script>
 <script src="company-store.js"></script>
 <script src="trade-store.js"></script>
+<script src="site-manager-store.js"></script>
+<script src="postal-code-selection.js"></script>
 <script src="company-search.js"></script>
 <script src="search-tabs.js"></script>
 <script src="area-search.js"></script>
 <script src="administration-menu.js"></script>
 <script src="company-management.js"></script>
+<script src="site-manager-management.js"></script>
+<script src="site-manager-search.js"></script>
 <script src="map.js"></script>
 </body>
 

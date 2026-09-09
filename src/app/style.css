@@ -201,7 +201,8 @@ body {
   display: none;
 }
 
-.company-search__controls {
+.company-search__controls,
+.site-manager-search__controls {
   position: relative;
 }
 
@@ -550,6 +551,66 @@ dialog::backdrop {
   background: #f6f8f6;
 }
 
+.management-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 28px;
+  border-bottom: 1px solid #dce5df;
+  background: #fff;
+}
+
+.management-tabs__tab {
+  padding: 13px 16px 11px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #526158;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.management-tabs__tab:hover,
+.management-tabs__tab:focus-visible {
+  color: #146b37;
+  background: #f6f8f6;
+  outline: none;
+}
+
+.management-tabs__tab.is-active {
+  border-bottom-color: #146b37;
+  color: #146b37;
+}
+
+.management-toolbar--single {
+  grid-template-columns: minmax(220px, 1fr);
+}
+
+.management-inline-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin: 20px 28px 0;
+  padding: 16px;
+  border: 1px solid #d8e0da;
+  border-radius: 9px;
+  background: #f6f8f6;
+}
+
+.management-inline-form__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.management-inline-form .form-error {
+  grid-column: 1 / -1;
+}
+
+.management-panel__title {
+  margin: 22px 28px 0;
+}
+
 .form-field {
   display: grid;
   gap: 6px;
@@ -594,7 +655,7 @@ dialog::backdrop {
   overflow: auto;
 }
 
-.company-table {
+.management-table {
   width: 100%;
   table-layout: fixed;
   border-spacing: 0;
@@ -620,15 +681,15 @@ dialog::backdrop {
   width: auto;
 }
 
-.company-table th,
-.company-table td {
+.management-table th,
+.management-table td {
   padding: 13px 14px;
   border-bottom: 1px solid #e2e8e4;
   text-align: left;
   vertical-align: middle;
 }
 
-.company-table th {
+.management-table th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -639,16 +700,16 @@ dialog::backdrop {
   text-transform: uppercase;
 }
 
-.company-table th:first-child,
+.management-table th:first-child,
 .company-table__name-cell {
   border-right: 1px solid #d8e0da;
 }
 
-.company-table tr:last-child td {
+.management-table tr:last-child td {
   border-bottom: 0;
 }
 
-.company-table tbody tr:hover {
+.management-table tbody tr:hover {
   background: #f8faf8;
 }
 
@@ -662,7 +723,7 @@ dialog::backdrop {
   background: #edf5ef;
 }
 
-.company-table tbody tr.is-inactive,
+.management-table tbody tr.is-inactive,
 .trade-list li.is-inactive {
   color: #69736c;
   background: #f1f3f1;
@@ -677,6 +738,21 @@ dialog::backdrop {
   color: #59625c;
   font-size: 11px;
   font-weight: 700;
+}
+
+.status-badge--active {
+  background: #dcefe2;
+  color: #21683b;
+}
+
+.site-manager-table__column--name {
+  width: 42%;
+}
+
+#trade-management-panel {
+  max-height: calc(100vh - 190px);
+  padding-bottom: 28px;
+  overflow: auto;
 }
 
 .company-table__postal-codes {
@@ -1251,6 +1327,7 @@ dialog::backdrop {
   }
 
   .management-toolbar,
+  .management-inline-form,
   .editor-fields,
   .trade-form {
     grid-template-columns: 1fr;

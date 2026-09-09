@@ -88,6 +88,23 @@ Gewerken. In Unternehmensformularen werden nur aktive Gewerke zur Auswahl
 angeboten. Ein bereits verwendetes Gewerk darf nicht endgültig gelöscht werden;
 es kann deaktiviert werden und bleibt bei bestehenden Unternehmen sichtbar.
 
+## Bauleiter
+
+| Feld | Typ | Regel |
+| --- | --- | --- |
+| `id` | UUID | Technischer, unveränderlicher Primärschlüssel. |
+| `name` | String | Pflichtfeld, ohne äußere Leerzeichen, höchstens 255 Zeichen. |
+| `territories` | Gebietscode-Liste | Mindestens ein eindeutiger Code im Format `^\\d{2}$` oder `LUX`. |
+| `status` | Enum | `active` oder `inactive`; neue Bauleiter sind `active`. |
+| `createdAt` | Zeitpunkt | Vom Server gesetzter Erstellungszeitpunkt. |
+| `updatedAt` | Zeitpunkt | Vom Server bei Änderungen aktualisiert. |
+
+Die Zuordnung wird separat über `site_manager_territories` mit
+`site_manager_id` und `postal_code` gespeichert. Sie enthält weder
+`pps_number` noch `trade_id` oder eine Dienstleisterrolle. Der zusammengesetzte
+Primärschlüssel verhindert nur doppelte Codes je Bauleiter; mehrere Bauleiter
+dürfen dasselbe Gebiet abdecken.
+
 ## Deaktivieren und Löschen
 
 Deaktivieren ist eine reversible fachliche Statusänderung. Inaktive Unternehmen
@@ -120,9 +137,10 @@ sind beide identisch; jede fachliche Änderung aktualisiert `updatedAt`, währen
 
 ## Seed- und Bestandsmigration
 
-Das portable JSON-Format hat `schemaVersion: 2` und enthält die beiden Arrays
-`trades` und `companies`. Der Seed-Import erfolgt in einer Transaktion: zuerst
-Gewerke, dann Unternehmen, Gebietszuordnungen und Informationseinträge. IDs und
+Das portable JSON-Format hat `schemaVersion: 2` und enthält die drei Arrays
+`trades`, `companies` und `siteManagers`. Der Seed-Import erfolgt in einer
+Transaktion: zuerst Gewerke, dann Unternehmen, Gebietszuordnungen und
+Informationseinträge. IDs und
 Zeitpunkte werden aus der Datei übernommen, nicht neu erzeugt. Damit kann
 dasselbe Dokument lokal importiert und später ohne fachliche Sonderkonvertierung
 in PostgreSQL geschrieben werden.
