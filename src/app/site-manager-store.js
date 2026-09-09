@@ -1,0 +1,24 @@
+const SITE_MANAGER_API_URL = "/api/site-managers";
+
+const siteManagerStore = (() => {
+    async function request(url = SITE_MANAGER_API_URL, options = {}) {
+        const response = await fetch(url, {
+            headers: { "Content-Type": "application/json", ...options.headers },
+            ...options
+        });
+        const data = response.status === 204 ? null : await response.json();
+        if (!response.ok) throw new Error(data?.message || `Bauleiterdaten konnten nicht verarbeitet werden (${response.status}).`);
+        return data;
+    }
+
+    function list() { return request(); }
+    function save(manager) {
+        const fields = (({ name, territories, status }) => ({ name, territories, status }))(manager);
+        return request(manager.id ? `${SITE_MANAGER_API_URL}/${manager.id}` : SITE_MANAGER_API_URL, {
+            method: manager.id ? "PATCH" : "POST",
+            body: JSON.stringify(fields)
+        });
+    }
+
+    return { list, save };
+})();

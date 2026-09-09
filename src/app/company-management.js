@@ -12,7 +12,8 @@ const SELECTABLE_POSTAL_CODES = [
 ];
 
 function initializeCompanyManagement() {
-    const dialog = document.getElementById("company-management");
+    // The legacy selector keeps integrations working while the dialog receives its neutral name.
+    const dialog = document.getElementById("master-data-management") || document.getElementById("company-management");
     const tableBody = document.getElementById("company-table-body");
     const searchInput = document.getElementById("management-search");
     const tradeFilter = document.getElementById("management-trade-filter");
@@ -21,10 +22,23 @@ function initializeCompanyManagement() {
     const deleteCompanyName = document.getElementById("delete-company-name");
     const confirmCompanyDelete = document.getElementById("confirm-company-delete");
     const header = dialog.querySelector(".management-dialog__header");
-    const listElements = [dialog.querySelector(".management-toolbar"), resultStatus, dialog.querySelector(".company-table-wrapper")];
+    const managementTabs = dialog.querySelector(".management-tabs");
+    const companyPanel = document.getElementById("company-management-panel");
+    const siteManagerPanel = document.getElementById("site-manager-management-panel");
+    const siteManagerSearch = document.getElementById("site-manager-management-search");
+    const siteManagerStatus = document.getElementById("site-manager-management-result-status");
+    const siteManagerTableBody = document.getElementById("site-manager-table-body");
+    const siteManagerForm = document.getElementById("site-manager-form");
+    const siteManagerName = document.getElementById("site-manager-name");
+    const siteManagerTerritories = document.getElementById("site-manager-territories");
+    const siteManagerFormError = document.getElementById("site-manager-form-error");
+    const primaryAction = document.getElementById("create-master-data-entry") || document.getElementById("create-company");
+    const listElements = [managementTabs, companyPanel, siteManagerPanel, document.getElementById("trade-management-panel")];
     let companies = [];
     let trades = [];
     let currentCompany = null;
+    let siteManagers = [];
+    let activeArea = "company-management-panel";
     let initialState = "";
     let detailView = null;
     let pointerStartedOnBackdrop = false;
@@ -106,6 +120,103 @@ function initializeCompanyManagement() {
         }
     }
 
+    function renderSiteManagers() {
+        const query = normalizeSearchValue(siteManagerSearch.value);
+        const matches = siteManagers.filter((manager) => !query || normalizeSearchValue(manager.name).includes(query));
+        siteManagerStatus.textContent = `${matches.length} von ${siteManagers.length} Bauleitern`;
+        siteManagerTableBody.replaceChildren();
+        if (!matches.length) {
+            const cell = siteManagerTableBody.insertRow().insertCell();
+            cell.colSpan = 2;
+            cell.className = "company-table__empty";
+            cell.textContent = "Keine Bauleiter für diese Suche gefunden.";
+            return;
+        }
+        matches.forEach((manager) => {
+            const row = siteManagerTableBody.insertRow();
+            row.classList.toggle("is-inactive", manager.status !== "active");
+            const nameCell = row.insertCell();
+            nameCell.className = "company-table__name-cell";
+            const name = document.createElement("strong");
+            name.textContent = manager.name;
+            nameCell.append(name);
+            const badge = document.createElement("span");
+            badge.className = `status-badge${manager.status === "active" ? " status-badge--active" : ""}`;
+            badge.textContent = manager.status === "active" ? "Aktiv" : "Inaktiv";
+            nameCell.append(" ", badge);
+            const territories = row.insertCell();
+            territories.className = "company-table__postal-codes";
+            territories.textContent = manager.territories.join(", ");
+        });
+    }
+
+    async function refreshSiteManagers() {
+        try {
+            siteManagers = await siteManagerStore.list();
+            renderSiteManagers();
+        } catch (error) {
+            siteManagerStatus.textContent = error.message;
+            siteManagerTableBody.replaceChildren();
+        }
+    }
+
+    function activateManagementArea(tab, focusPanel = true) {
+        const tabs = [...managementTabs.querySelectorAll('[role="tab"]')];
+        tabs.forEach((item) => {
+            const selected = item === tab;
+            const panel = document.getElementById(item.getAttribute("aria-controls"));
+            item.classList.toggle("is-active", selected);
+            item.setAttribute("aria-selected", String(selected));
+            item.tabIndex = selected ? 0 : -1;
+            panel.hidden = !selected;
+        });
+        activeArea = tab.getAttribute("aria-controls");
+        primaryAction.hidden = activeArea === "trade-management-panel";
+        primaryAction.textContent = activeArea === "site-manager-management-panel" ? "+ Neuer Bauleiter" : "+ Neues Unternehmen";
+        if (activeArea === "site-manager-management-panel") refreshSiteManagers();
+        if (activeArea === "trade-management-panel") document.dispatchEvent(new CustomEvent("trade-management:open"));
+        if (focusPanel) document.getElementById(activeArea).querySelector("input, select, button")?.focus();
+    }
+
+    function openNewSiteManager() {
+        siteManagerForm.reset();
+        siteManagerFormError.hidden = true;
+        siteManagerForm.hidden = false;
+        siteManagerName.focus();
+    }
+
+    siteManagerForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const territories = siteManagerTerritories.value.split(",").map((code) => code.trim().toUpperCase());
+        try {
+            await siteManagerStore.save({ name: siteManagerName.value, territories, status: "active" });
+            siteManagerForm.hidden = true;
+            await refreshSiteManagers();
+        } catch (error) {
+            siteManagerFormError.textContent = error.message;
+            siteManagerFormError.hidden = false;
+        }
+    });
+    document.getElementById("cancel-site-manager").addEventListener("click", () => {
+        siteManagerForm.hidden = true;
+        primaryAction.focus();
+    });
+
+    [...managementTabs.querySelectorAll('[role="tab"]')].forEach((tab, index, tabs) => {
+        tab.addEventListener("click", () => activateManagementArea(tab));
+        tab.addEventListener("keydown", (event) => {
+            let targetIndex;
+            if (event.key === "ArrowLeft") targetIndex = (index - 1 + tabs.length) % tabs.length;
+            else if (event.key === "ArrowRight") targetIndex = (index + 1) % tabs.length;
+            else if (event.key === "Home") targetIndex = 0;
+            else if (event.key === "End") targetIndex = tabs.length - 1;
+            else return;
+            event.preventDefault();
+            activateManagementArea(tabs[targetIndex]);
+            tabs[targetIndex].focus();
+        });
+    });
+
     function formState() {
         if (!detailView) return "";
         const information = [...detailView.querySelectorAll(".information-row")].map((row) => ({
@@ -183,6 +294,7 @@ function initializeCompanyManagement() {
         currentCompany = company;
         listElements.forEach((element) => { element.hidden = true; });
         header.hidden = true;
+        managementTabs.hidden = true;
         detailView = document.createElement("form");
         detailView.className = "company-detail";
         detailView.tabIndex = -1;
@@ -434,7 +546,8 @@ function initializeCompanyManagement() {
         detailView?.remove();
         detailView = null;
         header.hidden = false;
-        listElements.forEach((element) => { element.hidden = false; });
+        managementTabs.hidden = false;
+        listElements.slice(1).forEach((element) => { element.hidden = element.id !== activeArea; });
         if (shouldRender) renderCompanies();
     }
 
@@ -442,10 +555,13 @@ function initializeCompanyManagement() {
         const loaded = await refresh();
         showList(loaded);
         dialog.showModal();
-        searchInput.focus();
+        activateManagementArea(document.getElementById("company-management-tab"));
     });
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
-    document.getElementById("create-company").addEventListener("click", openNewCompany);
+    primaryAction.addEventListener("click", () => {
+        if (activeArea === "company-management-panel") openNewCompany();
+        else if (activeArea === "site-manager-management-panel") openNewSiteManager();
+    });
     document.getElementById("cancel-company-delete").addEventListener("click", () => deleteConfirmation.close());
     confirmCompanyDelete.addEventListener("click", async () => {
         if (!currentCompany) return;
@@ -463,6 +579,7 @@ function initializeCompanyManagement() {
         }
     });
     searchInput.addEventListener("input", renderCompanies);
+    siteManagerSearch.addEventListener("input", renderSiteManagers);
     tradeFilter.addEventListener("change", renderCompanies);
     window.addEventListener("trades:changed", refresh);
     dialog.addEventListener("pointerdown", (event) => {
@@ -488,7 +605,6 @@ function initializeCompanyManagement() {
 document.addEventListener("DOMContentLoaded", initializeCompanyManagement);
 
 function initializeTradeManagement() {
-    const dialog = document.getElementById("trade-management");
     const form = document.getElementById("trade-form");
     const nameInput = document.getElementById("trade-name");
     const list = document.getElementById("trade-list");
@@ -599,18 +715,15 @@ function initializeTradeManagement() {
             error.hidden = false;
         }
     });
-    document.getElementById("open-trade-management").addEventListener("click", async () => {
-        dialog.showModal();
+    document.addEventListener("trade-management:open", async () => {
         try {
             await render();
             error.hidden = true;
-            nameInput.focus();
         } catch (loadError) {
             error.textContent = loadError.message;
             error.hidden = false;
         }
     });
-    document.getElementById("close-trade-management").addEventListener("click", () => dialog.close());
     document.getElementById("cancel-trade-delete").addEventListener("click", () => deleteConfirmation.close());
     deleteConfirmation.addEventListener("close", () => { tradeToDelete = null; });
     confirmTradeDelete.addEventListener("click", async () => {
