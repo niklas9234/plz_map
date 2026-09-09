@@ -1,5 +1,9 @@
 const SITE_MANAGER_API_URL = "/api/site-managers";
 
+function siteManagerPostalCodes(territories = []) {
+    return territories.map((territory) => typeof territory === "string" ? territory : territory.postalCode);
+}
+
 const siteManagerStore = (() => {
     async function request(url = SITE_MANAGER_API_URL, options = {}) {
         const response = await fetch(url, {
