@@ -4,7 +4,7 @@ function normalizeSiteManagerSearchValue(value) {
 
 function findSiteManagerSuggestions(siteManagers, searchValue) {
     const query = normalizeSiteManagerSearchValue(searchValue);
-    if (!query) return [];
+    if (!query) return siteManagers;
     return siteManagers.filter((siteManager) =>
         normalizeSiteManagerSearchValue(siteManager.name).includes(query)
     );
@@ -62,11 +62,8 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
         closeSuggestions();
         if (loadFailed) return;
 
-        const query = normalizeSiteManagerSearchValue(input.value);
-        if (!query) {
-            if (!selectedSiteManager) {
-                status.textContent = siteManagers.length ? "" : "Keine aktiven Bauleiter verfügbar.";
-            }
+        if (!siteManagers.length) {
+            if (!selectedSiteManager) status.textContent = "Keine aktiven Bauleiter verfügbar.";
             return;
         }
 
@@ -120,6 +117,7 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
     input.disabled = true;
     status.textContent = "Aktive Bauleiter werden geladen …";
     input.addEventListener("input", renderSuggestions);
+    input.addEventListener("focus", renderSuggestions);
     input.addEventListener("keydown", (event) => {
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             if (suggestions.hidden) return;
