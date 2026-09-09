@@ -16,7 +16,7 @@ body {
   z-index: 2;
   top: 16px;
   left: 16px;
-  width: min(470px, calc(100vw - 32px));
+  width: min(470px, calc(100vw - 96px));
   box-sizing: border-box;
   padding: 16px;
   border-radius: 10px;
@@ -31,6 +31,120 @@ body {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.administration-menu {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.administration-menu__toggle {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #d5ded8;
+  border-radius: 50%;
+  color: #24452f;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+}
+
+.administration-menu__toggle:hover,
+.administration-menu__toggle:focus-visible,
+.administration-menu__toggle[aria-expanded="true"] {
+  background: #edf5ef;
+}
+
+.administration-menu__icon {
+  display: grid;
+  width: 21px;
+  gap: 4px;
+}
+
+.administration-menu__icon span {
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.administration-menu__panel {
+  order: -1;
+  width: 210px;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid #d5ded8;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+}
+
+.administration-menu__panel[hidden] {
+  display: none;
+}
+
+.administration-menu__title {
+  margin: 3px 8px 7px;
+  color: #68786d;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.administration-menu__item {
+  display: block;
+  width: 100%;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 7px;
+  color: #24452f;
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.administration-menu__item:hover,
+.administration-menu__item:focus-visible {
+  background: #edf5ef;
+}
+
+.administration-page {
+  width: min(620px, calc(100vw - 40px));
+  padding: 0;
+}
+
+.administration-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid #dce5df;
+}
+
+.administration-page__header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.administration-page__content {
+  padding: 24px 28px 32px;
+  line-height: 1.6;
+}
+
+.administration-page__content p {
+  margin: 0;
 }
 
 .search-tabs {
