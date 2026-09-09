@@ -16,11 +16,14 @@
 
   <section class="company-search" aria-labelledby="company-search-title">
     <div class="company-search__heading">
+      <p class="company-search__eyebrow">Suche</p>
       <div class="search-tabs" role="tablist" aria-label="Suchart auswählen">
         <button id="company-search-tab" class="search-tabs__tab is-active" type="button" role="tab"
-          aria-selected="true" aria-controls="company-search-panel">Unternehmen suchen</button>
+          aria-selected="true" aria-controls="company-search-panel">Unternehmen</button>
         <button id="area-search-tab" class="search-tabs__tab" type="button" role="tab"
-          aria-selected="false" aria-controls="area-search-panel">Gebiete suchen</button>
+          aria-selected="false" aria-controls="area-search-panel" tabindex="-1">Gebiete</button>
+        <button id="site-manager-search-tab" class="search-tabs__tab" type="button" role="tab"
+          aria-selected="false" aria-controls="site-manager-search-panel" tabindex="-1">Bauleiter</button>
       </div>
     </div>
     <h1 id="company-search-title" class="visually-hidden">Partnersuche</h1>
@@ -42,6 +45,14 @@
         <select id="area-trade"><option value="">Gewerk auswählen</option></select>
       </div>
       <div id="area-search-results" class="area-search__results" role="status" aria-live="polite"></div>
+    </div>
+    <div id="site-manager-search-panel" role="tabpanel" aria-labelledby="site-manager-search-tab" hidden>
+      <div class="site-manager-search__controls" role="search">
+        <label class="visually-hidden" for="site-manager-search-input">Bauleiter nach Name suchen</label>
+        <input id="site-manager-search-input" type="search" autocomplete="off" placeholder="Name"
+          aria-label="Bauleiter nach Name suchen">
+      </div>
+      <div id="site-manager-search-status" class="site-manager-search__status" role="status" aria-live="polite"></div>
     </div>
   </section>
 
@@ -170,6 +181,7 @@
 <script src="company-store.js"></script>
 <script src="trade-store.js"></script>
 <script src="company-search.js"></script>
+<script src="search-tabs.js"></script>
 <script src="area-search.js"></script>
 <script src="administration-menu.js"></script>
 <script src="company-management.js"></script>
