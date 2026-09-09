@@ -201,7 +201,8 @@ body {
   display: none;
 }
 
-.company-search__controls {
+.company-search__controls,
+.site-manager-search__controls {
   position: relative;
 }
 

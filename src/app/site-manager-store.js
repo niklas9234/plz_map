@@ -12,6 +12,7 @@ const siteManagerStore = (() => {
     }
 
     function list() { return request(); }
+    function listActive() { return request(`${SITE_MANAGER_API_URL}?status=active`); }
     function save(manager) {
         const fields = (({ name, territories, status }) => ({ name, territories, status }))(manager);
         return request(manager.id ? `${SITE_MANAGER_API_URL}/${manager.id}` : SITE_MANAGER_API_URL, {
@@ -37,5 +38,5 @@ const siteManagerStore = (() => {
             });
     }
 
-    return { list, save, remove, setActive };
+    return { list, listActive, save, remove, setActive };
 })();
