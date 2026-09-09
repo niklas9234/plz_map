@@ -3,16 +3,17 @@
 Das JSON-Format ist die stabile Übergabegrenze zwischen Installationen und
 Datenbankprodukten. Es bildet fachliche Daten ab, nicht SQLite-Tabellen.
 
-## Version 1
+## Version 2
 
 ```json
 {
   "format": "plz-map-data-export",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exportedAt": "2026-09-03T12:34:56Z",
   "applicationVersion": "1.0.0",
   "trades": [],
-  "companies": []
+  "companies": [],
+  "siteManagers": []
 }
 ```
 
@@ -28,6 +29,11 @@ Dokuments. Eine Gebietszuordnung besitzt `postalCode` und `role`
 (`primary`/`alternative`). Deutsche Gebiete sind zweistellige Strings, etwa
 `"08"`; `"LUX"` ist die Sonderkennung für Luxemburg. Zusatzinformationen sind
 geordnete Objekte mit `category` und `value`.
+
+Ein Bauleiter in `siteManagers` enthält `id`, `name`, `status`, `createdAt`,
+`updatedAt` und `territories` als Liste von Gebietscodes. Bauleiter besitzen
+keine PPS-Nummer, kein Gewerk und keine Dienstleisterrolle. Derselbe Gebietscode
+darf bei beliebig vielen Bauleitern vorkommen.
 
 Unbekannte oder fehlende Felder werden abgelehnt. Geprüft werden UUIDs,
 eindeutige PPS-Nummern und Gewerknamen, Gewerkverweise, Status und Rollen,

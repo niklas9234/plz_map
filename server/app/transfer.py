@@ -13,14 +13,17 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 FORMAT = "plz-map-data-export"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 STATUS = {"active", "inactive"}
 ROLES = {"primary", "alternative"}
 POSTAL_CODE = re.compile(r"^\d{2}$")
 # This is deliberately an explicit allow-list.  Exporting database metadata or
 # whole SQLite files would also copy logs, temporary tables and host-specific
 # paths and would make the transfer format dependent on one database product.
-MUTABLE_TABLES = ("trades", "companies", "territories", "company_information")
+MUTABLE_TABLES = (
+    "trades", "companies", "territories", "company_information",
+    "site_managers", "site_manager_territories",
+)
 
 
 class ImportValidationError(ValueError):
@@ -84,9 +87,21 @@ def export_data(connection: Connection) -> dict[str, Any]:
             "information": information, "status": row["status"],
             "createdAt": row["created_at"], "updatedAt": row["updated_at"],
         })
+    site_managers = []
+    for row in connection.execute(text("SELECT * FROM site_managers ORDER BY id")).mappings():
+        territories = [item[0] for item in connection.execute(text(
+            "SELECT postal_code FROM site_manager_territories "
+            "WHERE site_manager_id=:site_manager_id ORDER BY postal_code"
+        ), {"site_manager_id": row["id"]})]
+        site_managers.append({
+            "id": row["id"], "name": row["name"], "territories": territories,
+            "status": row["status"], "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+        })
     result = {"format": FORMAT, "schemaVersion": SCHEMA_VERSION,
               "exportedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-              "applicationVersion": application_version(), "trades": trades, "companies": companies}
+              "applicationVersion": application_version(), "trades": trades, "companies": companies,
+              "siteManagers": site_managers}
     if started_snapshot:
         connection.commit()
     return result
@@ -96,7 +111,7 @@ def validate_import(document: Any) -> dict[str, Any]:
     errors: list[str] = []
     if not isinstance(document, dict):
         raise ImportValidationError(["$: muss ein JSON-Objekt sein"])
-    allowed_top = {"format", "schemaVersion", "exportedAt", "applicationVersion", "trades", "companies"}
+    allowed_top = {"format", "schemaVersion", "exportedAt", "applicationVersion", "trades", "companies", "siteManagers"}
     unknown = set(document) - allowed_top
     if unknown:
         errors.append(f"$: unbekannte Felder: {', '.join(sorted(unknown))}")
@@ -116,8 +131,10 @@ def validate_import(document: Any) -> dict[str, Any]:
         errors.append("applicationVersion: muss eine nichtleere Zeichenkette sein")
     trades = document.get("trades")
     companies = document.get("companies")
+    site_managers = document.get("siteManagers")
     if not isinstance(trades, list): errors.append("trades: muss eine Liste sein"); trades = []
     if not isinstance(companies, list): errors.append("companies: muss eine Liste sein"); companies = []
+    if not isinstance(site_managers, list): errors.append("siteManagers: muss eine Liste sein"); site_managers = []
 
     trade_ids: set[str] = set(); trade_names: set[str] = set()
     trade_fields = {"id", "name", "status", "color", "createdAt", "updatedAt"}
@@ -176,6 +193,31 @@ def validate_import(document: Any) -> dict[str, Any]:
                     or item["value"] != item["value"].strip()):
                 errors.append(f"{path}.information[{pos}]: ungültige Kategorie oder ungültiger Wert")
         _timestamp(company.get("createdAt"), f"{path}.createdAt", errors); _timestamp(company.get("updatedAt"), f"{path}.updatedAt", errors)
+    site_manager_ids: set[str] = set()
+    site_manager_fields = {"id", "name", "territories", "status", "createdAt", "updatedAt"}
+    for index, manager in enumerate(site_managers):
+        path = f"siteManagers[{index}]"
+        if not isinstance(manager, dict): errors.append(f"{path}: muss ein Objekt sein"); continue
+        if set(manager) != site_manager_fields: errors.append(f"{path}: Felder entsprechen nicht dem Schema")
+        _uuid(manager.get("id"), f"{path}.id", errors)
+        if manager.get("id") in site_manager_ids: errors.append(f"{path}.id: doppelte UUID")
+        site_manager_ids.add(manager.get("id"))
+        name = manager.get("name")
+        if not isinstance(name, str) or not name.strip() or name != name.strip() or len(name) > 255:
+            errors.append(f"{path}.name: ungültiger Name")
+        if manager.get("status") not in STATUS: errors.append(f"{path}.status: ungültiger Status")
+        territories = manager.get("territories")
+        if not isinstance(territories, list) or not territories:
+            errors.append(f"{path}.territories: mindestens eine Zuordnung erforderlich"); territories = []
+        codes: set[str] = set()
+        for pos, code in enumerate(territories):
+            item_path = f"{path}.territories[{pos}]"
+            if not isinstance(code, str) or not (POSTAL_CODE.fullmatch(code) or code == "LUX"):
+                errors.append(f"{item_path}: zweistelliger String oder LUX erwartet")
+            if code in codes: errors.append(f"{item_path}: doppelte Zuordnung")
+            codes.add(code)
+        _timestamp(manager.get("createdAt"), f"{path}.createdAt", errors)
+        _timestamp(manager.get("updatedAt"), f"{path}.updatedAt", errors)
     if errors: raise ImportValidationError(errors)
     return document
 
@@ -184,7 +226,8 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
     if mode not in {"empty", "validate"}:
         raise ImportValidationError(["mode: erlaubt sind 'empty' und 'validate'"])
     data = validate_import(document)
-    counts = {"trades": len(data["trades"]), "companies": len(data["companies"])}
+    counts = {"trades": len(data["trades"]), "companies": len(data["companies"]),
+              "siteManagers": len(data["siteManagers"])}
     if mode == "validate": return {**counts, "written": False}
     try:
         if connection.in_transaction():
@@ -218,6 +261,14 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
                     {"company_id": company["id"], "position": pos, "category": item["category"], "value": item["value"]}
                     for pos, item in enumerate(company["information"])
                 ])
+        for manager in data["siteManagers"]:
+            connection.execute(text("INSERT INTO site_managers (id, name, status, created_at, updated_at) VALUES (:id, :name, :status, :created_at, :updated_at)"), {
+                "id": manager["id"], "name": manager["name"], "status": manager["status"],
+                "created_at": manager["createdAt"], "updated_at": manager["updatedAt"],
+            })
+            connection.execute(text("INSERT INTO site_manager_territories (site_manager_id, postal_code) VALUES (:site_manager_id, :postal_code)"), [
+                {"site_manager_id": manager["id"], "postal_code": code} for code in manager["territories"]
+            ])
         transaction.commit()
     except Exception:
         connection.rollback()
@@ -253,6 +304,15 @@ def write_validated_data(connection: Any, data: dict[str, Any]) -> None:
             "INSERT INTO company_information (company_id,position,category,value) VALUES (?,?,?,?)",
             [(company["id"], position, item["category"], item["value"])
              for position, item in enumerate(company["information"])],
+        )
+    for manager in data["siteManagers"]:
+        connection.execute(
+            "INSERT INTO site_managers (id,name,status,created_at,updated_at) VALUES (?,?,?,?,?)",
+            (manager["id"], manager["name"], manager["status"], manager["createdAt"], manager["updatedAt"]),
+        )
+        connection.executemany(
+            "INSERT INTO site_manager_territories (site_manager_id,postal_code) VALUES (?,?)",
+            [(manager["id"], code) for code in manager["territories"]],
         )
 
 
