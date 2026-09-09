@@ -26,11 +26,18 @@ body {
 }
 
 .company-search__heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 6px;
   margin-bottom: 10px;
+}
+
+.company-search__eyebrow {
+  margin: 0;
+  color: #68786d;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .administration-menu {
@@ -148,12 +155,15 @@ body {
 }
 
 .search-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
   min-width: 0;
   gap: 6px;
 }
 
 .search-tabs__tab {
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid #aab8ae;
   border-radius: 7px;
@@ -162,6 +172,7 @@ body {
   font: inherit;
   font-weight: 650;
   cursor: pointer;
+  text-align: center;
 }
 
 .search-tabs__tab:hover,
@@ -201,6 +212,16 @@ body {
   border: 1px solid #777;
   border-radius: 5px;
   font: inherit;
+}
+
+.site-manager-search__status {
+  margin-top: 10px;
+  color: #68786d;
+  font-size: 13px;
+}
+
+.site-manager-search__status:empty {
+  display: none;
 }
 
 .area-search__controls {
@@ -255,21 +276,6 @@ body {
   margin: 0;
   color: #68786d;
   font-size: 13px;
-}
-
-@media (max-width: 480px) {
-  .company-search__heading {
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-
-  .search-tabs {
-    flex: 1 1 100%;
-  }
-
-  .search-tabs__tab {
-    flex: 1;
-  }
 }
 
 .company-search__suggestions {

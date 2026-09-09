@@ -61,6 +61,15 @@ einen Check Constraint auf die vier Werte.
 - Doppelte PLZ-Werte werden abgelehnt oder vor dem Speichern eindeutig
   normalisiert; die gewählte Importstrategie muss das Ergebnis protokollieren.
 
+## Bauleiter
+
+Bauleiter sind eine eigenständige Stammdatenart und keine Unternehmen oder
+Gewerke. Sie besitzen `id`, `name`, `status`, `createdAt`, `updatedAt` und
+mindestens ein zugeordnetes PLZ-Gebiet. Eine PPS-Nummer, ein Gewerk und die
+Unternehmensrollen `primary` beziehungsweise `alternative` gibt es für sie
+nicht. Mehrere Bauleiter dürfen dasselbe Gebiet abdecken. Die öffentliche Suche
+filtert Bauleiter ausschließlich anhand ihres Namens.
+
 ## Gewerke
 
 Gewerke sind eine erweiterbare Stammdatenliste und kein Freitextfeld.

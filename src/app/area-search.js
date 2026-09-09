@@ -20,27 +20,11 @@ function createAreaPartnerCard(company) {
 }
 
 async function initializeAreaSearch(map, postalCodeData) {
-    const companyTab = document.getElementById("company-search-tab");
-    const areaTab = document.getElementById("area-search-tab");
-    const companyPanel = document.getElementById("company-search-panel");
-    const areaPanel = document.getElementById("area-search-panel");
-    const companyInput = document.getElementById("company-search-input");
     const postalCodeInput = document.getElementById("area-postal-code");
     const tradeSelect = document.getElementById("area-trade");
     const results = document.getElementById("area-search-results");
     let companies = [];
     let trades = [];
-
-    function activateTab(tab) {
-        const showAreaSearch = tab === areaTab;
-        companyTab.classList.toggle("is-active", !showAreaSearch);
-        areaTab.classList.toggle("is-active", showAreaSearch);
-        companyTab.setAttribute("aria-selected", String(!showAreaSearch));
-        areaTab.setAttribute("aria-selected", String(showAreaSearch));
-        companyPanel.hidden = showAreaSearch;
-        areaPanel.hidden = !showAreaSearch;
-        (showAreaSearch ? postalCodeInput : companyInput).focus();
-    }
 
     function renderPartnerGroup(title, partners, emptyText) {
         const section = document.createElement("section");
@@ -85,13 +69,6 @@ async function initializeAreaSearch(map, postalCodeData) {
         await search();
     }
 
-    companyTab.addEventListener("click", () => activateTab(companyTab));
-    areaTab.addEventListener("click", () => activateTab(areaTab));
-    [companyTab, areaTab].forEach((tab) => tab.addEventListener("keydown", (event) => {
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        event.preventDefault();
-        activateTab(tab === companyTab ? areaTab : companyTab);
-    }));
     postalCodeInput.addEventListener("input", () => {
         const value = postalCodeInput.value.replace(/[^a-z\d]/gi, "").toUpperCase();
         postalCodeInput.value = /^\d/.test(value)
