@@ -22,7 +22,6 @@
         <button id="area-search-tab" class="search-tabs__tab" type="button" role="tab"
           aria-selected="false" aria-controls="area-search-panel">Gebiete suchen</button>
       </div>
-      <button id="open-company-management" class="button button--secondary" type="button">Verwalten</button>
     </div>
     <h1 id="company-search-title" class="visually-hidden">Partnersuche</h1>
     <div id="company-search-panel" role="tabpanel" aria-labelledby="company-search-tab">
@@ -46,7 +45,38 @@
     </div>
   </section>
 
+  <aside class="administration-menu" aria-label="Verwaltung">
+    <button id="administration-menu-toggle" class="administration-menu__toggle" type="button"
+      aria-label="Verwaltungsmenü öffnen" aria-expanded="false" aria-controls="administration-menu-panel">
+      <span class="administration-menu__icon" aria-hidden="true"><span></span><span></span><span></span></span>
+    </button>
+    <nav id="administration-menu-panel" class="administration-menu__panel" aria-label="Verwaltungsbereiche" hidden>
+      <p class="administration-menu__title">Verwaltung</p>
+      <button id="open-company-management" class="administration-menu__item" type="button">Daten verwalten</button>
+      <button class="administration-menu__item" type="button" data-administration-page="settings">Einstellungen</button>
+      <button class="administration-menu__item" type="button" data-administration-page="info">Info</button>
+    </nav>
+  </aside>
+
   <div id="map"></div>
+
+  <dialog id="administration-page" class="administration-page" aria-labelledby="administration-page-title">
+    <div class="administration-page__header">
+      <div>
+        <p class="eyebrow">Verwaltung</p>
+        <h2 id="administration-page-title"></h2>
+      </div>
+      <button id="close-administration-page" class="icon-button" type="button" aria-label="Seite schließen">&times;</button>
+    </div>
+    <div class="administration-page__content">
+      <div data-page-content="settings" hidden>
+        <p>Die Karteneinstellungen werden zentral für die Anwendung verwaltet.</p>
+      </div>
+      <div data-page-content="info" hidden>
+        <p>PLZ-Karte zur Suche von Unternehmen und ihren Postleitzahlgebieten in Deutschland und Luxemburg.</p>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="company-management" class="management-dialog" aria-labelledby="management-title">
     <div class="management-dialog__header">
@@ -141,6 +171,7 @@
 <script src="trade-store.js"></script>
 <script src="company-search.js"></script>
 <script src="area-search.js"></script>
+<script src="administration-menu.js"></script>
 <script src="company-management.js"></script>
 <script src="map.js"></script>
 </body>
