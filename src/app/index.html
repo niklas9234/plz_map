@@ -148,16 +148,6 @@
     </section>
 
     <section id="site-manager-management-panel" class="management-panel" role="tabpanel" aria-labelledby="site-manager-management-tab" hidden>
-      <form id="site-manager-form" class="management-inline-form" hidden>
-        <label class="form-field"><span>Name</span><input id="site-manager-name" required maxlength="120" autocomplete="off"></label>
-        <label class="form-field"><span>PLZ-Gebiete</span><input id="site-manager-territories" required
-          pattern="(?:\d{2}|LUX)(?:\s*,\s*(?:\d{2}|LUX))*" placeholder="z. B. 01, 02, LUX"></label>
-        <div class="management-inline-form__actions">
-          <button id="cancel-site-manager" class="button button--secondary" type="button">Abbrechen</button>
-          <button class="button button--primary" type="submit">Speichern</button>
-        </div>
-        <p id="site-manager-form-error" class="form-error" role="alert" hidden></p>
-      </form>
       <div class="management-toolbar management-toolbar--single">
         <label class="form-field management-toolbar__search">
           <span>Bauleiter suchen</span>
@@ -184,6 +174,15 @@
       <p id="trade-error" class="form-error trade-error" role="alert" hidden></p>
       <ul id="trade-list" class="trade-list"></ul>
     </section>
+  </dialog>
+
+  <dialog id="delete-site-manager-confirmation" class="confirm-dialog" aria-labelledby="delete-site-manager-title" aria-describedby="delete-site-manager-description">
+    <h2 id="delete-site-manager-title">Bauleiter löschen?</h2>
+    <p id="delete-site-manager-description">Möchten Sie <strong id="delete-site-manager-name"></strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    <div class="dialog-actions">
+      <button id="cancel-site-manager-delete" class="button button--secondary" type="button">Abbrechen</button>
+      <button id="confirm-site-manager-delete" class="button button--danger" type="button">Bauleiter löschen</button>
+    </div>
   </dialog>
 
   <dialog id="delete-company-confirmation" class="confirm-dialog" aria-labelledby="delete-company-title" aria-describedby="delete-company-description">
@@ -215,11 +214,13 @@
 <script src="company-store.js"></script>
 <script src="trade-store.js"></script>
 <script src="site-manager-store.js"></script>
+<script src="postal-code-selection.js"></script>
 <script src="company-search.js"></script>
 <script src="search-tabs.js"></script>
 <script src="area-search.js"></script>
 <script src="administration-menu.js"></script>
 <script src="company-management.js"></script>
+<script src="site-manager-management.js"></script>
 <script src="map.js"></script>
 </body>
 

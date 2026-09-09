@@ -1,16 +1,3 @@
-const SELECTABLE_POSTAL_CODES = [
-    "01", "02", "03", "04", "06", "07", "08", "09",
-    "10", "12", "13", "14", "15", "16", "17", "18", "19",
-    "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-    "30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
-    "40", "41", "42", "44", "45", "46", "47", "48", "49",
-    "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
-    "60", "61", "63", "64", "65", "66", "67", "68", "69",
-    "70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
-    "80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
-    "90", "91", "92", "93", "94", "95", "96", "97", "98", "99"
-];
-
 function initializeCompanyManagement() {
     // The legacy selector keeps integrations working while the dialog receives its neutral name.
     const dialog = document.getElementById("master-data-management") || document.getElementById("company-management");
@@ -25,22 +12,15 @@ function initializeCompanyManagement() {
     const managementTabs = dialog.querySelector(".management-tabs");
     const companyPanel = document.getElementById("company-management-panel");
     const siteManagerPanel = document.getElementById("site-manager-management-panel");
-    const siteManagerSearch = document.getElementById("site-manager-management-search");
-    const siteManagerStatus = document.getElementById("site-manager-management-result-status");
-    const siteManagerTableBody = document.getElementById("site-manager-table-body");
-    const siteManagerForm = document.getElementById("site-manager-form");
-    const siteManagerName = document.getElementById("site-manager-name");
-    const siteManagerTerritories = document.getElementById("site-manager-territories");
-    const siteManagerFormError = document.getElementById("site-manager-form-error");
     const primaryAction = document.getElementById("create-master-data-entry") || document.getElementById("create-company");
     const listElements = [managementTabs, companyPanel, siteManagerPanel, document.getElementById("trade-management-panel")];
     let companies = [];
     let trades = [];
     let currentCompany = null;
-    let siteManagers = [];
     let activeArea = "company-management-panel";
     let initialState = "";
     let detailView = null;
+    let postalCodeSelection = null;
     let pointerStartedOnBackdrop = false;
 
     function isOutsideDialog(event) {
@@ -120,46 +100,6 @@ function initializeCompanyManagement() {
         }
     }
 
-    function renderSiteManagers() {
-        const query = normalizeSearchValue(siteManagerSearch.value);
-        const matches = siteManagers.filter((manager) => !query || normalizeSearchValue(manager.name).includes(query));
-        siteManagerStatus.textContent = `${matches.length} von ${siteManagers.length} Bauleitern`;
-        siteManagerTableBody.replaceChildren();
-        if (!matches.length) {
-            const cell = siteManagerTableBody.insertRow().insertCell();
-            cell.colSpan = 2;
-            cell.className = "company-table__empty";
-            cell.textContent = "Keine Bauleiter für diese Suche gefunden.";
-            return;
-        }
-        matches.forEach((manager) => {
-            const row = siteManagerTableBody.insertRow();
-            row.classList.toggle("is-inactive", manager.status !== "active");
-            const nameCell = row.insertCell();
-            nameCell.className = "company-table__name-cell";
-            const name = document.createElement("strong");
-            name.textContent = manager.name;
-            nameCell.append(name);
-            const badge = document.createElement("span");
-            badge.className = `status-badge${manager.status === "active" ? " status-badge--active" : ""}`;
-            badge.textContent = manager.status === "active" ? "Aktiv" : "Inaktiv";
-            nameCell.append(" ", badge);
-            const territories = row.insertCell();
-            territories.className = "company-table__postal-codes";
-            territories.textContent = manager.territories.join(", ");
-        });
-    }
-
-    async function refreshSiteManagers() {
-        try {
-            siteManagers = await siteManagerStore.list();
-            renderSiteManagers();
-        } catch (error) {
-            siteManagerStatus.textContent = error.message;
-            siteManagerTableBody.replaceChildren();
-        }
-    }
-
     function activateManagementArea(tab, focusPanel = true) {
         const tabs = [...managementTabs.querySelectorAll('[role="tab"]')];
         tabs.forEach((item) => {
@@ -173,34 +113,10 @@ function initializeCompanyManagement() {
         activeArea = tab.getAttribute("aria-controls");
         primaryAction.hidden = activeArea === "trade-management-panel";
         primaryAction.textContent = activeArea === "site-manager-management-panel" ? "+ Neuer Bauleiter" : "+ Neues Unternehmen";
-        if (activeArea === "site-manager-management-panel") refreshSiteManagers();
+        if (activeArea === "site-manager-management-panel") document.dispatchEvent(new CustomEvent("site-manager-management:open"));
         if (activeArea === "trade-management-panel") document.dispatchEvent(new CustomEvent("trade-management:open"));
         if (focusPanel) document.getElementById(activeArea).querySelector("input, select, button")?.focus();
     }
-
-    function openNewSiteManager() {
-        siteManagerForm.reset();
-        siteManagerFormError.hidden = true;
-        siteManagerForm.hidden = false;
-        siteManagerName.focus();
-    }
-
-    siteManagerForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const territories = siteManagerTerritories.value.split(",").map((code) => code.trim().toUpperCase());
-        try {
-            await siteManagerStore.save({ name: siteManagerName.value, territories, status: "active" });
-            siteManagerForm.hidden = true;
-            await refreshSiteManagers();
-        } catch (error) {
-            siteManagerFormError.textContent = error.message;
-            siteManagerFormError.hidden = false;
-        }
-    });
-    document.getElementById("cancel-site-manager").addEventListener("click", () => {
-        siteManagerForm.hidden = true;
-        primaryAction.focus();
-    });
 
     [...managementTabs.querySelectorAll('[role="tab"]')].forEach((tab, index, tabs) => {
         tab.addEventListener("click", () => activateManagementArea(tab));
@@ -227,10 +143,7 @@ function initializeCompanyManagement() {
             name: detailView.querySelector("#detail-name").value,
             ppsNumber: detailView.querySelector("#detail-pps").value,
             tradeId: detailView.querySelector("#detail-trade").value,
-            territories: [...detailView.querySelectorAll(".postal-code-tile[data-role]:not(:disabled)")].map((tile) => ({
-                postalCode: tile.dataset.code,
-                role: tile.dataset.role
-            })),
+            territories: postalCodeSelection.assignments(),
             information
         });
     }
@@ -315,18 +228,7 @@ function initializeCompanyManagement() {
                 <label class="form-field"><span>PPS-Nummer</span><input id="detail-pps" required maxlength="40"></label>
                 <label class="form-field"><span>Gewerk</span><select id="detail-trade" required></select></label>
               </div>
-              <section class="detail-section postal-code-section">
-                <h3>PLZ-Gebiete</h3>
-                <p class="postal-code-section__hint">Klicken Sie mehrfach auf ein Gebiet: Weiß = nicht zugewiesen, Grün = Vorzugsdienstleister, Gelb = Alternativdienstleister.</p>
-                <div class="postal-code-selection-summary">
-                  <p class="postal-code-selection-status" aria-live="polite" aria-atomic="true"></p>
-                  <button class="button button--secondary postal-code-clear" type="button">Auswahl löschen</button>
-                </div>
-                <div class="postal-code-picker">
-                  <div class="postal-code-grid" role="grid" aria-label="Deutsche PLZ-Gebiete auswählen"></div>
-                </div>
-                <div class="postal-code-international" aria-label="Weitere PLZ-Gebiete"></div>
-              </section>
+              <postal-code-selection mode="company"></postal-code-selection>
               <section class="detail-section information-section">
                 <h3>Informationen</h3>
                 <p class="information-empty">Fügen Sie hier weitere Informationen über das Unternehmen hinzu.</p>
@@ -351,129 +253,10 @@ function initializeCompanyManagement() {
         const tradeSelect = detailView.querySelector("#detail-trade");
         trades.filter((trade) => trade.status === "active" || trade.id === company.tradeId).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.id)));
         tradeSelect.value = company.tradeId;
-        const grid = detailView.querySelector(".postal-code-grid");
-        const internationalCodes = detailView.querySelector(".postal-code-international");
-        const selectionStatus = detailView.querySelector(".postal-code-selection-status");
-        const clearSelection = detailView.querySelector(".postal-code-clear");
-        const selectablePostalCodes = new Set(SELECTABLE_POSTAL_CODES);
-        let activePostalCodePointer = null;
-        let postalCodeDragRole = null;
-
-        function roleForCode(code) {
-            return company.territories?.find((territory) => territory.postalCode === code)?.role || null;
-        }
-
-        function nextPostalCodeRole(role) {
-            if (!role) return "primary";
-            if (role === "primary") return "alternative";
-            return null;
-        }
-
-        function updatePostalCodeSelection() {
-            const primaryCount = detailView.querySelectorAll('.postal-code-tile[data-role="primary"]:not(:disabled)').length;
-            const alternativeCount = detailView.querySelectorAll('.postal-code-tile[data-role="alternative"]:not(:disabled)').length;
-            selectionStatus.textContent = `Vorzug: ${primaryCount}, Alternativ: ${alternativeCount}`;
-            clearSelection.disabled = primaryCount + alternativeCount === 0;
-        }
-
-        function setPostalCodeRole(tile, role) {
-            if (tile.disabled || (tile.dataset.role || null) === role) return;
-            if (role) tile.dataset.role = role;
-            else delete tile.dataset.role;
-            tile.classList.toggle("is-primary", role === "primary");
-            tile.classList.toggle("is-alternative", role === "alternative");
-            const roleLabel = role === "primary" ? "Vorzugsdienstleister" : role === "alternative" ? "Alternativdienstleister" : "nicht zugewiesen";
-            tile.setAttribute("aria-label", `PLZ-Gebiet ${tile.dataset.code}, ${roleLabel}`);
-            updatePostalCodeSelection();
-            updateDirtyState();
-        }
-
-        function finishPostalCodeDrag(event) {
-            if (event.pointerId !== activePostalCodePointer) return;
-            activePostalCodePointer = null;
-            document.removeEventListener("pointerup", finishPostalCodeDrag);
-            document.removeEventListener("pointercancel", finishPostalCodeDrag);
-        }
-
-        function makePostalCodeTileInteractive(tile) {
-            tile.addEventListener("pointerdown", (event) => {
-                if (event.button !== 0) return;
-                activePostalCodePointer = event.pointerId;
-                postalCodeDragRole = nextPostalCodeRole(tile.dataset.role);
-                setPostalCodeRole(tile, postalCodeDragRole);
-                document.addEventListener("pointerup", finishPostalCodeDrag);
-                document.addEventListener("pointercancel", finishPostalCodeDrag);
-            });
-            tile.addEventListener("pointerenter", (event) => {
-                if (event.pointerId === activePostalCodePointer && (event.buttons & 1) === 1) {
-                    setPostalCodeRole(tile, postalCodeDragRole);
-                }
-            });
-            tile.addEventListener("click", (event) => {
-                // Pointer-Eingaben werden bereits beim Drücken verarbeitet; ein
-                // Tastatur-Klick (detail === 0) behält das bisherige Verhalten.
-                if (event.detail !== 0) return;
-                setPostalCodeRole(tile, nextPostalCodeRole(tile.dataset.role));
-            });
-        }
-
-        function createSelectableTile(code, ariaLabel = `PLZ-Gebiet ${code}`) {
-            const tile = document.createElement("button");
-            tile.type = "button";
-            tile.className = "postal-code-tile";
-            tile.dataset.code = code;
-            tile.textContent = code;
-            const role = roleForCode(code);
-            if (role) tile.dataset.role = role;
-            tile.classList.toggle("is-primary", role === "primary");
-            tile.classList.toggle("is-alternative", role === "alternative");
-            tile.setAttribute("aria-label", `${ariaLabel}, ${role === "primary" ? "Vorzugsdienstleister" : role === "alternative" ? "Alternativdienstleister" : "nicht zugewiesen"}`);
-            makePostalCodeTileInteractive(tile);
-            return tile;
-        }
-
-        for (let firstDigit = 0; firstDigit <= 9; firstDigit += 1) {
-            const row = document.createElement("div");
-            row.className = "postal-code-grid__row";
-            row.setAttribute("role", "row");
-
-            for (let finalDigit = 0; finalDigit <= 9; finalDigit += 1) {
-                const code = `${firstDigit}${finalDigit}`;
-                const cell = document.createElement("span");
-                cell.className = "postal-code-grid__cell";
-                cell.setAttribute("role", "gridcell");
-                const tile = document.createElement("button");
-                tile.type = "button";
-                tile.className = "postal-code-tile";
-                tile.dataset.code = code;
-                tile.textContent = code;
-                tile.setAttribute("aria-label", `PLZ-Gebiet ${code}`);
-                if (selectablePostalCodes.has(code)) {
-                    const role = roleForCode(code);
-                    if (role) tile.dataset.role = role;
-                    tile.classList.toggle("is-primary", role === "primary");
-                    tile.classList.toggle("is-alternative", role === "alternative");
-                    tile.setAttribute("aria-label", `PLZ-Gebiet ${code}, ${role === "primary" ? "Vorzugsdienstleister" : role === "alternative" ? "Alternativdienstleister" : "nicht zugewiesen"}`);
-                    makePostalCodeTileInteractive(tile);
-                } else {
-                    tile.disabled = true;
-                    tile.setAttribute("aria-label", `PLZ-Gebiet ${code} nicht vergeben`);
-                }
-                cell.append(tile);
-                row.append(cell);
-            }
-            grid.append(row);
-        }
-
-        const luxTile = createSelectableTile("LUX", "Luxemburg");
-        luxTile.classList.add("postal-code-tile--international");
-        internationalCodes.append(luxTile);
-        clearSelection.addEventListener("click", () => {
-            detailView.querySelectorAll(".postal-code-tile[data-role]:not(:disabled)").forEach((tile) => setPostalCodeRole(tile, null));
-            updatePostalCodeSelection();
-            updateDirtyState();
+        postalCodeSelection = detailView.querySelector("postal-code-selection").configure({
+            territories: company.territories,
+            onChange: updateDirtyState
         });
-        updatePostalCodeSelection();
         (company.information || []).forEach(addInformationRow);
         updateInformationEmptyState();
         initialState = formState();
@@ -522,6 +305,11 @@ function initializeCompanyManagement() {
     async function saveCompany() {
         const data = JSON.parse(formState());
         const error = detailView.querySelector(".detail-error");
+        if (!data.name.trim()) {
+            error.textContent = "Bitte geben Sie einen Unternehmensnamen ein.";
+            error.hidden = false;
+            return false;
+        }
         if (!data.territories.length) {
             error.textContent = "Bitte wählen Sie mindestens ein PLZ-Gebiet aus.";
             error.hidden = false;
@@ -560,7 +348,7 @@ function initializeCompanyManagement() {
     document.getElementById("close-company-management").addEventListener("click", closeToMap);
     primaryAction.addEventListener("click", () => {
         if (activeArea === "company-management-panel") openNewCompany();
-        else if (activeArea === "site-manager-management-panel") openNewSiteManager();
+        else if (activeArea === "site-manager-management-panel") document.dispatchEvent(new CustomEvent("site-manager-management:create"));
     });
     document.getElementById("cancel-company-delete").addEventListener("click", () => deleteConfirmation.close());
     confirmCompanyDelete.addEventListener("click", async () => {
@@ -579,7 +367,6 @@ function initializeCompanyManagement() {
         }
     });
     searchInput.addEventListener("input", renderCompanies);
-    siteManagerSearch.addEventListener("input", renderSiteManagers);
     tradeFilter.addEventListener("change", renderCompanies);
     window.addEventListener("trades:changed", refresh);
     dialog.addEventListener("pointerdown", (event) => {
