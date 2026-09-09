@@ -67,13 +67,26 @@ def _normalize(source: Any) -> dict[str, Any]:
         company["id"] = company.get("id") or _stable_id("company", identity)
         companies.append(company)
 
+    source_site_managers = source.get("siteManagers", [])
+    if not isinstance(source_site_managers, list):
+        raise ImportValidationError(["siteManagers: muss eine Liste sein"])
+    site_managers: list[dict[str, Any]] = []
+    for index, original in enumerate(source_site_managers):
+        if not isinstance(original, dict):
+            raise ImportValidationError([f"siteManagers[{index}]: muss ein Objekt sein"])
+        manager = dict(original)
+        identity = str(manager.get("name") or f"record-{index}")
+        manager["id"] = manager.get("id") or _stable_id("site-manager", identity)
+        site_managers.append(manager)
+
     return validate_import({
         "format": FORMAT,
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "exportedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "applicationVersion": f"initial-seed:{INITIAL_SEED_ID}",
         "trades": trades,
         "companies": companies,
+        "siteManagers": site_managers,
     })
 
 
@@ -91,7 +104,7 @@ def import_initial_seed(connection: sqlite3.Connection, path: Path | None = None
             return {"written": False, "reason": "already-initialized", "seedId": previous[0]}
 
         has_data = any(connection.execute(f"SELECT EXISTS(SELECT 1 FROM {table})").fetchone()[0]
-                       for table in ("trades", "companies"))
+                       for table in ("trades", "companies", "site_managers"))
         now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         if has_data:
             connection.execute("INSERT INTO application_metadata VALUES (?, ?, ?)",
@@ -105,10 +118,11 @@ def import_initial_seed(connection: sqlite3.Connection, path: Path | None = None
         connection.execute("INSERT INTO application_metadata VALUES (?, ?, ?)",
                            (INITIAL_SEED_KEY, INITIAL_SEED_ID, now))
         connection.commit()
-        log.info("Initialimport %s abgeschlossen: %d Gewerke, %d Unternehmen, 0 abgelehnt",
-                 INITIAL_SEED_ID, len(data["trades"]), len(data["companies"]))
+        log.info("Initialimport %s abgeschlossen: %d Gewerke, %d Unternehmen, %d Bauleiter, 0 abgelehnt",
+                 INITIAL_SEED_ID, len(data["trades"]), len(data["companies"]), len(data["siteManagers"]))
         return {"written": True, "seedId": INITIAL_SEED_ID,
-                "trades": len(data["trades"]), "companies": len(data["companies"]), "rejected": 0}
+                "trades": len(data["trades"]), "companies": len(data["companies"]),
+                "siteManagers": len(data["siteManagers"]), "rejected": 0}
     except Exception as error:
         connection.rollback()
         if isinstance(error, ImportValidationError):

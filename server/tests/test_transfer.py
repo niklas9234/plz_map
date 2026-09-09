@@ -11,7 +11,7 @@ from app.models import Base
 
 
 def document():
-    trade_id, company_id = str(uuid4()), str(uuid4())
+    trade_id, company_id, manager_id = str(uuid4()), str(uuid4()), str(uuid4())
     return {
         "format": FORMAT, "schemaVersion": SCHEMA_VERSION, "exportedAt": "2026-09-03T10:00:00Z", "applicationVersion": "test",
         "trades": [{"id": trade_id, "name": "Elektro", "status": "active", "color": "#123456",
@@ -20,6 +20,9 @@ def document():
                        "territories": [{"postalCode": "08", "role": "primary"}],
                        "information": [{"category": "phone", "value": "123"}], "status": "inactive",
                        "createdAt": "2026-03-01T00:00:00Z", "updatedAt": "2026-04-01T00:00:00Z"}],
+        "siteManagers": [{"id": manager_id, "name": "Alex Bau", "territories": ["08", "LUX"],
+                          "status": "active", "createdAt": "2026-03-01T00:00:00Z",
+                          "updatedAt": "2026-04-01T00:00:00Z"}],
     }
 
 
@@ -27,9 +30,9 @@ def test_round_trip_and_validate_mode_on_every_database(database_engine):
     source = document()
     with database_engine.connect() as db:
         assert import_data(db, source, "validate")["written"] is False
-        assert import_data(db, source) == {"trades": 1, "companies": 1, "written": True}
+        assert import_data(db, source) == {"trades": 1, "companies": 1, "siteManagers": 1, "written": True}
         exported = export_data(db)
-    for key in ("trades", "companies"):
+    for key in ("trades", "companies", "siteManagers"):
         assert exported[key] == source[key]
 
 
@@ -45,7 +48,7 @@ def test_sqlite_export_populates_a_separate_empty_database(database_engine):
 
         with database_engine.connect() as target:
             assert import_data(target, exported) == {
-                "trades": 1, "companies": 1, "written": True,
+                "trades": 1, "companies": 1, "siteManagers": 1, "written": True,
             }
             imported = export_data(target)
 
@@ -59,6 +62,7 @@ def test_sqlite_export_populates_a_separate_empty_database(database_engine):
 
         assert imported["trades"] == exported["trades"]
         assert imported["companies"] == exported["companies"]
+        assert imported["siteManagers"] == exported["siteManagers"]
     finally:
         sqlite.dispose()
 
@@ -82,7 +86,7 @@ def test_export_contract_does_not_expose_machine_specific_metadata(database_engi
         exported = export_data(db)
 
     assert set(exported) == {
-        "format", "schemaVersion", "exportedAt", "applicationVersion", "trades", "companies",
+        "format", "schemaVersion", "exportedAt", "applicationVersion", "trades", "companies", "siteManagers",
     }
     serialized = str(exported).lower()
     assert "sqlite" not in serialized
@@ -139,3 +143,12 @@ def test_database_allows_only_one_primary_per_trade_and_area(database_engine):
                            {"id": company_id, "trade": source["trades"][0]["id"]})
                 db.execute(text("INSERT INTO territories (company_id,postal_code,trade_id,role) VALUES (:id,'08',:trade,'primary')"),
                            {"id": company_id, "trade": source["trades"][0]["id"]})
+
+
+def test_database_allows_multiple_site_managers_in_the_same_area(database_engine):
+    source = document()
+    second = copy.deepcopy(source["siteManagers"][0])
+    second["id"], second["name"] = str(uuid4()), "Sam Bau"
+    source["siteManagers"].append(second)
+    with database_engine.connect() as db:
+        assert import_data(db, source)["siteManagers"] == 2

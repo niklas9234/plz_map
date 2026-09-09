@@ -28,6 +28,8 @@ def legacy_seed():
             "information": [], "status": "active",
             "createdAt": timestamp, "updatedAt": timestamp,
         }],
+        "siteManagers": [{"name": "Alex Bau", "territories": ["08"], "status": "active",
+                          "createdAt": timestamp, "updatedAt": timestamp}],
     }
 
 
@@ -49,10 +51,11 @@ def test_initial_seed_normalizes_names_and_generates_stable_ids(tmp_path):
     second_company = second.execute("SELECT id, trade_id FROM companies").fetchone()
 
     assert result == {"written": True, "seedId": INITIAL_SEED_ID, "trades": 1,
-                      "companies": 1, "rejected": 0}
+                      "companies": 1, "siteManagers": 1, "rejected": 0}
     assert trade["name"] == "Elektro"
     assert company["trade_id"] == trade["id"]
     assert tuple(company) == tuple(second_company)
+    assert first.execute("SELECT count(*) FROM site_managers").fetchone()[0] == 1
 
 
 def test_seed_marker_prevents_reimport_after_user_deletes_data(tmp_path):

@@ -57,6 +57,22 @@ werden. Eine PATCH-Antwort enthält stets die vollständige aktuelle Ressource.
 Eine Gewerkantwort enthält `id`, `name`, `color`, `status`, `createdAt` und
 `updatedAt`. Auch hier wird kein boolesches Feld `active` ausgegeben.
 
+## Bauleiter
+
+| Methode und Pfad | Verhalten |
+| --- | --- |
+| `GET /api/site-managers` | Bauleiter auflisten; Filter `query`, `status` und optional `postalCode`. `query` durchsucht ausschließlich `name`. |
+| `GET /api/site-managers/{id}` | Einen Bauleiter laden. |
+| `POST /api/site-managers` | Bauleiter mit Name, Status und Gebieten anlegen. |
+| `PATCH /api/site-managers/{id}` | Name, Status oder Gebiete ändern. |
+| `POST /api/site-managers/{id}/deactivate` | Bauleiter deaktivieren. |
+| `POST /api/site-managers/{id}/activate` | Bauleiter reaktivieren. |
+| `DELETE /api/site-managers/{id}` | Bauleiter endgültig löschen. |
+
+`territories` ist eine Liste zweistelliger Gebietscodes beziehungsweise `LUX`.
+Die Ressource enthält weder `ppsNumber` noch `tradeId` oder Gebietsrollen;
+mehrere Bauleiter dürfen denselben Gebietscode führen.
+
 ## Portabler Import und Export
 
 | Methode und Pfad | Verhalten |
@@ -78,7 +94,8 @@ Eine Gewerkantwort enthält `id`, `name`, `color`, `status`, `createdAt` und
       "updatedAt": "2026-09-01T10:00:00.000Z"
     }
   ],
-  "companies": []
+  "companies": [],
+  "siteManagers": []
 }
 ```
 
