@@ -224,7 +224,7 @@ async function initializeCompanySearch(map, postalCodeData) {
                 const button = document.createElement("button");
                 button.type = "button";
                 button.id = `company-suggestion-${index}`;
-                button.dataset.ppsNumber = company.ppsNumber;
+                button.dataset.companyId = company.id;
                 button.setAttribute("role", "option");
                 button.setAttribute("aria-selected", "false");
                 const companyLabel = document.createElement("span");
@@ -257,7 +257,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
             const selectedButton = suggestionButtons()[activeSuggestionIndex] || suggestionButtons()[0];
             const company = selectedButton
-                ? companies.find((item) => item.ppsNumber === selectedButton.dataset.ppsNumber)
+                ? companies.find((item) => item.id === selectedButton.dataset.companyId)
                 : findCompany(companies, input.value);
             if (company) {
                 event.preventDefault();

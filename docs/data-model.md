@@ -55,8 +55,9 @@ einen Check Constraint auf die vier Werte.
 
 ### Eindeutigkeit und Normalisierung
 
-- Die Datenbank erzwingt die globale Eindeutigkeit der PPS-Nummer mit einem
-  Unique Constraint. Der Import und die API prüfen dies zusätzlich, der
+- Die Datenbank erzwingt die Eindeutigkeit der Kombination aus PPS-Nummer und
+  Gewerk mit einem zusammengesetzten Unique Constraint. Dieselbe PPS-Nummer
+  darf in verschiedenen Gewerken vorkommen. Der Import und die API prüfen dies zusätzlich, der
   Constraint bleibt aber die letzte Instanz bei parallelen Anfragen.
 - Äußere Leerzeichen in Name und PPS-Nummer werden entfernt.
 - Deutsche PLZ-Gebiete müssen dem regulären Ausdruck `^\d{2}$` entsprechen;

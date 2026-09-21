@@ -171,8 +171,11 @@ def validate_import(document: Any) -> dict[str, Any]:
             value = company.get(field)
             if not isinstance(value, str) or not value.strip() or value != value.strip(): errors.append(f"{path}.{field}: ungültig")
         pps = company.get("ppsNumber")
-        if isinstance(pps, str) and pps in pps_numbers: errors.append(f"{path}.ppsNumber: nicht eindeutig")
-        elif isinstance(pps, str): pps_numbers.add(pps)
+        pps_key = (pps.casefold(), company.get("tradeId")) if isinstance(pps, str) else None
+        if pps_key is not None and pps_key in pps_keys:
+            errors.append(f"{path}.ppsNumber: innerhalb des Gewerks nicht eindeutig")
+        elif pps_key is not None:
+            pps_keys.add(pps_key)
         if company.get("status") not in STATUS: errors.append(f"{path}.status: ungültiger Status")
         assignments = company.get("tradeAssignments")
         if not isinstance(assignments, list) or not assignments: errors.append(f"{path}.tradeAssignments: mindestens eine Zuordnung erforderlich"); assignments = []

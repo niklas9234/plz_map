@@ -189,8 +189,13 @@ def _commit(session: Session, conflict_message: str) -> None:
         raise ApiError(HTTPStatus.CONFLICT, "conflict", conflict_message)
 
 
-def _ensure_pps_available(session: Session, pps_number: str, current_id: str | None = None) -> None:
-    statement = select(Company.id).where(func.lower(Company.pps_number) == pps_number.casefold())
+def _ensure_pps_available(
+    session: Session, pps_number: str, trade_id: str, current_id: str | None = None
+) -> None:
+    statement = select(Company.id).where(
+        func.lower(Company.pps_number) == pps_number.casefold(),
+        Company.trade_id == trade_id,
+    )
     if current_id:
         statement = statement.where(Company.id != current_id)
     if session.scalar(statement):

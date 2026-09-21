@@ -36,7 +36,7 @@ keine PPS-Nummer, kein Gewerk und keine Dienstleisterrolle. Derselbe Gebietscode
 darf bei beliebig vielen Bauleitern vorkommen.
 
 Unbekannte oder fehlende Felder werden abgelehnt. Geprüft werden UUIDs,
-eindeutige PPS-Nummern und Gewerknamen, Gewerkverweise, Status und Rollen,
+je Gewerk eindeutige PPS-Nummern und global eindeutige Gewerknamen, Gewerkverweise, Status und Rollen,
 mindestens ein Gebiet je Unternehmen, doppelte Gebiete sowie höchstens ein
 Vorzugsdienstleister je Gewerk und Gebiet.
 
