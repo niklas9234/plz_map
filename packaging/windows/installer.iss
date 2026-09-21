@@ -1,5 +1,7 @@
 #define MyAppName "PLZ-Karte"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #error MyAppVersion must be supplied by the build (ISCC /DMyAppVersion=<version>).
+#endif
 #define MyAppExeName "PLZ-Karte.exe"
 
 [Setup]
