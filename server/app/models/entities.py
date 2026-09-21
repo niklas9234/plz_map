@@ -37,7 +37,7 @@ class Company(Base):
     __tablename__ = "companies"
     __table_args__ = (
         CheckConstraint("status IN ('active', 'inactive')", name="ck_companies_status"),
-        UniqueConstraint("pps_number", name="uq_companies_pps_number"),
+        UniqueConstraint("pps_number", "trade_id", name="uq_companies_pps_number_trade_id"),
         UniqueConstraint("id", "trade_id", name="uq_companies_id_trade_id"),
     )
 

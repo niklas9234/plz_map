@@ -42,6 +42,9 @@ in `trade`. `information` folgt der Kategorienliste und Validierung aus dem
 Datenmodell. `id`, `createdAt` und `updatedAt` werden bei regulären POST- und
 PATCH-Aufrufen serverseitig verwaltet und dürfen vom Client nicht überschrieben
 werden. Eine PATCH-Antwort enthält stets die vollständige aktuelle Ressource.
+Eine `ppsNumber` muss ohne Beachtung der Groß-/Kleinschreibung nur innerhalb
+desselben Gewerks eindeutig sein; in unterschiedlichen Gewerken darf sie sich
+wiederholen.
 
 ## Bauleiter
 
@@ -133,7 +136,7 @@ Fehlerantworten besitzen mindestens `code`, `message` und optional `fields`.
 | `401 Unauthorized` | Keine gültige Anmeldung. |
 | `403 Forbidden` | Keine Berechtigung für die Operation. |
 | `404 Not Found` | Ressource existiert nicht. |
-| `409 Conflict` | PPS-Nummer oder Gewerkname bereits vorhanden, beziehungsweise Gewerk wird noch verwendet. |
+| `409 Conflict` | PPS-Nummer im selben Gewerk oder Gewerkname bereits vorhanden, beziehungsweise Gewerk wird noch verwendet. |
 | `422 Unprocessable Content` | Fachliche Feldvalidierung fehlgeschlagen. |
 
 Eindeutigkeitskonflikte werden unabhängig von vorherigen Anwendungsprüfungen aus

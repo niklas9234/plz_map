@@ -10,7 +10,7 @@ Regeln lokal ab.
 | --- | --- | --- |
 | `id` | UUID | Technischer, unveränderlicher Primärschlüssel. |
 | `name` | String | Pflichtfeld, nach dem Entfernen äußerer Leerzeichen nicht leer. |
-| `ppsNumber` | String | Pflichtfeld und global eindeutig; Änderungen ändern nicht die `id`. |
+| `ppsNumber` | String | Pflichtfeld und innerhalb eines Gewerks eindeutig; Änderungen ändern nicht die `id`. |
 | `tradeId` | UUID | Pflichtverweis auf ein vorhandenes Gewerk. Kein Freitext. |
 | `territories` | Gebietszuordnungs-Liste | Mindestens ein Eintrag. Jede Zuordnung enthält `postalCode` und die Rolle `primary` oder `alternative`. |
 | `information` | Informations-Liste | Geordnete Liste aus `category` und `value`; Details siehe unten. |
@@ -51,8 +51,9 @@ einen Check Constraint auf die vier Werte.
 
 ### Eindeutigkeit und Normalisierung
 
-- Die Datenbank erzwingt die globale Eindeutigkeit der PPS-Nummer mit einem
-  Unique Constraint. Der Import und die API prüfen dies zusätzlich, der
+- Die Datenbank erzwingt die Eindeutigkeit der Kombination aus PPS-Nummer und
+  Gewerk mit einem zusammengesetzten Unique Constraint. Dieselbe PPS-Nummer
+  darf in verschiedenen Gewerken vorkommen. Der Import und die API prüfen dies zusätzlich, der
   Constraint bleibt aber die letzte Instanz bei parallelen Anfragen.
 - Äußere Leerzeichen in Name und PPS-Nummer werden entfernt.
 - Deutsche PLZ-Gebiete müssen dem regulären Ausdruck `^\d{2}$` entsprechen;

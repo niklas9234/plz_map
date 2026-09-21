@@ -67,7 +67,7 @@ Mindestens eines der beiden Gebietsfelder muss befüllt sein. Pro Gewerk und
 Gebiet darf es systemweit nur einen Eintrag mit der Rolle `primary` geben.
 
 Der Import setzt jedes neue Unternehmen automatisch auf `active`. Weil die
-Datenbank bereits beim Anlegen eine eindeutige PPS-Nummer verlangt, erzeugt das
+Datenbank bereits beim Anlegen eine je Gewerk eindeutige PPS-Nummer verlangt, erzeugt das
 Programm zunächst einen eindeutig erkennbaren Platzhalter in der Form
 `IMPORT-<UUID>`. Dieser kann anschließend in der Unternehmensverwaltung durch
 die endgültige PPS-Nummer ersetzt werden. Weitere Unternehmensinformationen
