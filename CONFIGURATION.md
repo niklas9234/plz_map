@@ -39,8 +39,11 @@ Verzeichnis kopiert werden. Weitere Hinweise stehen in
 
 Der Desktopstart benötigt keine `.env`-Datei. Er verwendet unabhängig von einer
 möglicherweise gesetzten Serverkonfiguration die lokale SQLite-Datei und lauscht
-nur auf `127.0.0.1:8080`. Optional können `PLZ_MAP_DATA_DIR` und
-`PLZ_MAP_LOG_DIR` die lokalen Daten- und Logverzeichnisse überschreiben.
+nur auf `127.0.0.1`. Standardmäßig lässt er das Betriebssystem einen freien Port
+wählen. `PLZ_MAP_LOCAL_PORT` kann für die jeweilige Benutzersitzung stattdessen
+einen festen Port vorgeben. Optional können `PLZ_MAP_DATA_DIR` und
+`PLZ_MAP_LOG_DIR` die benutzerspezifischen Daten- und Logverzeichnisse
+überschreiben.
 
 ```sh
 python server/run.py

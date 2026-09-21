@@ -56,10 +56,18 @@ class ProductionConfig:
 def local_desktop_config() -> ProductionConfig:
     """Build the safe, zero-configuration desktop profile."""
     paths = prepare_data_directories()
+    try:
+        # Port 0 asks the operating system for a currently free port.  A fixed
+        # port can still be selected for this process/user session when needed.
+        port = int(os.environ.get("PLZ_MAP_LOCAL_PORT", "0"))
+    except ValueError as error:
+        raise RuntimeError("PLZ_MAP_LOCAL_PORT muss eine ganze Zahl sein") from error
+    if not 0 <= port <= 65535:
+        raise RuntimeError("PLZ_MAP_LOCAL_PORT muss zwischen 0 und 65535 liegen")
     return ProductionConfig(
         profile="local-desktop",
         host=HOST,
-        port=PORT,
+        port=port,
         database_url=f"sqlite:///{paths['root'] / 'plz_map.sqlite3'}",
         data_paths=paths,
     )
@@ -232,14 +240,21 @@ def backup_database(database: Path, backup_dir: Path, keep: int = 10) -> None:
 
 def request_running_server_stop(control_file: Path) -> bool:
     try:
-        token = control_file.read_text(encoding="utf-8").strip()
+        control = json.loads(control_file.read_text(encoding="utf-8"))
+        token = control["token"]
+        port = control["port"]
+        if (not isinstance(token, str) or not token
+                or not isinstance(port, int) or isinstance(port, bool)
+                or not 1 <= port <= 65535):
+            return False
         request = urllib.request.Request(
-            f"http://{HOST}:{PORT}/api/system/shutdown", method="POST",
+            f"http://{HOST}:{port}/api/system/shutdown", method="POST",
             headers={"X-PLZ-Map-Token": token}, data=b"",
         )
         with urllib.request.urlopen(request, timeout=3) as response:
             return response.status == 204
-    except (OSError, urllib.error.URLError):
+    except (KeyError, TypeError, ValueError, OSError, urllib.error.URLError,
+            json.JSONDecodeError):
         return False
 
 
@@ -334,8 +349,12 @@ def prepare_server(config: ProductionConfig):
     server.set_app(create_wsgi_application(config, engine, token, server.shutdown))
     control_file = config.data_paths["root"] / "server.token" if config.data_paths else None
     if control_file:
-        control_file.write_text(token, encoding="utf-8")
-    general_logger.info("Anwendung gestartet; Server: %s", config.url)
+        control_file.write_text(
+            json.dumps({"port": server.server_address[1], "token": token}),
+            encoding="utf-8",
+        )
+    actual_url = f"http://{server.server_address[0]}:{server.server_address[1]}/"
+    general_logger.info("Anwendung gestartet; Server: %s", actual_url)
 
     def stop_on_signal(_signum, _frame):
         threading.Thread(target=server.shutdown, daemon=True).start()
@@ -388,7 +407,7 @@ def run_desktop() -> int:
 
     window = webview.create_window(
         "PLZ-Karte",
-        f"{config.url}?desktop=1",
+        f"http://{server.server_address[0]}:{server.server_address[1]}/?desktop=1",
         width=1440,
         height=900,
         min_size=(1024, 700),
