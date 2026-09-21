@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 
 from app.database import create_database_engine  # noqa: E402
-from app.models import Company, Territory, Trade  # noqa: E402
+from app.models import Company, CompanyTrade, Territory, Trade  # noqa: E402
 
 
 COLUMNS = (
@@ -151,13 +151,14 @@ def import_companies(
                 company = Company(
                     id=company_id, name=row.name,
                     pps_number=f"IMPORT-{company_id}",
-                    trade_id=row.trade_id, status="active",
+                    status="active",
                     created_at=now, updated_at=now,
                 )
-                company.territories = [
-                    Territory(postal_code=code, role=role, trade_id=row.trade_id)
-                    for code, role in row.territories
-                ]
+                company.trades = [CompanyTrade(
+                    trade_id=row.trade_id,
+                    territories=[Territory(postal_code=code, role=role)
+                                 for code, role in row.territories],
+                )]
                 session.add(company)
             session.commit()
             return len(rows)

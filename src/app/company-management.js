@@ -34,7 +34,7 @@ function initializeCompanyManagement() {
         return companies.filter((company) => (!query ||
             normalizeSearchValue(company.name).includes(query) ||
             normalizeSearchValue(company.ppsNumber).includes(query)) &&
-            (!tradeFilter.value || company.tradeId === tradeFilter.value));
+            (!tradeFilter.value || company.tradeAssignments.some((item) => item.tradeId === tradeFilter.value)));
     }
 
     function populateTradeOptions() {
@@ -72,11 +72,12 @@ function initializeCompanyManagement() {
                 status.textContent = "Inaktiv";
                 nameCell.append(" ", status);
             }
-            row.insertCell().append(createTradeBadge(company.tradeId));
+            const tradeCell = row.insertCell();
+            company.tradeAssignments.forEach((assignment) => tradeCell.append(createTradeBadge(assignment.tradeId), " "));
             row.insertCell().textContent = company.ppsNumber;
             const postalCodes = row.insertCell();
             postalCodes.className = "company-table__postal-codes";
-            postalCodes.textContent = formatCompanyTerritories(company.territories);
+            postalCodes.textContent = company.tradeAssignments.map((item) => formatCompanyTerritories(item.territories)).join(" | ");
             row.addEventListener("click", () => openCompany(company));
             row.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -142,8 +143,9 @@ function initializeCompanyManagement() {
         return JSON.stringify({
             name: detailView.querySelector("#detail-name").value,
             ppsNumber: detailView.querySelector("#detail-pps").value,
-            tradeId: detailView.querySelector("#detail-trade").value,
-            territories: postalCodeSelection.assignments(),
+            tradeAssignments: [...detailView.querySelector("#detail-trade").selectedOptions].map((option) => ({
+                tradeId: option.value, territories: postalCodeSelection.assignments()
+            })),
             information
         });
     }
@@ -226,7 +228,7 @@ function initializeCompanyManagement() {
               <div class="company-detail__master-data">
                 <label class="form-field"><span>Unternehmensname</span><input id="detail-name" required maxlength="120"></label>
                 <label class="form-field"><span>PPS-Nummer</span><input id="detail-pps" required maxlength="40"></label>
-                <label class="form-field"><span>Gewerk</span><select id="detail-trade" required></select></label>
+                <label class="form-field"><span>Gewerke</span><select id="detail-trade" required multiple></select></label>
               </div>
               <postal-code-selection mode="company"></postal-code-selection>
               <section class="detail-section information-section">
@@ -251,10 +253,12 @@ function initializeCompanyManagement() {
         detailView.querySelector(".company-detail__company-name").textContent = isNew ? "Neues Unternehmen" : company.name;
         detailView.querySelector("#detail-pps").value = company.ppsNumber;
         const tradeSelect = detailView.querySelector("#detail-trade");
-        trades.filter((trade) => trade.status === "active" || trade.id === company.tradeId).forEach((trade) => tradeSelect.add(new Option(trade.name, trade.id)));
-        tradeSelect.value = company.tradeId;
+        const assignedTrades = new Set(company.tradeAssignments.map((item) => item.tradeId));
+        trades.filter((trade) => trade.status === "active" || assignedTrades.has(trade.id)).forEach((trade) => {
+            const option = new Option(trade.name, trade.id); option.selected = assignedTrades.has(trade.id); tradeSelect.add(option);
+        });
         postalCodeSelection = detailView.querySelector("postal-code-selection").configure({
-            territories: company.territories,
+            territories: company.tradeAssignments[0]?.territories || [],
             onChange: updateDirtyState
         });
         (company.information || []).forEach(addInformationRow);
@@ -293,8 +297,7 @@ function initializeCompanyManagement() {
         openCompany({
             name: "",
             ppsNumber: "",
-            tradeId: firstActiveTrade,
-            territories: [],
+            tradeAssignments: firstActiveTrade ? [{ tradeId: firstActiveTrade, territories: [] }] : [],
             information: [],
             status: "active"
         }, true);
@@ -310,7 +313,7 @@ function initializeCompanyManagement() {
             error.hidden = false;
             return false;
         }
-        if (!data.territories.length) {
+        if (!data.tradeAssignments.length || data.tradeAssignments.some((item) => !item.territories.length)) {
             error.textContent = "Bitte wählen Sie mindestens ein PLZ-Gebiet aus.";
             error.hidden = false;
             return false;

@@ -64,7 +64,7 @@ function createTradeBadge(tradeId) {
 }
 
 function companyPostalCodes(company) {
-    return company.territories.map((territory) => territory.postalCode);
+    return [...new Set(company.tradeAssignments.flatMap((assignment) => assignment.territories.map((territory) => territory.postalCode)))];
 }
 
 function formatCompanyTerritories(territories) {
@@ -135,7 +135,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         input.value = "";
         closeSuggestions();
         setVisiblePostalCodes(map, companyPostalCodes(company));
-        tradeStore.colorFor(company.tradeId).then((color) => setPostalCodeColor(map, color));
+        tradeStore.colorFor(company.tradeAssignments[0].tradeId).then((color) => setPostalCodeColor(map, color));
         zoomToPostalCodes(map, companyPostalCodes(company), postalCodeData);
 
         const companyDetails = document.createElement("div");
@@ -158,7 +158,7 @@ async function initializeCompanySearch(map, postalCodeData) {
             " · ",
             companyNumber,
             " · ",
-            createTradeBadge(company.tradeId)
+            ...company.tradeAssignments.flatMap((assignment) => [" ", createTradeBadge(assignment.tradeId)])
         );
 
         const centerButton = document.createElement("button");
@@ -190,7 +190,7 @@ async function initializeCompanySearch(map, postalCodeData) {
         postalCodeArea.className = "company-search__postal-codes";
         postalCodeArea.id = detailsId;
         postalCodeArea.hidden = true;
-        postalCodeArea.textContent = formatCompanyTerritories(company.territories);
+        postalCodeArea.textContent = company.tradeAssignments.map((assignment) => formatCompanyTerritories(assignment.territories)).join(" | ");
 
         detailsButton.addEventListener("click", () => {
             const isOpen = detailsButton.getAttribute("aria-expanded") === "true";
@@ -208,7 +208,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
     try {
         let activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
-        let companies = (await companyStore.list({ status: "active" })).filter((company) => activeTrades.has(company.tradeId));
+        let companies = (await companyStore.list({ status: "active" })).filter((company) => company.tradeAssignments.some((item) => activeTrades.has(item.tradeId)));
 
         status.replaceChildren();
 
@@ -229,7 +229,7 @@ async function initializeCompanySearch(map, postalCodeData) {
                 button.setAttribute("aria-selected", "false");
                 const companyLabel = document.createElement("span");
                 companyLabel.textContent = `${company.name} · ${company.ppsNumber} · `;
-                button.append(companyLabel, createTradeBadge(company.tradeId));
+                button.append(companyLabel, ...company.tradeAssignments.flatMap((assignment) => [" ", createTradeBadge(assignment.tradeId)]));
                 button.addEventListener("click", () => selectCompany(company));
                 item.append(button);
                 suggestions.append(item);
@@ -271,7 +271,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
         window.addEventListener("companies:changed", async () => {
             activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
-            companies = (await companyStore.list({ status: "active" })).filter((company) => activeTrades.has(company.tradeId));
+            companies = (await companyStore.list({ status: "active" })).filter((company) => company.tradeAssignments.some((item) => activeTrades.has(item.tradeId)));
             const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
             if (updatedSelection) selectCompany(updatedSelection);
             else {
@@ -283,7 +283,7 @@ async function initializeCompanySearch(map, postalCodeData) {
 
         window.addEventListener("trades:changed", async () => {
             activeTrades = new Set((await tradeStore.list()).filter((trade) => trade.status === "active").map((trade) => trade.id));
-            companies = (await companyStore.list({ status: "active" })).filter((company) => activeTrades.has(company.tradeId));
+            companies = (await companyStore.list({ status: "active" })).filter((company) => company.tradeAssignments.some((item) => activeTrades.has(item.tradeId)));
             const updatedSelection = selectedCompany && companies.find((company) => company.id === selectedCompany.id);
             if (updatedSelection) selectCompany(updatedSelection);
             else {

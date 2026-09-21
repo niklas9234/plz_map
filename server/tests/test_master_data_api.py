@@ -18,8 +18,7 @@ def test_company_and_trade_crud_have_identical_contract_on_every_database(databa
     app = create_application(database_engine)
     trade = call(app, "/api/trades", "POST", TRADE, "201 Created")
     company_payload = {
-        "name": "Beispiel GmbH", "ppsNumber": "PPS-01", "tradeId": trade["id"],
-        "territories": [{"postalCode": "08", "role": "primary"}],
+        "name": "Beispiel GmbH", "ppsNumber": "PPS-01", "tradeAssignments": [{"tradeId": trade["id"], "territories": [{"postalCode": "08", "role": "primary"}]}],
         "information": [{"category": "phone", "value": "+49 30 1"}], "status": "active",
     }
     company = call(app, "/api/companies", "POST", company_payload, "201 Created")
@@ -36,7 +35,7 @@ def test_company_and_trade_crud_have_identical_contract_on_every_database(databa
 def test_validation_and_conflicts_are_database_independent(database_engine):
     app = create_application(database_engine)
     trade = call(app, "/api/trades", "POST", TRADE, "201 Created")
-    invalid = {"name": "Firma", "ppsNumber": "PPS", "tradeId": trade["id"], "territories": [], "information": []}
+    invalid = {"name": "Firma", "ppsNumber": "PPS", "tradeAssignments": [{"tradeId": trade["id"], "territories": []}], "information": []}
     response, _ = request(app, "/api/companies", "POST", invalid)
     assert response["status"] == "422 Unprocessable Entity"
     response, _ = request(app, "/api/trades", "POST", TRADE)
@@ -45,45 +44,29 @@ def test_validation_and_conflicts_are_database_independent(database_engine):
     assert response["status"] == "400 Bad Request"
 
 
-def test_company_pps_number_is_unique_per_trade(database_engine):
+def test_company_can_have_independent_territories_for_multiple_trades(database_engine):
     app = create_application(database_engine)
-    first_trade = call(app, "/api/trades", "POST", TRADE, "201 Created")
-    second_trade = call(app, "/api/trades", "POST", {
-        "name": "Sanitär", "color": "#123456", "status": "active",
-    }, "201 Created")
+    electrical = call(app, "/api/trades", "POST", TRADE, "201 Created")
+    roofing = call(app, "/api/trades", "POST", {"name": "Dach", "color": "#123456"}, "201 Created")
+    payload = {
+        "name": "Mehrfach GmbH", "ppsNumber": "PPS-MULTI", "status": "active",
+        "information": [{"category": "contact", "value": "Zentrale"}],
+        "tradeAssignments": [
+            {"tradeId": electrical["id"], "territories": [{"postalCode": "08", "role": "primary"}]},
+            {"tradeId": roofing["id"], "territories": [{"postalCode": "10", "role": "alternative"}]},
+        ],
+    }
+    company = call(app, "/api/companies", "POST", payload, "201 Created")
+    assert company["tradeAssignments"] == sorted(payload["tradeAssignments"], key=lambda item: item["tradeId"])
+    assert call(app, f"/api/companies?tradeId={roofing['id']}&postalCode=10") == [company]
+    assert call(app, f"/api/companies?tradeId={electrical['id']}&postalCode=10") == []
 
-    def company(name, pps_number, trade_id, postal_code):
-        return {
-            "name": name,
-            "ppsNumber": pps_number,
-            "tradeId": trade_id,
-            "territories": [{"postalCode": postal_code, "role": "primary"}],
-            "information": [],
-            "status": "active",
-        }
-
-    first = call(app, "/api/companies", "POST", company(
-        "Firma Elektro", "PPS-01", first_trade["id"], "08"
-    ), "201 Created")
-    second = call(app, "/api/companies", "POST", company(
-        "Firma Sanitär", "pps-01", second_trade["id"], "09"
-    ), "201 Created")
-
-    response, _ = request(app, "/api/companies", "POST", company(
-        "Doppelt", "pPs-01", first_trade["id"], "10"
-    ))
-    assert response["status"] == "409 Conflict"
-
-    response, _ = request(app, f"/api/companies/{second['id']}", "PATCH", {
-        "tradeId": first_trade["id"],
+    changed = call(app, f"/api/companies/{company['id']}", "PATCH", {
+        "tradeAssignments": [payload["tradeAssignments"][1]],
     })
-    assert response["status"] == "409 Conflict"
-
-    # A no-op PPS update must not conflict with the current company itself.
-    unchanged = call(app, f"/api/companies/{first['id']}", "PATCH", {
-        "ppsNumber": "PPS-01",
-    })
-    assert unchanged["id"] == first["id"]
+    assert changed["name"] == payload["name"]
+    assert changed["information"] == payload["information"]
+    assert changed["tradeAssignments"] == [payload["tradeAssignments"][1]]
 
 
 def test_site_manager_crud_and_filters_work_on_every_database(database_engine):

@@ -14,7 +14,7 @@ from uuid import UUID, uuid5
 from .transfer import FORMAT, ImportValidationError, validate_import, write_validated_data
 
 
-INITIAL_SEED_ID = "companies-json-2026-09-03-v2"
+INITIAL_SEED_ID = "companies-json-2026-09-21-v3"
 INITIAL_SEED_KEY = "initial_seed"
 STABLE_ID_NAMESPACE = UUID("f90d8dca-2db4-4d17-8380-d94275ae563e")
 
@@ -63,6 +63,11 @@ def _normalize(source: Any) -> dict[str, Any]:
                                "createdAt": timestamp, "updatedAt": timestamp})
                 by_name[key] = trade_id
             company["tradeId"] = by_name[key]
+        if "tradeAssignments" not in company and company.get("tradeId"):
+            company["tradeAssignments"] = [{
+                "tradeId": company.pop("tradeId"),
+                "territories": company.pop("territories", []),
+            }]
         identity = str(company.get("ppsNumber") or company.get("name") or f"record-{index}")
         company["id"] = company.get("id") or _stable_id("company", identity)
         companies.append(company)
@@ -81,7 +86,7 @@ def _normalize(source: Any) -> dict[str, Any]:
 
     return validate_import({
         "format": FORMAT,
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "exportedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "applicationVersion": f"initial-seed:{INITIAL_SEED_ID}",
         "trades": trades,

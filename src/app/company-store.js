@@ -19,8 +19,8 @@ const companyStore = (() => {
     }
 
     async function save(company) {
-        const fields = (({ name, ppsNumber, tradeId, territories, information, status }) =>
-            ({ name, ppsNumber, tradeId, territories, information, status }))(company);
+        const fields = (({ name, ppsNumber, tradeAssignments, information, status }) =>
+            ({ name, ppsNumber, tradeAssignments, information, status }))(company);
         const existing = Boolean(company.id);
         const result = await request(existing ? `/${company.id}` : "", {
             method: existing ? "PATCH" : "POST", body: JSON.stringify(fields)
