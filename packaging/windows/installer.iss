@@ -10,6 +10,8 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 DefaultDirName={autopf}\PLZ-Karte
 DefaultGroupName=PLZ-Karte
+; Keep this machine-wide: Intune runs the installer as SYSTEM and {autopf}
+; therefore resolves to the native Program Files directory.
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -30,6 +32,8 @@ Source: "..\..\dist\PLZ-Karte\*"; DestDir: "{app}"; Flags: ignoreversion recurse
 Name: "C:\Logs\PLZ-Karte"; Permissions: users-modify
 
 [Icons]
+; SYSTEM has no interactive user's profile. Put Start menu entries in the
+; shared Programs folder so that every intended user can see them.
 Name: "{commonprograms}\PLZ-Karte\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{commonprograms}\PLZ-Karte\PLZ-Karte beenden"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; WorkingDir: "{app}"
 Name: "{autodesktop}\PLZ-Karte"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
