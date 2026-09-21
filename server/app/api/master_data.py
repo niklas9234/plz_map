@@ -190,11 +190,11 @@ def _commit(session: Session, conflict_message: str) -> None:
 
 
 def _ensure_pps_available(
-    session: Session, pps_number: str, trade_id: str, current_id: str | None = None
+    session: Session, pps_number: str, trade_ids: set[str], current_id: str | None = None
 ) -> None:
-    statement = select(Company.id).where(
+    statement = select(Company.id).join(CompanyTrade).where(
         func.lower(Company.pps_number) == pps_number.casefold(),
-        Company.trade_id == trade_id,
+        CompanyTrade.trade_id.in_(trade_ids),
     )
     if current_id:
         statement = statement.where(Company.id != current_id)
@@ -336,7 +336,7 @@ def _companies(session: Session, rest: list[str], method: str, query_string: str
         data = _body(payload, COMPANY_WRITE_FIELDS); values = _company_parts(data)
         missing = [item["tradeId"] for item in values[3] if not session.get(Trade, item["tradeId"])]
         if missing: raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Ein Gewerk existiert nicht.", ["tradeAssignments"])
-        _ensure_pps_available(session, values[1])
+        _ensure_pps_available(session, values[1], {item["tradeId"] for item in values[3]})
         timestamp = _now(); company = Company(id=str(uuid4()), name=values[0], pps_number=values[1], status=values[2], created_at=timestamp, updated_at=timestamp)
         company.trades = [CompanyTrade(trade_id=a["tradeId"], territories=[Territory(postal_code=x["postalCode"], role=x["role"]) for x in a["territories"]]) for a in values[3]]
         company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[4])]
@@ -350,7 +350,9 @@ def _companies(session: Session, rest: list[str], method: str, query_string: str
         data = _body(payload, COMPANY_WRITE_FIELDS, True); values = _company_parts(data, company)
         missing = [item["tradeId"] for item in values[3] if not session.get(Trade, item["tradeId"])]
         if missing: raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Ein Gewerk existiert nicht.", ["tradeAssignments"])
-        _ensure_pps_available(session, values[1], company.id)
+        _ensure_pps_available(
+            session, values[1], {item["tradeId"] for item in values[3]}, company.id
+        )
         company.name, company.pps_number, company.status = values[:3]; company.updated_at = _now()
         company.trades = [CompanyTrade(trade_id=a["tradeId"], territories=[Territory(postal_code=x["postalCode"], role=x["role"]) for x in a["territories"]]) for a in values[3]]
         company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[4])]

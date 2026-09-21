@@ -3,8 +3,8 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0004"
-down_revision = "0003"
+revision = "0005"
+down_revision = "0004"
 branch_labels = None
 depends_on = None
 
@@ -57,12 +57,15 @@ def upgrade():
     naming = {"fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s"}
     with op.batch_alter_table("companies", naming_convention=naming) as batch:
         batch.drop_constraint("uq_companies_id_trade_id", type_="unique")
+        batch.drop_constraint("uq_companies_pps_number_trade_id", type_="unique")
         batch.drop_constraint("fk_companies_trade_id_trades", type_="foreignkey")
         batch.drop_column("trade_id")
+        batch.create_unique_constraint("uq_companies_pps_number", ["pps_number"])
 
 
 def downgrade():
     with op.batch_alter_table("companies") as batch:
+        batch.drop_constraint("uq_companies_pps_number", type_="unique")
         batch.add_column(sa.Column("trade_id", sa.String(36), nullable=True))
     op.execute(sa.text(
         "UPDATE companies SET trade_id = (SELECT MIN(trade_id) FROM company_trades "
@@ -74,4 +77,7 @@ def downgrade():
         batch.alter_column("trade_id", nullable=False)
         batch.create_foreign_key("fk_companies_trade_id_trades", "trades", ["trade_id"], ["id"])
         batch.create_unique_constraint("uq_companies_id_trade_id", ["id", "trade_id"])
+        batch.create_unique_constraint(
+            "uq_companies_pps_number_trade_id", ["pps_number", "trade_id"]
+        )
     op.drop_table("company_trades")

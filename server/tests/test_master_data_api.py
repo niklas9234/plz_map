@@ -69,6 +69,33 @@ def test_company_can_have_independent_territories_for_multiple_trades(database_e
     assert changed["tradeAssignments"] == [payload["tradeAssignments"][1]]
 
 
+def test_companies_can_share_pps_only_when_their_trades_do_not_overlap(database_engine):
+    app = create_application(database_engine)
+    electrical = call(app, "/api/trades", "POST", TRADE, "201 Created")
+    roofing = call(app, "/api/trades", "POST", {"name": "Dach", "color": "#123456"}, "201 Created")
+
+    def company(name, trade):
+        return {
+            "name": name, "ppsNumber": "PPS-GEMEINSAM", "information": [],
+            "tradeAssignments": [{
+                "tradeId": trade["id"],
+                "territories": [{"postalCode": "08", "role": "alternative"}],
+            }],
+        }
+
+    first = call(app, "/api/companies", "POST", company("Elektrofirma", electrical), "201 Created")
+    second = call(app, "/api/companies", "POST", company("Dachfirma", roofing), "201 Created")
+
+    response, _ = request(app, "/api/companies", "POST", company("Noch Elektro", electrical))
+    assert response["status"] == "409 Conflict"
+
+    response, _ = request(app, f"/api/companies/{second['id']}", "PATCH", {
+        "tradeAssignments": company("Dachfirma", electrical)["tradeAssignments"],
+    })
+    assert response["status"] == "409 Conflict"
+    assert call(app, f"/api/companies/{first['id']}")["ppsNumber"] == "PPS-GEMEINSAM"
+
+
 def test_site_manager_crud_and_filters_work_on_every_database(database_engine):
     app = create_application(database_engine)
     payload = {
