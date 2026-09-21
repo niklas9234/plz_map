@@ -176,8 +176,13 @@ def _commit(session: Session, conflict_message: str) -> None:
         raise ApiError(HTTPStatus.CONFLICT, "conflict", conflict_message)
 
 
-def _ensure_pps_available(session: Session, pps_number: str, current_id: str | None = None) -> None:
-    statement = select(Company.id).where(func.lower(Company.pps_number) == pps_number.casefold())
+def _ensure_pps_available(
+    session: Session, pps_number: str, trade_id: str, current_id: str | None = None
+) -> None:
+    statement = select(Company.id).where(
+        func.lower(Company.pps_number) == pps_number.casefold(),
+        Company.trade_id == trade_id,
+    )
     if current_id:
         statement = statement.where(Company.id != current_id)
     if session.scalar(statement):
@@ -308,7 +313,7 @@ def _companies(session: Session, rest: list[str], method: str, query_string: str
     if not rest and method == "POST":
         data = _body(payload, COMPANY_WRITE_FIELDS); values = _company_parts(data)
         if not session.get(Trade, values[2]): raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Das Gewerk existiert nicht.", ["tradeId"])
-        _ensure_pps_available(session, values[1])
+        _ensure_pps_available(session, values[1], values[2])
         timestamp = _now(); company = Company(id=str(uuid4()), name=values[0], pps_number=values[1], trade_id=values[2], status=values[3], created_at=timestamp, updated_at=timestamp)
         company.territories = [Territory(postal_code=x["postalCode"], role=x["role"], trade_id=values[2]) for x in values[4]]
         company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[5])]
@@ -321,7 +326,7 @@ def _companies(session: Session, rest: list[str], method: str, query_string: str
     if len(rest) == 1 and method == "PATCH":
         data = _body(payload, COMPANY_WRITE_FIELDS, True); values = _company_parts(data, company)
         if not session.get(Trade, values[2]): raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Das Gewerk existiert nicht.", ["tradeId"])
-        _ensure_pps_available(session, values[1], company.id)
+        _ensure_pps_available(session, values[1], values[2], company.id)
         company.name, company.pps_number, company.trade_id, company.status = values[:4]; company.updated_at = _now()
         company.territories = [Territory(postal_code=x["postalCode"], role=x["role"], trade_id=values[2]) for x in values[4]]
         company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[5])]

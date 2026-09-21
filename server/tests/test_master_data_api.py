@@ -45,6 +45,47 @@ def test_validation_and_conflicts_are_database_independent(database_engine):
     assert response["status"] == "400 Bad Request"
 
 
+def test_company_pps_number_is_unique_per_trade(database_engine):
+    app = create_application(database_engine)
+    first_trade = call(app, "/api/trades", "POST", TRADE, "201 Created")
+    second_trade = call(app, "/api/trades", "POST", {
+        "name": "Sanitär", "color": "#123456", "status": "active",
+    }, "201 Created")
+
+    def company(name, pps_number, trade_id, postal_code):
+        return {
+            "name": name,
+            "ppsNumber": pps_number,
+            "tradeId": trade_id,
+            "territories": [{"postalCode": postal_code, "role": "primary"}],
+            "information": [],
+            "status": "active",
+        }
+
+    first = call(app, "/api/companies", "POST", company(
+        "Firma Elektro", "PPS-01", first_trade["id"], "08"
+    ), "201 Created")
+    second = call(app, "/api/companies", "POST", company(
+        "Firma Sanitär", "pps-01", second_trade["id"], "09"
+    ), "201 Created")
+
+    response, _ = request(app, "/api/companies", "POST", company(
+        "Doppelt", "pPs-01", first_trade["id"], "10"
+    ))
+    assert response["status"] == "409 Conflict"
+
+    response, _ = request(app, f"/api/companies/{second['id']}", "PATCH", {
+        "tradeId": first_trade["id"],
+    })
+    assert response["status"] == "409 Conflict"
+
+    # A no-op PPS update must not conflict with the current company itself.
+    unchanged = call(app, f"/api/companies/{first['id']}", "PATCH", {
+        "ppsNumber": "PPS-01",
+    })
+    assert unchanged["id"] == first["id"]
+
+
 def test_site_manager_crud_and_filters_work_on_every_database(database_engine):
     app = create_application(database_engine)
     payload = {

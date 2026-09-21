@@ -114,7 +114,7 @@ def test_database_enforces_case_insensitive_trade_names(database_engine):
                 db.execute(text("INSERT INTO trades (id,name,status,color,created_at,updated_at) VALUES (:id,'ELEKTRO','active','#654321','now','now')"), {"id": str(uuid4())})
 
 
-def test_database_enforces_unique_pps_number(database_engine):
+def test_database_enforces_unique_pps_number_per_trade(database_engine):
     source = document()
     with database_engine.connect() as db:
         import_data(db, source)
@@ -122,6 +122,37 @@ def test_database_enforces_unique_pps_number(database_engine):
             with db.begin():
                 db.execute(text("INSERT INTO companies (id,name,pps_number,trade_id,status,created_at,updated_at) VALUES (:id,'Zweite','PPS-01',:trade,'active','now','now')"),
                            {"id": str(uuid4()), "trade": source["trades"][0]["id"]})
+
+
+def test_import_and_database_allow_same_pps_number_in_different_trades(database_engine):
+    source = document()
+    second_trade = copy.deepcopy(source["trades"][0])
+    second_trade.update({"id": str(uuid4()), "name": "Sanitär", "color": "#654321"})
+    source["trades"].append(second_trade)
+    second_company = copy.deepcopy(source["companies"][0])
+    second_company.update({
+        "id": str(uuid4()), "name": "Zweite", "ppsNumber": "pps-01",
+        "tradeId": second_trade["id"],
+        "territories": [{"postalCode": "08", "role": "primary"}],
+    })
+    source["companies"].append(second_company)
+
+    with database_engine.connect() as db:
+        assert import_data(db, source)["companies"] == 2
+        assert db.execute(text("SELECT count(*) FROM companies WHERE lower(pps_number) = 'pps-01'")).scalar_one() == 2
+
+
+def test_import_rejects_case_insensitive_duplicate_pps_number_in_same_trade():
+    source = document()
+    duplicate = copy.deepcopy(source["companies"][0])
+    duplicate.update({
+        "id": str(uuid4()), "name": "Zweite", "ppsNumber": "pps-01",
+        "territories": [{"postalCode": "09", "role": "primary"}],
+    })
+    source["companies"].append(duplicate)
+
+    with pytest.raises(ImportValidationError, match="innerhalb des Gewerks nicht eindeutig"):
+        import_data(create_engine("sqlite+pysqlite:///:memory:").connect(), source, "validate")
 
 
 def test_database_enforces_trade_relationship(database_engine):
