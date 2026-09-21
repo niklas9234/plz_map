@@ -513,6 +513,11 @@ dialog::backdrop {
   overflow: hidden;
 }
 
+.management-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Author-level display rules must not override the view switching attribute. */
 .management-dialog [hidden] {
   display: none !important;
@@ -586,6 +591,14 @@ dialog::backdrop {
   grid-template-columns: minmax(220px, 1fr);
 }
 
+#company-management-panel,
+#site-manager-management-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .management-inline-form {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
@@ -650,7 +663,8 @@ dialog::backdrop {
 }
 
 .company-table-wrapper {
-  max-height: calc(100vh - 285px);
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 0 28px 28px;
   overflow: auto;
 }
