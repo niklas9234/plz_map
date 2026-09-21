@@ -4,6 +4,7 @@
 /germany.pmtiles
 /go-pmtiles_1.31.2_Linux_x86_64/
 /germany-luxembourg.pmtiles
+/src/app/data/pmtiles
 *.pmtiles
 
 # Lokale Importdatei kann echte Unternehmensdaten enthalten
