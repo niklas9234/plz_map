@@ -1,5 +1,7 @@
 #define MyAppName "PLZ-Karte"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #error MyAppVersion must be supplied by build.ps1 from the release tag
+#endif
 #define MyAppExeName "PLZ-Karte.exe"
 
 [Setup]
