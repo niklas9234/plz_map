@@ -3,12 +3,12 @@
 Das JSON-Format ist die stabile Übergabegrenze zwischen Installationen und
 Datenbankprodukten. Es bildet fachliche Daten ab, nicht SQLite-Tabellen.
 
-## Version 2
+## Version 3
 
 ```json
 {
   "format": "plz-map-data-export",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "exportedAt": "2026-09-03T12:34:56Z",
   "applicationVersion": "1.0.0",
   "trades": [],
@@ -23,9 +23,9 @@ Zeitzone.
 
 Ein Gewerk enthält `id` (UUID), `name`, `status` (`active`/`inactive`), die
 optionale Farbe `color`, `createdAt` und `updatedAt`. Ein Unternehmen enthält
-`id` (UUID), `name`, `ppsNumber`, `tradeId` (UUID), `status`, Zeitpunkte,
-`territories` und `information`. `tradeId` verweist auf ein Gewerk desselben
-Dokuments. Eine Gebietszuordnung besitzt `postalCode` und `role`
+`id` (UUID), `name`, `ppsNumber`, `status`, Zeitpunkte, `tradeAssignments` und
+`information`. Jede Gewerkzuordnung enthält `tradeId` und `territories`;
+`tradeId` verweist auf ein Gewerk desselben Dokuments. Eine Gebietszuordnung besitzt `postalCode` und `role`
 (`primary`/`alternative`). Deutsche Gebiete sind zweistellige Strings, etwa
 `"08"`; `"LUX"` ist die Sonderkennung für Luxemburg. Zusatzinformationen sind
 geordnete Objekte mit `category` und `value`.

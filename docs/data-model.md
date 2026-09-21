@@ -11,8 +11,7 @@ Regeln lokal ab.
 | `id` | UUID | Technischer, unveränderlicher Primärschlüssel. |
 | `name` | String | Pflichtfeld, nach dem Entfernen äußerer Leerzeichen nicht leer. |
 | `ppsNumber` | String | Pflichtfeld und global eindeutig; Änderungen ändern nicht die `id`. |
-| `tradeId` | UUID | Pflichtverweis auf ein vorhandenes Gewerk. Kein Freitext. |
-| `territories` | Gebietszuordnungs-Liste | Mindestens ein Eintrag. Jede Zuordnung enthält `postalCode` und die Rolle `primary` oder `alternative`. |
+| `tradeAssignments` | Gewerkzuordnungs-Liste | Mindestens eine Zuordnung aus `tradeId` und nichtleerer `territories`-Liste. |
 | `information` | Informations-Liste | Geordnete Liste aus `category` und `value`; Details siehe unten. |
 | `status` | Enum | `active` oder `inactive`; neue Unternehmen sind `active`. |
 | `createdAt` | Zeitpunkt | Vom Server gesetzter Erstellungszeitpunkt. |
@@ -28,10 +27,15 @@ Alternativdienstleister (`alternative`) zugeordnet sein; zwischen ihnen besteht
 keine weitere Rangfolge. Ein Unternehmen kann in verschiedenen Gebieten
 unterschiedliche Rollen haben.
 
-`tradeId` ist die einzige gespeicherte Gewerkbeziehung. Ein Feld `trade` wird
-weder gespeichert noch exportiert. Clients lösen die Bezeichnung über
-`GET /api/trades` auf; so entspricht die lokale Repräsentation unmittelbar
-einem PostgreSQL-Fremdschlüssel.
+### Pflegeebene (verbindliche Designentscheidung)
+
+Name, PPS-Nummer, Status und Kontaktinformationen werden **unternehmensweit**
+gepflegt. Gewerke werden über `company_trades` zugeordnet; Gebiete und ihre
+Rolle werden **je Gewerkzuordnung** gepflegt. Dadurch bleibt die PPS-Nummer auch
+bei mehreren Gewerken global eindeutig, während Vorzugs- und Alternativgebiete
+je Gewerk unabhängig ausgewertet werden. `territories` verweist mit
+`(company_id, trade_id)` auf `company_trades`; sein Primärschlüssel ist
+`(company_id, trade_id, postal_code)`.
 
 ### Zusätzliche Informationen
 
@@ -137,7 +141,7 @@ sind beide identisch; jede fachliche Änderung aktualisiert `updatedAt`, währen
 
 ## Seed- und Bestandsmigration
 
-Das portable JSON-Format hat `schemaVersion: 2` und enthält die drei Arrays
+Das portable JSON-Format hat `schemaVersion: 3` und enthält die drei Arrays
 `trades`, `companies` und `siteManagers`. Der Seed-Import erfolgt in einer
 Transaktion: zuerst Gewerke, dann Unternehmen, Gebietszuordnungen und
 Informationseinträge. IDs und

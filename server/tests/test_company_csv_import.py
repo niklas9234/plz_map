@@ -51,7 +51,7 @@ def test_import_appends_company_and_preserves_existing_data(database_engine, tmp
         assert all(company.status == "active" for company in companies)
         assert all(company.pps_number.startswith("IMPORT-") for company in companies)
         assert companies[0].pps_number != companies[1].pps_number
-        assert [(item.postal_code, item.role) for item in companies[0].territories] == [
+        assert [(item.postal_code, item.role) for item in companies[0].trades[0].territories] == [
             ("08", "primary"), ("09", "alternative")
         ]
 

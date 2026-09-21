@@ -16,8 +16,7 @@ def document():
         "format": FORMAT, "schemaVersion": SCHEMA_VERSION, "exportedAt": "2026-09-03T10:00:00Z", "applicationVersion": "test",
         "trades": [{"id": trade_id, "name": "Elektro", "status": "active", "color": "#123456",
                     "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-02-01T00:00:00Z"}],
-        "companies": [{"id": company_id, "name": "Firma", "ppsNumber": "PPS-01", "tradeId": trade_id,
-                       "territories": [{"postalCode": "08", "role": "primary"}],
+        "companies": [{"id": company_id, "name": "Firma", "ppsNumber": "PPS-01", "tradeAssignments": [{"tradeId": trade_id, "territories": [{"postalCode": "08", "role": "primary"}]}],
                        "information": [{"category": "phone", "value": "123"}], "status": "inactive",
                        "createdAt": "2026-03-01T00:00:00Z", "updatedAt": "2026-04-01T00:00:00Z"}],
         "siteManagers": [{"id": manager_id, "name": "Alex Bau", "territories": ["08", "LUX"],
@@ -120,17 +119,18 @@ def test_database_enforces_unique_pps_number(database_engine):
         import_data(db, source)
         with pytest.raises(IntegrityError):
             with db.begin():
-                db.execute(text("INSERT INTO companies (id,name,pps_number,trade_id,status,created_at,updated_at) VALUES (:id,'Zweite','PPS-01',:trade,'active','now','now')"),
-                           {"id": str(uuid4()), "trade": source["trades"][0]["id"]})
+                db.execute(text("INSERT INTO companies (id,name,pps_number,status,created_at,updated_at) VALUES (:id,'Zweite','PPS-01','active','now','now')"),
+                           {"id": str(uuid4())})
 
 
 def test_database_enforces_trade_relationship(database_engine):
     with database_engine.connect() as db:
+        company_id = str(uuid4())
+        with db.begin():
+            db.execute(text("INSERT INTO companies (id,name,pps_number,status,created_at,updated_at) VALUES (:id,'Firma','PPS-X','active','now','now')"), {"id": company_id})
         with pytest.raises(IntegrityError):
             with db.begin():
-                db.execute(text("INSERT INTO companies (id,name,pps_number,trade_id,status,created_at,updated_at) VALUES (:id,'Firma','PPS-X',:trade,'active','now','now')"),
-                           {"id": str(uuid4()), "trade": str(uuid4())})
-
+                db.execute(text("INSERT INTO company_trades (company_id,trade_id) VALUES (:id,:trade)"), {"id": company_id, "trade": str(uuid4())})
 
 def test_database_allows_only_one_primary_per_trade_and_area(database_engine):
     source = document()
@@ -139,8 +139,9 @@ def test_database_allows_only_one_primary_per_trade_and_area(database_engine):
         company_id = str(uuid4())
         with pytest.raises(IntegrityError):
             with db.begin():
-                db.execute(text("INSERT INTO companies (id,name,pps_number,trade_id,status,created_at,updated_at) VALUES (:id,'Zweite','PPS-02',:trade,'active','now','now')"),
-                           {"id": company_id, "trade": source["trades"][0]["id"]})
+                db.execute(text("INSERT INTO companies (id,name,pps_number,status,created_at,updated_at) VALUES (:id,'Zweite','PPS-02','active','now','now')"),
+                           {"id": company_id})
+                db.execute(text("INSERT INTO company_trades (company_id,trade_id) VALUES (:id,:trade)"), {"id": company_id, "trade": source["trades"][0]["id"]})
                 db.execute(text("INSERT INTO territories (company_id,postal_code,trade_id,role) VALUES (:id,'08',:trade,'primary')"),
                            {"id": company_id, "trade": source["trades"][0]["id"]})
 

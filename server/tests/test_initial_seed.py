@@ -43,12 +43,12 @@ def test_initial_seed_normalizes_names_and_generates_stable_ids(tmp_path):
     path = write_seed(tmp_path, legacy_seed())
     first = connection()
     result = import_initial_seed(first, path)
-    company = first.execute("SELECT id, trade_id FROM companies").fetchone()
+    company = first.execute("SELECT companies.id, company_trades.trade_id FROM companies JOIN company_trades ON companies.id=company_trades.company_id").fetchone()
     trade = first.execute("SELECT id, name FROM trades").fetchone()
 
     second = connection()
     import_initial_seed(second, path)
-    second_company = second.execute("SELECT id, trade_id FROM companies").fetchone()
+    second_company = second.execute("SELECT companies.id, company_trades.trade_id FROM companies JOIN company_trades ON companies.id=company_trades.company_id").fetchone()
 
     assert result == {"written": True, "seedId": INITIAL_SEED_ID, "trades": 1,
                       "companies": 1, "siteManagers": 1, "rejected": 0}

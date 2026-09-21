@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 FORMAT = "plz-map-data-export"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 STATUS = {"active", "inactive"}
 ROLES = {"primary", "alternative"}
 POSTAL_CODE = re.compile(r"^\d{2}$")
@@ -21,7 +21,7 @@ POSTAL_CODE = re.compile(r"^\d{2}$")
 # whole SQLite files would also copy logs, temporary tables and host-specific
 # paths and would make the transfer format dependent on one database product.
 MUTABLE_TABLES = (
-    "trades", "companies", "territories", "company_information",
+    "trades", "companies", "company_trades", "territories", "company_information",
     "site_managers", "site_manager_territories",
 )
 
@@ -73,17 +73,22 @@ def export_data(connection: Connection) -> dict[str, Any]:
     ]
     companies = []
     for row in connection.execute(text("SELECT * FROM companies ORDER BY id")).mappings():
-        territories = [dict(item) for item in connection.execute(text(
-            "SELECT postal_code AS \"postalCode\", role FROM territories "
-            "WHERE company_id=:company_id ORDER BY postal_code"
-        ), {"company_id": row["id"]}).mappings()]
+        assignments = []
+        for assignment in connection.execute(text(
+            "SELECT trade_id FROM company_trades WHERE company_id=:company_id ORDER BY trade_id"
+        ), {"company_id": row["id"]}).mappings():
+            territories = [dict(item) for item in connection.execute(text(
+                "SELECT postal_code AS \"postalCode\", role FROM territories "
+                "WHERE company_id=:company_id AND trade_id=:trade_id ORDER BY postal_code"
+            ), {"company_id": row["id"], "trade_id": assignment["trade_id"]}).mappings()]
+            assignments.append({"tradeId": assignment["trade_id"], "territories": territories})
         information = [dict(item) for item in connection.execute(text(
             "SELECT category, value FROM company_information "
             "WHERE company_id=:company_id ORDER BY position"
         ), {"company_id": row["id"]}).mappings()]
         companies.append({
             "id": row["id"], "name": row["name"], "ppsNumber": row["pps_number"],
-            "tradeId": row["trade_id"], "territories": territories,
+            "tradeAssignments": assignments,
             "information": information, "status": row["status"],
             "createdAt": row["created_at"], "updatedAt": row["updated_at"],
         })
@@ -154,15 +159,14 @@ def validate_import(document: Any) -> dict[str, Any]:
         _timestamp(trade.get("createdAt"), f"{path}.createdAt", errors); _timestamp(trade.get("updatedAt"), f"{path}.updatedAt", errors)
 
     company_ids: set[str] = set(); pps_numbers: set[str] = set(); primaries: set[tuple[str, str]] = set()
-    company_fields = {"id", "name", "ppsNumber", "tradeId", "territories", "information", "status", "createdAt", "updatedAt"}
+    company_fields = {"id", "name", "ppsNumber", "tradeAssignments", "information", "status", "createdAt", "updatedAt"}
     for index, company in enumerate(companies):
         path = f"companies[{index}]"
         if not isinstance(company, dict): errors.append(f"{path}: muss ein Objekt sein"); continue
         if set(company) != company_fields: errors.append(f"{path}: Felder entsprechen nicht dem Schema")
-        _uuid(company.get("id"), f"{path}.id", errors); _uuid(company.get("tradeId"), f"{path}.tradeId", errors)
+        _uuid(company.get("id"), f"{path}.id", errors)
         if company.get("id") in company_ids: errors.append(f"{path}.id: doppelte UUID")
         company_ids.add(company.get("id"))
-        if company.get("tradeId") not in trade_ids: errors.append(f"{path}.tradeId: unbekanntes Gewerk")
         for field in ("name", "ppsNumber"):
             value = company.get(field)
             if not isinstance(value, str) or not value.strip() or value != value.strip(): errors.append(f"{path}.{field}: ungültig")
@@ -170,20 +174,30 @@ def validate_import(document: Any) -> dict[str, Any]:
         if isinstance(pps, str) and pps in pps_numbers: errors.append(f"{path}.ppsNumber: nicht eindeutig")
         elif isinstance(pps, str): pps_numbers.add(pps)
         if company.get("status") not in STATUS: errors.append(f"{path}.status: ungültiger Status")
-        territories = company.get("territories")
-        if not isinstance(territories, list) or not territories: errors.append(f"{path}.territories: mindestens eine Zuordnung erforderlich"); territories = []
-        codes: set[str] = set()
-        for pos, territory in enumerate(territories):
-            item_path = f"{path}.territories[{pos}]"
-            if not isinstance(territory, dict) or set(territory) != {"postalCode", "role"}: errors.append(f"{item_path}: ungültige Felder"); continue
-            code, role = territory.get("postalCode"), territory.get("role")
-            if not isinstance(code, str) or not (POSTAL_CODE.fullmatch(code) or code == "LUX"): errors.append(f"{item_path}.postalCode: zweistelliger String oder LUX erwartet")
-            if code in codes: errors.append(f"{item_path}.postalCode: doppelte Zuordnung")
-            codes.add(code)
-            if role not in ROLES: errors.append(f"{item_path}.role: ungültige Gebietsrolle")
-            key = (company.get("tradeId"), code)
-            if role == "primary" and key in primaries: errors.append(f"{item_path}: Vorzugsdienstleister für Gewerk und Gebiet ist nicht eindeutig")
-            elif role == "primary": primaries.add(key)
+        assignments = company.get("tradeAssignments")
+        if not isinstance(assignments, list) or not assignments: errors.append(f"{path}.tradeAssignments: mindestens eine Zuordnung erforderlich"); assignments = []
+        company_trades: set[str] = set()
+        for assignment_pos, assignment in enumerate(assignments):
+            assignment_path = f"{path}.tradeAssignments[{assignment_pos}]"
+            if not isinstance(assignment, dict) or set(assignment) != {"tradeId", "territories"}: errors.append(f"{assignment_path}: ungültige Felder"); continue
+            trade_id = assignment.get("tradeId"); _uuid(trade_id, f"{assignment_path}.tradeId", errors)
+            if trade_id not in trade_ids: errors.append(f"{assignment_path}.tradeId: unbekanntes Gewerk")
+            if trade_id in company_trades: errors.append(f"{assignment_path}.tradeId: doppelte Zuordnung")
+            company_trades.add(trade_id)
+            territories = assignment.get("territories")
+            if not isinstance(territories, list) or not territories: errors.append(f"{assignment_path}.territories: mindestens eine Zuordnung erforderlich"); territories = []
+            codes: set[str] = set()
+            for pos, territory in enumerate(territories):
+                item_path = f"{assignment_path}.territories[{pos}]"
+                if not isinstance(territory, dict) or set(territory) != {"postalCode", "role"}: errors.append(f"{item_path}: ungültige Felder"); continue
+                code, role = territory.get("postalCode"), territory.get("role")
+                if not isinstance(code, str) or not (POSTAL_CODE.fullmatch(code) or code == "LUX"): errors.append(f"{item_path}.postalCode: zweistelliger String oder LUX erwartet")
+                if code in codes: errors.append(f"{item_path}.postalCode: doppelte Zuordnung")
+                codes.add(code)
+                if role not in ROLES: errors.append(f"{item_path}.role: ungültige Gebietsrolle")
+                key = (trade_id, code)
+                if role == "primary" and key in primaries: errors.append(f"{item_path}: Vorzugsdienstleister für Gewerk und Gebiet ist nicht eindeutig")
+                elif role == "primary": primaries.add(key)
         information = company.get("information")
         if not isinstance(information, list): errors.append(f"{path}.information: muss eine Liste sein"); information = []
         for pos, item in enumerate(information):
@@ -248,14 +262,16 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
                 "status": trade["status"], "color": trade["color"], "created_at": trade["createdAt"], "updated_at": trade["updatedAt"],
             })
         for company in data["companies"]:
-            connection.execute(text("INSERT INTO companies (id, name, pps_number, trade_id, status, created_at, updated_at) VALUES (:id, :name, :pps_number, :trade_id, :status, :created_at, :updated_at)"), {
-                "id": company["id"], "name": company["name"], "pps_number": company["ppsNumber"], "trade_id": company["tradeId"],
+            connection.execute(text("INSERT INTO companies (id, name, pps_number, status, created_at, updated_at) VALUES (:id, :name, :pps_number, :status, :created_at, :updated_at)"), {
+                "id": company["id"], "name": company["name"], "pps_number": company["ppsNumber"],
                 "status": company["status"], "created_at": company["createdAt"], "updated_at": company["updatedAt"],
             })
-            connection.execute(text("INSERT INTO territories (company_id, postal_code, trade_id, role) VALUES (:company_id, :postal_code, :trade_id, :role)"), [
-                {"company_id": company["id"], "postal_code": item["postalCode"], "trade_id": company["tradeId"], "role": item["role"]}
-                for item in company["territories"]
-            ])
+            for assignment in company["tradeAssignments"]:
+                connection.execute(text("INSERT INTO company_trades (company_id, trade_id) VALUES (:company_id, :trade_id)"), {"company_id": company["id"], "trade_id": assignment["tradeId"]})
+                connection.execute(text("INSERT INTO territories (company_id, postal_code, trade_id, role) VALUES (:company_id, :postal_code, :trade_id, :role)"), [
+                    {"company_id": company["id"], "postal_code": item["postalCode"], "trade_id": assignment["tradeId"], "role": item["role"]}
+                    for item in assignment["territories"]
+                ])
             if company["information"]:
                 connection.execute(text("INSERT INTO company_information (company_id, position, category, value) VALUES (:company_id, :position, :category, :value)"), [
                     {"company_id": company["id"], "position": pos, "category": item["category"], "value": item["value"]}
@@ -290,16 +306,18 @@ def write_validated_data(connection: Any, data: dict[str, Any]) -> None:
         )
     for company in data["companies"]:
         connection.execute(
-            "INSERT INTO companies (id,name,pps_number,trade_id,status,created_at,updated_at) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (company["id"], company["name"], company["ppsNumber"], company["tradeId"],
+            "INSERT INTO companies (id,name,pps_number,status,created_at,updated_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (company["id"], company["name"], company["ppsNumber"],
              company["status"], company["createdAt"], company["updatedAt"]),
         )
-        connection.executemany(
-            "INSERT INTO territories (company_id,postal_code,trade_id,role) VALUES (?,?,?,?)",
-            [(company["id"], item["postalCode"], company["tradeId"], item["role"])
-             for item in company["territories"]],
-        )
+        for assignment in company["tradeAssignments"]:
+            connection.execute("INSERT INTO company_trades (company_id,trade_id) VALUES (?,?)", (company["id"], assignment["tradeId"]))
+            connection.executemany(
+                "INSERT INTO territories (company_id,postal_code,trade_id,role) VALUES (?,?,?,?)",
+                [(company["id"], item["postalCode"], assignment["tradeId"], item["role"])
+                 for item in assignment["territories"]],
+            )
         connection.executemany(
             "INSERT INTO company_information (company_id,position,category,value) VALUES (?,?,?,?)",
             [(company["id"], position, item["category"], item["value"])

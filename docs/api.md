@@ -23,10 +23,14 @@ Beispiel einer Antwort:
   "id": "7bccfe83-a7ef-43fd-b121-3e1fc091ec25",
   "name": "Beispiel GmbH",
   "ppsNumber": "PPS-1001",
-  "tradeId": "9603b68f-f93e-433f-91cb-a8a76194452d",
-  "territories": [
-    { "postalCode": "08", "role": "primary" },
-    { "postalCode": "82", "role": "alternative" }
+  "tradeAssignments": [
+    {
+      "tradeId": "9603b68f-f93e-433f-91cb-a8a76194452d",
+      "territories": [
+        { "postalCode": "08", "role": "primary" },
+        { "postalCode": "82", "role": "alternative" }
+      ]
+    }
   ],
   "information": [
     { "category": "phone", "value": "+49 30 123456" }
@@ -37,7 +41,7 @@ Beispiel einer Antwort:
 }
 ```
 
-Schreiboperationen akzeptieren ausschließlich `tradeId`, nie einen Gewerkname
+Schreiboperationen akzeptieren ausschließlich `tradeAssignments` mit `tradeId`, nie einen Gewerkname
 in `trade`. `information` folgt der Kategorienliste und Validierung aus dem
 Datenmodell. `id`, `createdAt` und `updatedAt` werden bei regulären POST- und
 PATCH-Aufrufen serverseitig verwaltet und dürfen vom Client nicht überschrieben
@@ -99,7 +103,7 @@ mehrere Bauleiter dürfen denselben Gebietscode führen.
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "exportedAt": "2026-09-03T12:00:00.000Z",
   "trades": [
     {
@@ -117,7 +121,7 @@ mehrere Bauleiter dürfen denselben Gebietscode führen.
 ```
 
 `exportedAt` ist Metadatum des Exports und beim Seed optional; die Datensätze
-sind in beiden Fällen identisch. Der Import akzeptiert exakt `schemaVersion: 2`,
+sind in beiden Fällen identisch. Der Import akzeptiert exakt `schemaVersion: 3`,
 prüft vor dem Schreiben sämtliche UUIDs, Zeitpunkte, Enums, Fremdschlüssel und
 Eindeutigkeitsregeln und schreibt entweder alles oder nichts. Unbekannte Felder
 werden abgelehnt. Der lokale Export `companyStore.exportData()` erzeugt genau

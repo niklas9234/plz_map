@@ -12,13 +12,13 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from ..models import Company, CompanyInformation, SiteManager, SiteManagerTerritory, Territory, Trade
+from ..models import Company, CompanyInformation, CompanyTrade, SiteManager, SiteManagerTerritory, Territory, Trade
 
 STATUSES = {"active", "inactive"}
 ROLES = {"primary", "alternative"}
 CATEGORIES = {"address", "phone", "contact", "other"}
 TRADE_WRITE_FIELDS = {"name", "color", "status"}
-COMPANY_WRITE_FIELDS = {"name", "ppsNumber", "tradeId", "territories", "information", "status"}
+COMPANY_WRITE_FIELDS = {"name", "ppsNumber", "tradeAssignments", "information", "status"}
 SITE_MANAGER_WRITE_FIELDS = {"name", "territories", "status"}
 
 
@@ -46,9 +46,11 @@ def _trade_json(trade: Trade) -> dict[str, Any]:
 def _company_json(company: Company) -> dict[str, Any]:
     return {
         "id": company.id, "name": company.name, "ppsNumber": company.pps_number,
-        "tradeId": company.trade_id,
-        "territories": [{"postalCode": item.postal_code, "role": item.role}
-                        for item in sorted(company.territories, key=lambda item: item.postal_code)],
+        "tradeAssignments": [{
+            "tradeId": assignment.trade_id,
+            "territories": [{"postalCode": item.postal_code, "role": item.role}
+                            for item in sorted(assignment.territories, key=lambda item: item.postal_code)],
+        } for assignment in sorted(company.trades, key=lambda item: item.trade_id)],
         "information": [{"category": item.category, "value": item.value}
                         for item in sorted(company.information, key=lambda item: item.position)],
         "status": company.status, "createdAt": company.created_at, "updatedAt": company.updated_at,
@@ -109,25 +111,36 @@ def _validate_color(value: Any) -> None:
 def _company_parts(payload: dict[str, Any], company: Company | None = None):
     name = _required_text(payload, "name", company.name if company else None)
     pps = _required_text(payload, "ppsNumber", company.pps_number if company else None)
-    trade_id = _uuid(payload.get("tradeId", company.trade_id if company else None), "tradeId")
     status = _status(payload, company.status if company else "active")
-    territories = payload.get("territories")
+    assignments = payload.get("tradeAssignments")
     information = payload.get("information")
-    if territories is None and company:
-        territories = [{"postalCode": item.postal_code, "role": item.role} for item in company.territories]
+    if assignments is None and company:
+        assignments = _company_json(company)["tradeAssignments"]
     if information is None and company:
         information = [{"category": item.category, "value": item.value} for item in company.information]
     errors: list[str] = []
-    if not isinstance(territories, list) or not territories:
-        errors.append("territories")
-        territories = []
-    seen: set[str] = set()
-    for index, item in enumerate(territories):
-        code = item.get("postalCode") if isinstance(item, dict) else None
-        role = item.get("role") if isinstance(item, dict) else None
-        if not isinstance(item, dict) or set(item) != {"postalCode", "role"} or not isinstance(code, str) or not (len(code) == 2 and code.isdigit() or code == "LUX") or role not in ROLES or code in seen:
-            errors.append(f"territories[{index}]")
-        seen.add(code)
+    if not isinstance(assignments, list) or not assignments:
+        errors.append("tradeAssignments")
+        assignments = []
+    seen_trades: set[str] = set()
+    for assignment_index, assignment in enumerate(assignments):
+        path = f"tradeAssignments[{assignment_index}]"
+        if not isinstance(assignment, dict) or set(assignment) != {"tradeId", "territories"}:
+            errors.append(path); continue
+        try: trade_id = _uuid(assignment.get("tradeId"), f"{path}.tradeId")
+        except ApiError: errors.append(f"{path}.tradeId"); continue
+        if trade_id in seen_trades: errors.append(f"{path}.tradeId")
+        seen_trades.add(trade_id)
+        territories = assignment.get("territories")
+        if not isinstance(territories, list) or not territories:
+            errors.append(f"{path}.territories"); continue
+        seen: set[str] = set()
+        for index, item in enumerate(territories):
+            code = item.get("postalCode") if isinstance(item, dict) else None
+            role = item.get("role") if isinstance(item, dict) else None
+            if not isinstance(item, dict) or set(item) != {"postalCode", "role"} or not isinstance(code, str) or not (len(code) == 2 and code.isdigit() or code == "LUX") or role not in ROLES or code in seen:
+                errors.append(f"{path}.territories[{index}]")
+            seen.add(code)
     if not isinstance(information, list):
         errors.append("information")
         information = []
@@ -138,7 +151,7 @@ def _company_parts(payload: dict[str, Any], company: Company | None = None):
             errors.append(f"information[{index}]")
     if errors:
         raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Validierung fehlgeschlagen.", errors)
-    return name, pps, trade_id, status, territories, information
+    return name, pps, status, assignments, information
 
 
 def _site_manager_parts(payload: dict[str, Any], site_manager: SiteManager | None = None):
@@ -280,7 +293,7 @@ def _trades(session: Session, rest: list[str], method: str, query_string: str, p
         _commit(session, "Gewerkname oder Farbe wird bereits verwendet.")
         return HTTPStatus.OK, _trade_json(trade)
     if len(rest) == 1 and method == "DELETE":
-        if session.scalar(select(func.count()).select_from(Company).where(Company.trade_id == trade.id)):
+        if session.scalar(select(func.count()).select_from(CompanyTrade).where(CompanyTrade.trade_id == trade.id)):
             raise ApiError(HTTPStatus.CONFLICT, "trade_in_use", "Ein verwendetes Gewerk kann nicht gelöscht werden.")
         session.delete(trade); session.commit(); return HTTPStatus.NO_CONTENT, None
     if len(rest) == 2 and method == "POST" and rest[1] in {"activate", "deactivate"}:
@@ -290,7 +303,7 @@ def _trades(session: Session, rest: list[str], method: str, query_string: str, p
 
 
 def _companies(session: Session, rest: list[str], method: str, query_string: str, payload: Any):
-    eager = (selectinload(Company.territories), selectinload(Company.information))
+    eager = (selectinload(Company.trades).selectinload(CompanyTrade.territories), selectinload(Company.information))
     if not rest and method == "GET":
         params = parse_qs(query_string)
         statement = select(Company).options(*eager).order_by(Company.name)
@@ -301,17 +314,27 @@ def _companies(session: Session, rest: list[str], method: str, query_string: str
         query = params.get("query", [None])[0]
         if query: statement = statement.where(func.lower(Company.name).contains(query.casefold()) | func.lower(Company.pps_number).contains(query.casefold()))
         trade_id = params.get("tradeId", [None])[0]
-        if trade_id: statement = statement.where(Company.trade_id == trade_id)
         postal_code = params.get("postalCode", [None])[0]
-        if postal_code: statement = statement.where(Company.territories.any(Territory.postal_code == postal_code))
+        if trade_id and postal_code:
+            statement = statement.where(Company.trades.any(
+                (CompanyTrade.trade_id == trade_id)
+                & CompanyTrade.territories.any(Territory.postal_code == postal_code)
+            ))
+        elif trade_id:
+            statement = statement.where(Company.trades.any(CompanyTrade.trade_id == trade_id))
+        elif postal_code:
+            statement = statement.where(Company.trades.any(
+                CompanyTrade.territories.any(Territory.postal_code == postal_code)
+            ))
         return HTTPStatus.OK, [_company_json(item) for item in session.scalars(statement)]
     if not rest and method == "POST":
         data = _body(payload, COMPANY_WRITE_FIELDS); values = _company_parts(data)
-        if not session.get(Trade, values[2]): raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Das Gewerk existiert nicht.", ["tradeId"])
+        missing = [item["tradeId"] for item in values[3] if not session.get(Trade, item["tradeId"])]
+        if missing: raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Ein Gewerk existiert nicht.", ["tradeAssignments"])
         _ensure_pps_available(session, values[1])
-        timestamp = _now(); company = Company(id=str(uuid4()), name=values[0], pps_number=values[1], trade_id=values[2], status=values[3], created_at=timestamp, updated_at=timestamp)
-        company.territories = [Territory(postal_code=x["postalCode"], role=x["role"], trade_id=values[2]) for x in values[4]]
-        company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[5])]
+        timestamp = _now(); company = Company(id=str(uuid4()), name=values[0], pps_number=values[1], status=values[2], created_at=timestamp, updated_at=timestamp)
+        company.trades = [CompanyTrade(trade_id=a["tradeId"], territories=[Territory(postal_code=x["postalCode"], role=x["role"]) for x in a["territories"]]) for a in values[3]]
+        company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[4])]
         session.add(company); _commit(session, "PPS-Nummer oder Vorzugsgebiet wird bereits verwendet.")
         return HTTPStatus.CREATED, _company_json(company)
     if not rest: return None
@@ -320,11 +343,12 @@ def _companies(session: Session, rest: list[str], method: str, query_string: str
     if len(rest) == 1 and method == "GET": return HTTPStatus.OK, _company_json(company)
     if len(rest) == 1 and method == "PATCH":
         data = _body(payload, COMPANY_WRITE_FIELDS, True); values = _company_parts(data, company)
-        if not session.get(Trade, values[2]): raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Das Gewerk existiert nicht.", ["tradeId"])
+        missing = [item["tradeId"] for item in values[3] if not session.get(Trade, item["tradeId"])]
+        if missing: raise ApiError(HTTPStatus.UNPROCESSABLE_ENTITY, "validation_error", "Ein Gewerk existiert nicht.", ["tradeAssignments"])
         _ensure_pps_available(session, values[1], company.id)
-        company.name, company.pps_number, company.trade_id, company.status = values[:4]; company.updated_at = _now()
-        company.territories = [Territory(postal_code=x["postalCode"], role=x["role"], trade_id=values[2]) for x in values[4]]
-        company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[5])]
+        company.name, company.pps_number, company.status = values[:3]; company.updated_at = _now()
+        company.trades = [CompanyTrade(trade_id=a["tradeId"], territories=[Territory(postal_code=x["postalCode"], role=x["role"]) for x in a["territories"]]) for a in values[3]]
+        company.information = [CompanyInformation(position=i, **x) for i, x in enumerate(values[4])]
         _commit(session, "PPS-Nummer oder Vorzugsgebiet wird bereits verwendet.")
         return HTTPStatus.OK, _company_json(company)
     if len(rest) == 1 and method == "DELETE": session.delete(company); session.commit(); return HTTPStatus.NO_CONTENT, None

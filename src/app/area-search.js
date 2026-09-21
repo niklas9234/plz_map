@@ -1,8 +1,9 @@
 function findAreaPartners(companies, postalCode, tradeId) {
     return companies.reduce((partners, company) => {
-        if (company.status !== "active" || company.tradeId !== tradeId) return partners;
-        const assignment = company.territories.find((territory) => territory.postalCode === postalCode);
-        if (assignment) partners[assignment.role].push(company);
+        if (company.status !== "active") return partners;
+        const assignment = company.tradeAssignments.find((item) => item.tradeId === tradeId);
+        const territory = assignment?.territories.find((item) => item.postalCode === postalCode);
+        if (territory) partners[territory.role].push(company);
         return partners;
     }, { primary: [], alternative: [] });
 }
@@ -61,7 +62,7 @@ async function initializeAreaSearch(map, postalCodeData) {
     async function refreshData() {
         trades = (await tradeStore.list()).filter((trade) => trade.status === "active");
         const activeTradeIds = new Set(trades.map((trade) => trade.id));
-        companies = (await companyStore.list()).filter((company) => company.status === "active" && activeTradeIds.has(company.tradeId));
+        companies = (await companyStore.list()).filter((company) => company.status === "active" && company.tradeAssignments.some((item) => activeTradeIds.has(item.tradeId)));
         const selectedTrade = tradeSelect.value;
         tradeSelect.replaceChildren(new Option("Gewerk auswählen", ""));
         trades.forEach((trade) => tradeSelect.add(new Option(trade.name, trade.id)));
