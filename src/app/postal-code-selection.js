@@ -11,16 +11,19 @@ const SELECTABLE_POSTAL_CODES = [
     "90", "91", "92", "93", "94", "95", "96", "97", "98", "99"
 ];
 
+function postalCodeRole(territories, roles, code) {
+    const territory = territories.find((item) => (typeof item === "string" ? item : item.postalCode) === code);
+    if (!territory) return null;
+    return typeof territory === "string" || !territory.role ? roles[0].value : territory.role;
+}
+
 function createPostalCodePicker(root, options = {}) {
     const roles = options.roles || [
         { value: "primary", label: "Vorzugsdienstleister", className: "is-primary" },
         { value: "alternative", label: "Alternativdienstleister", className: "is-alternative" }
     ];
     const territories = options.territories || [];
-    const assignedRole = (code) => {
-        const territory = territories.find((item) => (typeof item === "string" ? item : item.postalCode) === code);
-        return territory ? (typeof territory === "string" ? roles[0].value : territory.role) : null;
-    };
+    const assignedRole = (code) => postalCodeRole(territories, roles, code);
     const grid = root.querySelector(".postal-code-grid");
     const international = root.querySelector(".postal-code-international");
     const status = root.querySelector(".postal-code-selection-status");
