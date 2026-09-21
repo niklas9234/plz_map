@@ -12,6 +12,13 @@ Das Ergebnis liegt in `dist-installer/`. Neben dem Installer wird dort
 `SHA256SUMS.txt` erzeugt. Der GitHub-Workflow veröffentlicht beide Dateien gemeinsam
 als Workflow-Artefakt.
 
+Für die Intune-App ist als Deinstallationsbefehl
+`"C:\Program Files\PLZ-Karte\unins000.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART`
+zu hinterlegen. Der Uninstaller versucht zunächst, die Anwendung kontrolliert zu
+beenden. Da ein als SYSTEM ausgeführter Prozess nicht auf die benutzerspezifische
+Steuerdatei zugreifen kann, beendet er anschließend noch laufende Instanzen der
+`PLZ-Karte.exe`, bevor die Programmdateien entfernt werden.
+
 ## Signierung
 
 Für signierte Releases werden die Repository-Secrets
@@ -32,8 +39,10 @@ löscht. Der Test prüft die Installation unter `%ProgramFiles%\PLZ-Karte` und d
 gemeinsamen Startmenüverknüpfungen, startet Version A als angemeldeter Benutzer und
 legt über deren API Testdaten in `%LOCALAPPDATA%\PLZ-Karte\plz_map.sqlite3` an. Nach
 dem Update auf Version B vergleicht er Unternehmen, Gewerke, Gebiete, Bauleiter und
-Unternehmensinformationen vollständig. Abschließend deinstalliert er die Anwendung
-und prüft, dass die benutzerspezifische SQLite-Datei erhalten bleibt:
+Unternehmensinformationen vollständig. Abschließend simuliert er die fehlende
+SYSTEM-Sicht auf die benutzerspezifische Steuerdatei, deinstalliert die noch laufende
+Anwendung und prüft, dass der Prozess beendet, die Programmdateien entfernt und die
+benutzerspezifische SQLite-Datei erhalten bleibt:
 
 ```powershell
 ./packaging/windows/upgrade-test.ps1 `

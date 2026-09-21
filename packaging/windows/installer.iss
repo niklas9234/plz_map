@@ -45,7 +45,11 @@ Name: "desktopicon"; Description: "Desktop-Verknüpfung erstellen"; GroupDescrip
 Filename: "{app}\{#MyAppExeName}"; Description: "PLZ-Karte jetzt starten"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
+; An Intune uninstall runs as SYSTEM and therefore cannot read the interactive
+; user's %LOCALAPPDATA% control file. Try the graceful, same-user path first,
+; then make sure no remaining server process keeps files in {app} locked.
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; Flags: runhidden waituntilterminated skipifdoesntexist
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM ""{#MyAppExeName}"""; Flags: runhidden waituntilterminated
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
