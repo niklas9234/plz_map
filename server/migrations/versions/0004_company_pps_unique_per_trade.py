@@ -10,13 +10,16 @@ depends_on = None
 
 
 def upgrade():
+    inspector = sa.inspect(op.get_bind())
+    company_columns = {column["name"] for column in inspector.get_columns("companies")}
     constraints = {
         constraint["name"]
-        for constraint in sa.inspect(op.get_bind()).get_unique_constraints("companies")
+        for constraint in inspector.get_unique_constraints("companies")
     }
     # An unversioned database may already have been created from the current
-    # ORM metadata before Alembic adopts it.
-    if "uq_companies_pps_number_trade_id" in constraints:
+    # ORM metadata before Alembic adopts it. In that schema trade assignments
+    # already live in company_trades and PPS numbers are unique per company.
+    if "trade_id" not in company_columns or "uq_companies_pps_number_trade_id" in constraints:
         return
     # Batch mode recreates the table on SQLite and issues regular ALTER TABLE
     # statements on PostgreSQL.
