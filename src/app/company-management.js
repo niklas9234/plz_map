@@ -228,7 +228,7 @@ function initializeCompanyManagement() {
               <div class="company-detail__master-data">
                 <label class="form-field"><span>Unternehmensname</span><input id="detail-name" required maxlength="120"></label>
                 <label class="form-field"><span>PPS-Nummer</span><input id="detail-pps" required maxlength="40"></label>
-                <label class="form-field"><span>Gewerke</span><select id="detail-trade" required multiple></select></label>
+                <label class="form-field"><span>Gewerke</span><select id="detail-trade" class="trade-multiselect" required multiple></select></label>
               </div>
               <postal-code-selection mode="company"></postal-code-selection>
               <section class="detail-section information-section">
