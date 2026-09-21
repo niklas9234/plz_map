@@ -834,6 +834,15 @@ dialog::backdrop {
   gap: 10px;
 }
 
+.management-dialog__header-actions .is-disabled {
+  pointer-events: none;
+  opacity: .55;
+}
+
+.import-status { margin: 14px 0 4px; line-height: 1.5; }
+.import-warning { padding: 10px 12px; border: 1px solid #d7a647; border-radius: 6px; background: #fff7df; color: #684b0b !important; }
+.import-errors { max-height: 220px; margin: 12px 0; padding: 10px 10px 10px 30px; overflow: auto; border: 1px solid #e2adad; border-radius: 6px; background: #fff0f0; color: #8e2424; }
+
 .color-picker {
   position: relative;
   min-width: 0;

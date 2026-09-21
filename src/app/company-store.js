@@ -46,5 +46,33 @@ const companyStore = (() => {
         return response.json();
     }
 
-    return { list, save, remove, setActive, exportData, informationCategories: INFORMATION_CATEGORIES };
+    async function importData(document, mode) {
+        if (!['validate', 'empty'].includes(mode)) throw new Error('Unbekannter Importmodus.');
+        let response;
+        try {
+            response = await fetch(`/api/admin/import?mode=${mode}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(document)
+            });
+        } catch (error) {
+            const networkError = new Error('Der Importdienst ist nicht erreichbar. Bitte prüfen Sie die Netzwerkverbindung.');
+            networkError.code = 'network_error';
+            throw networkError;
+        }
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const error = new Error(data.message || `Datenimport fehlgeschlagen (${response.status}).`);
+            error.code = data.code || 'import_error';
+            error.fields = Array.isArray(data.fields) ? data.fields : [];
+            throw error;
+        }
+        if (mode === 'empty') {
+            ['companies:changed', 'trades:changed', 'site-managers:changed'].forEach((name) =>
+                window.dispatchEvent(new CustomEvent(name)));
+        }
+        return data;
+    }
+
+    return { list, save, remove, setActive, exportData, importData, informationCategories: INFORMATION_CATEGORIES };
 })();
