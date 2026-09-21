@@ -1,5 +1,6 @@
 import io
 import json
+import socket
 import sys
 from pathlib import Path
 
@@ -19,7 +20,7 @@ def test_local_desktop_profile_is_loopback_sqlite_without_environment(tmp_path, 
 
     assert config.profile == "local-desktop"
     assert config.host == "127.0.0.1"
-    assert config.port == 8080
+    assert config.port == 0
     assert config.database_url == f"sqlite:///{tmp_path / 'plz_map.sqlite3'}"
     assert config.data_paths == {
         "root": tmp_path,
@@ -27,6 +28,13 @@ def test_local_desktop_profile_is_loopback_sqlite_without_environment(tmp_path, 
         "logs": tmp_path / "logs",
     }
     assert all(path.is_dir() for path in config.data_paths.values())
+
+
+def test_local_desktop_profile_accepts_session_port(tmp_path, monkeypatch):
+    monkeypatch.setenv("PLZ_MAP_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("PLZ_MAP_LOCAL_PORT", "8765")
+
+    assert production.local_desktop_config().port == 8765
 
 
 def test_server_profile_reads_environment_and_does_not_import_webview(monkeypatch):
@@ -148,6 +156,7 @@ def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypat
     captured = {}
 
     class FakeServer:
+        server_address = ("127.0.0.1", 8080)
         shutdown = staticmethod(lambda: None)
 
         def set_app(self, app):
@@ -164,8 +173,103 @@ def test_prepare_server_binds_local_profile_only_to_loopback(tmp_path, monkeypat
         assert captured == {"host": "127.0.0.1", "port": 8080}
         assert server.app is not None
         assert control == tmp_path / "server.token"
+        saved_control = json.loads(control.read_text(encoding="utf-8"))
+        assert saved_control["port"] == 8080
+        assert saved_control["token"]
     finally:
         engine.dispose()
+
+
+def test_local_profile_starts_when_standard_port_is_occupied(tmp_path, monkeypatch):
+    occupied = socket.socket()
+    occupied.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    occupied.bind((production.HOST, production.PORT))
+    occupied.listen()
+    monkeypatch.setenv("PLZ_MAP_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("PLZ_MAP_LOCAL_PORT", raising=False)
+    monkeypatch.setattr(production, "initialize_logging", lambda _config: None)
+    monkeypatch.setattr(production, "initialize_database", lambda _config: FakeEngine())
+    monkeypatch.setattr(production, "create_wsgi_application", lambda *_args: lambda *_args: [])
+
+    class FakeEngine:
+        def dispose(self):
+            pass
+
+    server = None
+    try:
+        server, control, engine = production.prepare_server(production.local_desktop_config())
+        assert server.server_address[0] == production.HOST
+        assert server.server_address[1] != production.PORT
+        assert json.loads(control.read_text(encoding="utf-8"))["port"] == server.server_address[1]
+    finally:
+        occupied.close()
+        if server is not None:
+            server.server_close()
+            control.unlink(missing_ok=True)
+            engine.dispose()
+
+
+def test_separate_users_store_their_own_server_ports(tmp_path, monkeypatch):
+    class FakeEngine:
+        def dispose(self):
+            pass
+
+    monkeypatch.setattr(production, "initialize_logging", lambda _config: None)
+    monkeypatch.setattr(production, "initialize_database", lambda _config: FakeEngine())
+    monkeypatch.setattr(production, "create_wsgi_application", lambda *_args: lambda *_args: [])
+    resources = []
+    try:
+        for user, expected_port in (("user-a", 0), ("user-b", 0)):
+            root = tmp_path / user
+            root.mkdir()
+            config = production.ProductionConfig(
+                "local-desktop", production.HOST, expected_port, "sqlite:///:memory:",
+                {"root": root, "backups": root / "backups", "logs": root / "logs"},
+            )
+            resources.append(production.prepare_server(config))
+
+        first_server, first_control, _ = resources[0]
+        second_server, second_control, _ = resources[1]
+        first = json.loads(first_control.read_text(encoding="utf-8"))
+        second = json.loads(second_control.read_text(encoding="utf-8"))
+        assert first_control != second_control
+        assert first["port"] == first_server.server_address[1]
+        assert second["port"] == second_server.server_address[1]
+        assert first["port"] != second["port"]
+        assert first["token"] != second["token"]
+    finally:
+        for server, control, engine in resources:
+            server.server_close()
+            control.unlink(missing_ok=True)
+            engine.dispose()
+
+
+def test_shutdown_uses_port_and_token_of_selected_user(tmp_path, monkeypatch):
+    first_control = tmp_path / "user-a" / "server.token"
+    second_control = tmp_path / "user-b" / "server.token"
+    first_control.parent.mkdir()
+    second_control.parent.mkdir()
+    first_control.write_text(json.dumps({"port": 49101, "token": "first"}), encoding="utf-8")
+    second_control.write_text(json.dumps({"port": 49102, "token": "second"}), encoding="utf-8")
+    calls = []
+
+    class Response:
+        status = 204
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+    def fake_urlopen(request, timeout):
+        calls.append((request.full_url, request.get_header("X-plz-map-token"), timeout))
+        return Response()
+
+    monkeypatch.setattr(production.urllib.request, "urlopen", fake_urlopen)
+
+    assert production.request_running_server_stop(second_control)
+    assert calls == [("http://127.0.0.1:49102/api/system/shutdown", "second", 3)]
 
 
 def test_initialize_database_imports_seed_for_desktop_profile(tmp_path, monkeypatch):
