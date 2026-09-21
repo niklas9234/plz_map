@@ -82,8 +82,14 @@ try {
         throw "Stammdaten unterscheiden sich nach dem Upgrade.`nVorher: $before`nNachher: $after"
     }
     if (-not (Test-Path (Join-Path $DataDirectory "plz_map.sqlite3"))) { throw "Die erwartete SQLite-Datei fehlt." }
-    Stop-Application
+    # Intune invokes the uninstaller as SYSTEM. In that context --shutdown
+    # cannot see the interactive user's control file. Removing it reproduces
+    # that condition and verifies the installer's taskkill fallback.
+    Remove-Item (Join-Path $DataDirectory "server.token") -Force
     Uninstall-Application
+    if ($script:Application -and -not $script:Application.WaitForExit(10000)) {
+        throw "Der laufende Anwendungsprozess wurde bei der Deinstallation nicht beendet."
+    }
     if (Test-Path $Executable) { throw "Die Anwendung ist nach der Deinstallation noch vorhanden: $Executable" }
     if (-not (Test-Path (Join-Path $DataDirectory "plz_map.sqlite3"))) { throw "Die SQLite-Datei wurde bei der Deinstallation entfernt." }
     Write-Host "Systeminstallation, Startmenü, Upgrade, Deinstallation und Erhalt der SQLite-Datei erfolgreich geprüft."
