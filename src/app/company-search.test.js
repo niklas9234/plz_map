@@ -71,8 +71,8 @@ function harness(companies) {
 
 test('gleiche PPS-Nummer zeigt beide Unternehmen und waehlt per ID aus', async () => {
     const companies = [
-        { id: 'company-1', name: 'Beispiel GmbH', ppsNumber: 'PPS-1', tradeId: 'trade-1', territories: [{ postalCode: '08', role: 'primary' }] },
-        { id: 'company-2', name: 'Beispiel GmbH', ppsNumber: 'PPS-1', tradeId: 'trade-2', territories: [{ postalCode: '10', role: 'primary' }] }
+        { id: 'company-1', name: 'Beispiel GmbH', ppsNumber: 'PPS-1', tradeAssignments: [{ tradeId: 'trade-1', territories: [{ postalCode: '08', role: 'primary' }] }] },
+        { id: 'company-2', name: 'Beispiel GmbH', ppsNumber: 'PPS-1', tradeAssignments: [{ tradeId: 'trade-2', territories: [{ postalCode: '10', role: 'primary' }] }] }
     ];
     const ui = harness(companies);
     await ui.initialize(ui.map, []);
@@ -88,5 +88,5 @@ test('gleiche PPS-Nummer zeigt beide Unternehmen und waehlt per ID aus', async (
     ui.input.listeners.keydown[0]({ key: 'ArrowDown', preventDefault() {} });
     ui.input.listeners.keydown[0]({ key: 'Enter', preventDefault() {} });
 
-    assert.deepEqual(ui.visibleSelections.at(-1).filter[2][1], ['10']);
+    assert.deepEqual(Array.from(ui.visibleSelections.at(-1).filter[2][1]), ['10']);
 });

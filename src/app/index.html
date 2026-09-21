@@ -7,7 +7,9 @@
 
   <title>PLZ Karte Deutschland</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
+    media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"></noscript>
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -218,8 +220,13 @@
     </div>
   </dialog>
 
-<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
+<!--
+  Kartendarstellung ist eine optionale Erweiterung der Stammdatenoberflaeche.
+  Die CDN-Dateien duerfen den Start der installierten Anwendung deshalb nicht
+  blockieren, wenn das Endgeraet keinen Internetzugang hat.
+-->
+<script id="maplibre-script" async src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<script id="pmtiles-script" async src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
 
 <script src="logging.js"></script>
 <script src="settings.js"></script>

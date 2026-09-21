@@ -12,11 +12,13 @@ function postalCodeFilter(postalCodes) {
 }
 
 function setVisiblePostalCodes(map, postalCodes) {
+    if (!map) return;
     const filter = postalCodeFilter(postalCodes);
     POSTAL_CODE_LAYER_IDS.forEach((layerId) => map.setFilter(layerId, filter));
 }
 
 function setPostalCodeColor(map, color) {
+    if (!map) return;
     ["plz-de-fill", "plz-lux-fill"].forEach((id) => map.setPaintProperty(id, "fill-color", color));
     ["plz-de-border", "plz-lux-border"].forEach((id) => map.setPaintProperty(id, "line-color", color));
 }
@@ -31,6 +33,7 @@ function extendBoundsWithCoordinates(bounds, coordinates) {
 }
 
 function zoomToPostalCodes(map, postalCodes, postalCodeData) {
+    if (!map || typeof maplibregl === "undefined") return;
     const selectedPostalCodes = new Set(postalCodes);
     const bounds = new maplibregl.LngLatBounds();
 
