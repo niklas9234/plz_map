@@ -4,39 +4,76 @@ Dieser Import ist bewusst vom vollständigen JSON-Datenumzug der Oberfläche
 getrennt. Er **ergänzt** Unternehmen in einer bereits befüllten Datenbank und
 ändert oder löscht keine vorhandenen Datensätze.
 
-## Vorbereitung
+## Schnellstart für die lokale Anwendung
 
-1. Die Anwendung während eines Imports in die lokale SQLite-Datenbank beenden.
-2. `unternehmen.csv.example` nach `unternehmen.csv` kopieren.
-3. Die Datei in Excel, LibreOffice oder einem Texteditor bearbeiten und als
-   UTF-8-CSV mit Semikolon als Trennzeichen speichern.
+Die Befehle werden im Stammverzeichnis des Projekts ausgeführt:
+
+```sh
+# Einmalig, falls die Backend-Abhängigkeiten noch nicht installiert sind
+python -m pip install -r server/requirements.txt
+
+# Vorlage kopieren (Linux/macOS)
+cp unternehmensimport/unternehmen.csv.example unternehmensimport/unternehmen.csv
+```
+
+Unter Windows kann die Vorlage im Explorer kopiert oder in PowerShell mit
+folgendem Befehl angelegt werden:
+
+```powershell
+Copy-Item unternehmensimport/unternehmen.csv.example unternehmensimport/unternehmen.csv
+```
+
+Danach `unternehmensimport/unternehmen.csv` bearbeiten. Vor dem Prüfen und
+Importieren muss die lokale Anwendung beendet werden, damit sie nicht
+gleichzeitig auf die SQLite-Datei schreibt.
+
+```sh
+# Erst nur prüfen; die Datenbank bleibt unverändert.
+python unternehmensimport/import_companies.py --check
+
+# Nur nach erfolgreicher Prüfung tatsächlich importieren.
+python unternehmensimport/import_companies.py
+```
+
+Eine erfolgreiche Ausführung endet zum Beispiel mit
+`Import erfolgreich: 2 Unternehmen.`. Bereits vorhandene Unternehmen bleiben
+dabei erhalten.
+
+## Vorgeschriebene Kopfzeile
+
+Ja, die CSV benötigt diese **exakte Kopfzeile** in dieser Reihenfolge:
+
+```csv
+name;trade;primary_postal_codes;alternative_postal_code
+```
+
+Die Datei muss als UTF-8-CSV mit Semikolon als Trennzeichen gespeichert sein.
+Die Datei `unternehmen.csv.example` ist eine direkt kopierbare Vorlage. Enthält
+ein Wert selbst ein Semikolon, muss das CSV-Programm diesen Wert in doppelte
+Anführungszeichen setzen.
+
+## Bedeutung der Spalten
 
 Die Spalten bedeuten:
 
 | Spalte | Pflicht | Inhalt |
 | --- | --- | --- |
 | `name` | ja | Name des Unternehmens |
-| `pps_number` | ja | Neue, eindeutige PPS-Nummer |
 | `trade` | ja | Exakter Name eines bereits vorhandenen Gewerks |
 | `primary_postal_codes` | bedingt | Zweistellige PLZ-Gebiete oder `LUX`, mit Komma getrennt |
-| `alternative_postal_codes` | bedingt | Weitere Gebiete, mit Komma getrennt |
-| `address`, `phone`, `contact`, `other` | nein | Zusatzinformationen; mehrere Werte mit `|` trennen |
-| `status` | nein | `active` (Standard) oder `inactive` |
+| `alternative_postal_code` | bedingt | Weitere Gebiete, mit Komma getrennt |
 
 Mindestens eines der beiden Gebietsfelder muss befüllt sein. Pro Gewerk und
 Gebiet darf es systemweit nur einen Eintrag mit der Rolle `primary` geben.
 
-## Prüfen und importieren
+Der Import setzt jedes neue Unternehmen automatisch auf `active`. Weil die
+Datenbank bereits beim Anlegen eine eindeutige PPS-Nummer verlangt, erzeugt das
+Programm zunächst einen eindeutig erkennbaren Platzhalter in der Form
+`IMPORT-<UUID>`. Dieser kann anschließend in der Unternehmensverwaltung durch
+die endgültige PPS-Nummer ersetzt werden. Weitere Unternehmensinformationen
+werden bei diesem vereinfachten Import nicht angelegt.
 
-Aus dem Stammverzeichnis des Projekts:
-
-```sh
-# Erst nur prüfen; die Datenbank bleibt unverändert.
-python unternehmensimport/import_companies.py --check
-
-# Danach alle Zeilen gemeinsam importieren.
-python unternehmensimport/import_companies.py
-```
+## Eine andere CSV-Datei verwenden
 
 Ohne weitere Angaben liest das Programm
 `unternehmensimport/unternehmen.csv` und verwendet dieselbe lokale Datenbank
@@ -58,5 +95,4 @@ python unternehmensimport/import_companies.py --database-url \
 Vor dem Schreiben werden **alle** CSV-Zeilen und Konflikte mit dem Bestand
 geprüft. Bei einem Fehler wird nichts importiert. Auch das anschließende
 Schreiben läuft in einer einzigen Transaktion, sodass kein Teilimport entsteht.
-Bereits vorhandene Unternehmen werden niemals aktualisiert oder ersetzt;
-doppelte PPS-Nummern führen stattdessen zu einer Fehlermeldung.
+Bereits vorhandene Unternehmen werden niemals aktualisiert oder ersetzt.

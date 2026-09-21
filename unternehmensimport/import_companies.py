@@ -21,15 +21,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 
 from app.database import create_database_engine  # noqa: E402
-from app.models import Company, CompanyInformation, Territory, Trade  # noqa: E402
+from app.models import Company, Territory, Trade  # noqa: E402
 
 
 COLUMNS = (
-    "name", "pps_number", "trade", "primary_postal_codes",
-    "alternative_postal_codes", "address", "phone", "contact", "other", "status",
+    "name", "trade", "primary_postal_codes", "alternative_postal_code",
 )
 POSTAL_CODE = re.compile(r"^\d{2}$")
-INFORMATION_COLUMNS = ("address", "phone", "contact", "other")
 
 
 class ImportError(ValueError):
@@ -40,12 +38,9 @@ class ImportError(ValueError):
 class CompanyRow:
     line: int
     name: str
-    pps_number: str
     trade_id: str
     trade_name: str
     territories: tuple[tuple[str, str], ...]
-    information: tuple[tuple[str, str], ...]
-    status: str
 
 
 def _split(value: str, delimiter: str) -> list[str]:
@@ -73,20 +68,15 @@ def _read_csv(path: Path, trades: dict[str, Trade]) -> tuple[list[CompanyRow], l
                 continue
             values = {key: (value or "").strip() for key, value in raw.items()}
             row_errors: list[str] = []
-            name, pps_number = values["name"], values["pps_number"]
+            name = values["name"]
             if not name or len(name) > 255:
                 row_errors.append("name fehlt oder ist länger als 255 Zeichen")
-            if not pps_number or len(pps_number) > 255:
-                row_errors.append("pps_number fehlt oder ist länger als 255 Zeichen")
             trade = trades.get(values["trade"].casefold())
             if not trade:
                 row_errors.append(f"Gewerk '{values['trade']}' existiert nicht")
-            status = values["status"] or "active"
-            if status not in {"active", "inactive"}:
-                row_errors.append("status muss 'active' oder 'inactive' sein")
 
             primary = _split(values["primary_postal_codes"], ",")
-            alternative = _split(values["alternative_postal_codes"], ",")
+            alternative = _split(values["alternative_postal_code"], ",")
             territories = [(code, "primary") for code in primary]
             territories += [(code, "alternative") for code in alternative]
             if not territories:
@@ -99,17 +89,11 @@ def _read_csv(path: Path, trades: dict[str, Trade]) -> tuple[list[CompanyRow], l
                     row_errors.append(f"PLZ-Gebiet '{code}' ist doppelt angegeben")
                 seen_codes.add(code)
 
-            information = tuple(
-                (category, item)
-                for category in INFORMATION_COLUMNS
-                for item in _split(values[category], "|")
-            )
             if row_errors:
                 errors.extend(f"Zeile {line}: {message}" for message in row_errors)
                 continue
             rows.append(CompanyRow(
-                line, name, pps_number, trade.id, trade.name,
-                tuple(territories), information, status,
+                line, name, trade.id, trade.name, tuple(territories),
             ))
     if not rows and not errors:
         errors.append("Die CSV-Datei enthält keine Unternehmen.")
@@ -118,10 +102,6 @@ def _read_csv(path: Path, trades: dict[str, Trade]) -> tuple[list[CompanyRow], l
 
 def _validate_conflicts(session: Session, rows: list[CompanyRow]) -> list[str]:
     errors: list[str] = []
-    existing_pps = {
-        value.casefold() for value in session.scalars(select(Company.pps_number))
-    }
-    batch_pps: set[str] = set()
     existing_primaries = set(session.execute(
         select(Territory.trade_id, Territory.postal_code)
         .where(Territory.role == "primary")
@@ -129,12 +109,6 @@ def _validate_conflicts(session: Session, rows: list[CompanyRow]) -> list[str]:
     batch_primaries: set[tuple[str, str]] = set()
 
     for row in rows:
-        pps_key = row.pps_number.casefold()
-        if pps_key in existing_pps:
-            errors.append(f"Zeile {row.line}: PPS-Nummer '{row.pps_number}' ist bereits vorhanden")
-        elif pps_key in batch_pps:
-            errors.append(f"Zeile {row.line}: PPS-Nummer '{row.pps_number}' ist in der CSV doppelt")
-        batch_pps.add(pps_key)
         for code, role in row.territories:
             if role != "primary":
                 continue
@@ -173,18 +147,16 @@ def import_companies(
 
             now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             for row in rows:
+                company_id = str(uuid4())
                 company = Company(
-                    id=str(uuid4()), name=row.name, pps_number=row.pps_number,
-                    trade_id=row.trade_id, status=row.status,
+                    id=company_id, name=row.name,
+                    pps_number=f"IMPORT-{company_id}",
+                    trade_id=row.trade_id, status="active",
                     created_at=now, updated_at=now,
                 )
                 company.territories = [
                     Territory(postal_code=code, role=role, trade_id=row.trade_id)
                     for code, role in row.territories
-                ]
-                company.information = [
-                    CompanyInformation(position=position, category=category, value=value)
-                    for position, (category, value) in enumerate(row.information)
                 ]
                 session.add(company)
             session.commit()

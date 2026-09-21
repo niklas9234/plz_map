@@ -22,6 +22,15 @@ go run main.go
 
 Run the test suite:
 
-```sh
-go test ./pmtiles
-```
+Der Import ergänzt keine bestehende Datenbank: Sobald Stammdaten vorhanden
+sind, wird er abgelehnt. Validieren lässt sich die Datei bereits vor der
+Bestätigung, ohne Daten zu schreiben.
+
+### Bestehende Unternehmensdaten per CSV erweitern
+
+Für das schrittweise Ergänzen von Unternehmen gibt es unabhängig von der
+Oberfläche den Kommandozeilenimport im Verzeichnis
+[`unternehmensimport`](unternehmensimport/README.md). Er liest eine einfach
+bearbeitbare CSV-Datei, prüft sie zunächst vollständig und fügt ausschließlich
+neue Unternehmen hinzu. Bestehende Datensätze werden dabei weder geändert noch
+gelöscht.

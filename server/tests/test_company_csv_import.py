@@ -18,8 +18,7 @@ SPEC.loader.exec_module(company_csv_import)
 
 
 HEADER = (
-    "name;pps_number;trade;primary_postal_codes;alternative_postal_codes;"
-    "address;phone;contact;other;status\n"
+    "name;trade;primary_postal_codes;alternative_postal_code\n"
 )
 
 
@@ -40,15 +39,18 @@ def write_csv(tmp_path, body):
 
 def test_import_appends_company_and_preserves_existing_data(database_engine, tmp_path):
     add_trade(database_engine)
-    first = write_csv(tmp_path, "Firma A;PPS-1;Elektro;08;09;Adresse;123;Alex;;active\n")
+    first = write_csv(tmp_path, "Firma A;Elektro;08;09\n")
     assert company_csv_import.import_companies(first, database_engine) == 1
 
-    second = write_csv(tmp_path, "Firma B;PPS-2;Elektro;;10;;;Bea;Notiz;inactive\n")
+    second = write_csv(tmp_path, "Firma B;Elektro;;10\n")
     assert company_csv_import.import_companies(second, database_engine) == 1
 
     with Session(database_engine) as session:
         companies = list(session.scalars(select(Company).order_by(Company.name)))
         assert [company.name for company in companies] == ["Firma A", "Firma B"]
+        assert all(company.status == "active" for company in companies)
+        assert all(company.pps_number.startswith("IMPORT-") for company in companies)
+        assert companies[0].pps_number != companies[1].pps_number
         assert [(item.postal_code, item.role) for item in companies[0].territories] == [
             ("08", "primary"), ("09", "alternative")
         ]
@@ -56,7 +58,7 @@ def test_import_appends_company_and_preserves_existing_data(database_engine, tmp
 
 def test_check_only_does_not_write(database_engine, tmp_path):
     add_trade(database_engine)
-    path = write_csv(tmp_path, "Firma;PPS-1;Elektro;08;;;;;;\n")
+    path = write_csv(tmp_path, "Firma;Elektro;08;\n")
     assert company_csv_import.import_companies(path, database_engine, check_only=True) == 1
     with Session(database_engine) as session:
         assert list(session.scalars(select(Company))) == []
@@ -66,8 +68,8 @@ def test_any_invalid_row_prevents_complete_import(database_engine, tmp_path):
     add_trade(database_engine)
     path = write_csv(
         tmp_path,
-        "Gültig;PPS-1;Elektro;08;;;;;;active\n"
-        "Ungültig;PPS-2;Unbekannt;09;;;;;;active\n",
+        "Gültig;Elektro;08;\n"
+        "Ungültig;Unbekannt;09;\n",
     )
     with pytest.raises(company_csv_import.ImportError, match="existiert nicht"):
         company_csv_import.import_companies(path, database_engine)
@@ -75,15 +77,14 @@ def test_any_invalid_row_prevents_complete_import(database_engine, tmp_path):
         assert list(session.scalars(select(Company))) == []
 
 
-def test_existing_primary_and_pps_conflicts_are_rejected(database_engine, tmp_path):
+def test_existing_primary_conflict_is_rejected(database_engine, tmp_path):
     add_trade(database_engine)
-    first = write_csv(tmp_path, "Firma A;PPS-1;Elektro;08;;;;;;active\n")
+    first = write_csv(tmp_path, "Firma A;Elektro;08;\n")
     company_csv_import.import_companies(first, database_engine)
-    second = write_csv(tmp_path, "Firma B;PPS-1;Elektro;08;;;;;;active\n")
+    second = write_csv(tmp_path, "Firma B;Elektro;08;\n")
 
     with pytest.raises(company_csv_import.ImportError) as error:
         company_csv_import.import_companies(second, database_engine)
-    assert "PPS-Nummer" in str(error.value)
     assert "Vorzugsdienstleister" in str(error.value)
     with Session(database_engine) as session:
         assert session.scalar(select(Company).where(Company.name == "Firma B")) is None
