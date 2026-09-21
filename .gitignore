@@ -12,3 +12,7 @@
 # Python cache files
 __pycache__/
 *.py[cod]
+
+
+*.pmtiles
+pmtiles.exe
