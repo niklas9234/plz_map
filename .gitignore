@@ -6,6 +6,9 @@
 /germany-luxembourg.pmtiles
 *.pmtiles
 
+# Lokale Importdatei kann echte Unternehmensdaten enthalten
+/unternehmensimport/unternehmen.csv
+
 # Python cache files
 __pycache__/
 *.py[cod]
