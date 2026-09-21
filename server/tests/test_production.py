@@ -239,7 +239,7 @@ def test_migrations_adopt_an_unversioned_legacy_schema(tmp_path):
             "site_manager_territories",
         }
         with migrated_engine.connect() as connection:
-            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0005"
+            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0006"
             assert connection.execute(text(
                 "SELECT value FROM application_metadata WHERE key = 'legacy'"
             )).scalar_one() == "preserved"

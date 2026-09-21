@@ -113,16 +113,6 @@ def test_database_enforces_case_insensitive_trade_names(database_engine):
                 db.execute(text("INSERT INTO trades (id,name,status,color,created_at,updated_at) VALUES (:id,'ELEKTRO','active','#654321','now','now')"), {"id": str(uuid4())})
 
 
-def test_database_enforces_unique_pps_number_per_trade(database_engine):
-    source = document()
-    with database_engine.connect() as db:
-        import_data(db, source)
-        with pytest.raises(IntegrityError):
-            with db.begin():
-                db.execute(text("INSERT INTO companies (id,name,pps_number,status,created_at,updated_at) VALUES (:id,'Zweite','PPS-01','active','now','now')"),
-                           {"id": str(uuid4())})
-
-
 def test_import_and_database_allow_same_pps_number_in_different_trades(database_engine):
     source = document()
     second_trade = copy.deepcopy(source["trades"][0])
@@ -131,8 +121,10 @@ def test_import_and_database_allow_same_pps_number_in_different_trades(database_
     second_company = copy.deepcopy(source["companies"][0])
     second_company.update({
         "id": str(uuid4()), "name": "Zweite", "ppsNumber": "pps-01",
-        "tradeId": second_trade["id"],
-        "territories": [{"postalCode": "08", "role": "primary"}],
+        "tradeAssignments": [{
+            "tradeId": second_trade["id"],
+            "territories": [{"postalCode": "08", "role": "primary"}],
+        }],
     })
     source["companies"].append(second_company)
 
@@ -146,7 +138,10 @@ def test_import_rejects_case_insensitive_duplicate_pps_number_in_same_trade():
     duplicate = copy.deepcopy(source["companies"][0])
     duplicate.update({
         "id": str(uuid4()), "name": "Zweite", "ppsNumber": "pps-01",
-        "territories": [{"postalCode": "09", "role": "primary"}],
+        "tradeAssignments": [{
+            "tradeId": source["trades"][0]["id"],
+            "territories": [{"postalCode": "09", "role": "primary"}],
+        }],
     })
     source["companies"].append(duplicate)
 

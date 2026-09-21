@@ -158,7 +158,7 @@ def validate_import(document: Any) -> dict[str, Any]:
         if trade.get("color") is not None and not isinstance(trade.get("color"), str): errors.append(f"{path}.color: ungültig")
         _timestamp(trade.get("createdAt"), f"{path}.createdAt", errors); _timestamp(trade.get("updatedAt"), f"{path}.updatedAt", errors)
 
-    company_ids: set[str] = set(); pps_numbers: set[str] = set(); primaries: set[tuple[str, str]] = set()
+    company_ids: set[str] = set(); pps_keys: set[tuple[str, str]] = set(); primaries: set[tuple[str, str]] = set()
     company_fields = {"id", "name", "ppsNumber", "tradeAssignments", "information", "status", "createdAt", "updatedAt"}
     for index, company in enumerate(companies):
         path = f"companies[{index}]"
@@ -171,11 +171,6 @@ def validate_import(document: Any) -> dict[str, Any]:
             value = company.get(field)
             if not isinstance(value, str) or not value.strip() or value != value.strip(): errors.append(f"{path}.{field}: ungültig")
         pps = company.get("ppsNumber")
-        pps_key = (pps.casefold(), company.get("tradeId")) if isinstance(pps, str) else None
-        if pps_key is not None and pps_key in pps_keys:
-            errors.append(f"{path}.ppsNumber: innerhalb des Gewerks nicht eindeutig")
-        elif pps_key is not None:
-            pps_keys.add(pps_key)
         if company.get("status") not in STATUS: errors.append(f"{path}.status: ungültiger Status")
         assignments = company.get("tradeAssignments")
         if not isinstance(assignments, list) or not assignments: errors.append(f"{path}.tradeAssignments: mindestens eine Zuordnung erforderlich"); assignments = []
@@ -187,6 +182,11 @@ def validate_import(document: Any) -> dict[str, Any]:
             if trade_id not in trade_ids: errors.append(f"{assignment_path}.tradeId: unbekanntes Gewerk")
             if trade_id in company_trades: errors.append(f"{assignment_path}.tradeId: doppelte Zuordnung")
             company_trades.add(trade_id)
+            pps_key = (pps.casefold(), trade_id) if isinstance(pps, str) and isinstance(trade_id, str) else None
+            if pps_key is not None and pps_key in pps_keys:
+                errors.append(f"{path}.ppsNumber: innerhalb des Gewerks nicht eindeutig")
+            elif pps_key is not None:
+                pps_keys.add(pps_key)
             territories = assignment.get("territories")
             if not isinstance(territories, list) or not territories: errors.append(f"{assignment_path}.territories: mindestens eine Zuordnung erforderlich"); territories = []
             codes: set[str] = set()
