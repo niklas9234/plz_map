@@ -1,123 +1,27 @@
-# PLZ-Karte
+# go-pmtiles
 
-Browserbasierte Karte zur Suche von Unternehmen und zur Anzeige ihrer
-Postleitzahlgebiete in Deutschland und Luxemburg.
+The single-file utility for creating and working with [PMTiles](https://github.com/protomaps/PMTiles) archives.
 
-## Projektstruktur
+## Installation
 
-```text
-.
-├── src/app/                 Statisches JavaScript-Frontend
-│   └── data/pmtiles/        Lokaler Ablageort der großen Basiskarte
-├── server/                  Vorbereitete Python-Backend-Struktur
-│   ├── app/
-│   │   ├── api/             HTTP-Endpunkte
-│   │   ├── models/          Datenbankmodelle
-│   │   └── schemas/         Ein- und Ausgabemodelle
-│   ├── migrations/          Künftige Datenbankmigrationen
-│   └── tests/               Backendtests
-└── bereinigung/             Bestehende Werkzeuge und Zwischendaten
+See [Releases](https://github.com/protomaps/go-pmtiles/releases) for your OS and architecture.
+
+## Docs
+
+See [docs.protomaps.com/pmtiles/cli](https://docs.protomaps.com/pmtiles/cli) for usage.
+
+See [Go package docs](https://pkg.go.dev/github.com/protomaps/go-pmtiles/pmtiles) for API usage.
+
+## Development
+
+Run the program in development:
+
+```sh
+go run main.go
 ```
 
-Das Frontend bleibt ohne Build-Schritt ausführbar. Das Verzeichnis `server/`
-bildet die Grenze für das geplante Python-Backend; es enthält bewusst noch
-keine Framework- oder Datenbankentscheidung.
+Run the test suite:
 
-## Lokaler Start der Anwendung
-
-1. Die Datei `germany-luxembourg.pmtiles` nach
-   `src/app/data/pmtiles/` kopieren.
-2. Abhängigkeiten installieren und den integrierten lokalen Server starten:
-
-   ```sh
-   python -m pip install -r server/requirements.txt
-   python server/run.py --local-server
-   ```
-
-   Der Befehl funktioniert unverändert in PowerShell, der Windows-
-   Eingabeaufforderung und in Unix-Shells. `PYTHONPATH=server` muss nicht gesetzt
-   werden; diese Schreibweise wäre in PowerShell kein gültiger Befehl.
-
-3. Die Anwendung öffnet automatisch `http://127.0.0.1:8080` im Browser und der
-   laufende Prozess zeigt die Adresse im Terminal an. Mit `--no-browser` lässt
-   sich das automatische Öffnen abschalten. Dieser Server liefert sowohl das
-   Frontend als auch die Endpunkte unter `/api/` aus und importiert beim ersten
-   Start die gebündelten Unternehmen und Gewerke. Ein reiner statischer Server
-   wie `python -m http.server` oder `http-server` reicht nicht aus: Er beantwortet
-   API-Aufrufe mit 404, sodass keine Stammdaten angezeigt werden.
-
-Die PMTiles-Datei wird nicht in Git aufgenommen. Weitere Karteneinstellungen
-sind in `CONFIGURATION.md` beschrieben.
-
-## Windows-Installation (ohne Docker und Python)
-
-Das konkrete Paketierungsziel ist **Windows 10/11 (64 Bit)**. Das Setup benötigt
-Administratorrechte, damit es das gemeinsame Logverzeichnis anlegen und für
-Benutzer beschreibbar machen kann. Es enthält
-den Python-Interpreter, das Backend und das Frontend; auf dem Zielrechner werden
-weder Docker noch eine Python-Installation benötigt.
-
-1. `PLZ-Karte-1.0.0-Setup.exe` ausführen und den Installationsdialog abschließen.
-2. Über **PLZ-Karte starten** im Startmenü starten. Der lokale Server startet
-   im Hintergrund und öffnet die Karte automatisch im Standardbrowser.
-3. Zum Beenden der lokalen Instanz **PLZ-Karte beenden** im Startmenü verwenden.
-
-Ein Update wird durch Ausführen des neueren Setups in dasselbe Verzeichnis
-installiert. Das Setup beendet eine noch laufende lokale Instanz automatisch,
-bevor es die Programmdateien ersetzt.
-Das Setup ersetzt ausschließlich unveränderliche Programmdateien unter
-`%LOCALAPPDATA%\Programs\PLZ-Karte`; Datenbank und Backups bleiben separat
-unter `%LOCALAPPDATA%\PLZ-Karte` erhalten. Die Logs bleiben unter
-`C:\Logs\PLZ-Karte` erhalten.
-
-Zur Deinstallation in den Windows-Einstellungen **Apps > Installierte Apps >
-PLZ-Karte > Deinstallieren** wählen. Der Deinstaller beendet zunächst den
-Server und entfernt nur die Programmdateien. Benutzerdaten bleiben absichtlich
-unter `%LOCALAPPDATA%\PLZ-Karte` erhalten und können für eine Neuinstallation
-übernommen werden. Sollen sie endgültig entfernt werden, kann dieser Ordner
-anschließend im Explorer gelöscht werden.
-
-### Windows-Paket erstellen
-
-Auf einem Windows-Buildrechner werden Python 3.12, PowerShell und Inno Setup 6
-benötigt. `packaging\windows\build.ps1` installiert mit demselben
-Python-Interpreter die Laufzeitabhängigkeiten aus `server\requirements.txt` und
-die Buildabhängigkeiten einschließlich der nativen WebView aus
-`packaging\windows\requirements-build.txt`, erzeugt
-die eigenständige Anwendung und anschließend das Setup in `dist-installer\`.
-Vor dem Build muss die nicht versionierte
-PMTiles-Datei in `src\app\data\pmtiles\` liegen, wenn sie Teil des Installers
-sein soll.
-
-## Fachliche Spezifikation
-
-Das verbindliche [Datenmodell](docs/data-model.md) beschreibt Unternehmen,
-zweistellige PLZ-Gebiete, erweiterbare Gewerke und den Lebenszyklus von
-Datensätzen. Der darauf aufbauende [API-Vertrag](docs/api.md) dient als Grundlage
-für die noch ausstehende Backend- und Datenbankimplementierung.
-
-Das [Exportformat](docs/export-format.md) und die getrennte
-[SQLite-zu-PostgreSQL-Anleitung](docs/sqlite-to-postgresql.md) beschreiben die
-portable Datensicherung und den Systemumzug.
-
-### Stammdaten auf ein anderes Gerät übertragen
-
-1. Auf Gerät A unter **Daten verwalten** die Aktion **Daten exportieren** wählen.
-2. Die heruntergeladene JSON-Datei auf Gerät B übertragen.
-3. Auf einer frischen Installation mit vollständig leerer Datenbank auf Gerät B
-   **Daten importieren** wählen und die Datei öffnen.
-4. Die angezeigten Anzahlen für Gewerke, Unternehmen und Bauleiter prüfen und
-   den Import ausdrücklich bestätigen.
-
-Der Import ergänzt keine bestehende Datenbank: Sobald Stammdaten vorhanden
-sind, wird er abgelehnt. Validieren lässt sich die Datei bereits vor der
-Bestätigung, ohne Daten zu schreiben.
-
-### Bestehende Unternehmensdaten per CSV erweitern
-
-Für das schrittweise Ergänzen von Unternehmen gibt es unabhängig von der
-Oberfläche den Kommandozeilenimport im Verzeichnis
-[`unternehmensimport`](unternehmensimport/README.md). Er liest eine einfach
-bearbeitbare CSV-Datei, prüft sie zunächst vollständig und fügt ausschließlich
-neue Unternehmen hinzu. Bestehende Datensätze werden dabei weder geändert noch
-gelöscht.
+```sh
+go test ./pmtiles
+```
