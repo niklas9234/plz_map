@@ -25,11 +25,15 @@ nicht freigegeben werden.
 ## Upgrade-Abnahme
 
 `upgrade-test.ps1` ist der automatisierte Abnahmetest für zwei bereits gebaute
-Installer. Er ist **ausschließlich auf einer Wegwerf-Windows-VM** auszuführen, da er
-`%LOCALAPPDATA%\PLZ-Karte` löscht. Der Test installiert Version A unbeaufsichtigt,
-legt über deren API Testdaten in `%LOCALAPPDATA%\PLZ-Karte\plz_map.sqlite3` an,
-installiert Version B darüber und vergleicht anschließend Unternehmen, Gewerke,
-Gebiete, Bauleiter und Unternehmensinformationen vollständig:
+Installer. Er ist **ausschließlich auf einer Wegwerf-Windows-VM** und für die
+Intune-Abnahme in einem Benutzerkontext nach einer Bereitstellung mit dem
+Installationsverhalten **System** auszuführen, da er `%LOCALAPPDATA%\PLZ-Karte`
+löscht. Der Test prüft die Installation unter `%ProgramFiles%\PLZ-Karte` und die
+gemeinsamen Startmenüverknüpfungen, startet Version A als angemeldeter Benutzer und
+legt über deren API Testdaten in `%LOCALAPPDATA%\PLZ-Karte\plz_map.sqlite3` an. Nach
+dem Update auf Version B vergleicht er Unternehmen, Gewerke, Gebiete, Bauleiter und
+Unternehmensinformationen vollständig. Abschließend deinstalliert er die Anwendung
+und prüft, dass die benutzerspezifische SQLite-Datei erhalten bleibt:
 
 ```powershell
 ./packaging/windows/upgrade-test.ps1 `
@@ -45,7 +49,9 @@ Gebiete, Bauleiter und Unternehmensinformationen vollständig:
 3. Prüfen, dass Installer und Anwendungs-EXE eine gültige Herausgebersignatur und
    einen vertrauenswürdigen Zeitstempel besitzen (`Get-AuthenticodeSignature`).
 4. `SHA256SUMS.txt` gegen `Get-FileHash <Installer> -Algorithm SHA256` prüfen.
-5. Den Upgrade-Abnahmetest auf einer sauberen VM mit dem letzten freigegebenen
-   Installer als Version A und dem neuen Artefakt als Version B erfolgreich ausführen.
+5. Den Upgrade-Abnahmetest auf einem sauberen Intune-Testgerät mit
+   Installationsverhalten **System**, dem letzten freigegebenen Installer als Version
+   A und dem neuen Artefakt als Version B erfolgreich ausführen. Den Start und den
+   Test dabei als normaler vorgesehener Benutzer durchführen.
 6. Erst danach GitHub Release anlegen, Installer und Prüfsummendatei anhängen und
    die Prüfsumme in den Release Notes veröffentlichen.

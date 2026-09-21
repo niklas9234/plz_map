@@ -9,11 +9,28 @@ if (-not $ConfirmDataDeletion) {
     throw "Der Test löscht %LOCALAPPDATA%\PLZ-Karte. Nur auf einer Wegwerf-VM mit -ConfirmDataDeletion ausführen."
 }
 $DataDirectory = Join-Path $env:LOCALAPPDATA "PLZ-Karte"
-$Executable = Join-Path $env:LOCALAPPDATA "Programs\PLZ-Karte\PLZ-Karte.exe"
+$InstallDirectory = Join-Path $env:ProgramFiles "PLZ-Karte"
+$Executable = Join-Path $InstallDirectory "PLZ-Karte.exe"
+$StartMenuDirectory = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\PLZ-Karte"
 
 function Install-Version([string] $Installer) {
     $process = Start-Process (Resolve-Path $Installer) -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "Installer schlug mit Exitcode $($process.ExitCode) fehl: $Installer" }
+}
+
+function Assert-MachineInstallation {
+    if (-not (Test-Path $Executable)) { throw "Die Anwendung wurde nicht unter Program Files installiert: $Executable" }
+    foreach ($shortcut in "PLZ-Karte starten.lnk", "PLZ-Karte beenden.lnk") {
+        $shortcutPath = Join-Path $StartMenuDirectory $shortcut
+        if (-not (Test-Path $shortcutPath)) { throw "Die gemeinsame Startmenüverknüpfung fehlt: $shortcutPath" }
+    }
+}
+
+function Uninstall-Application {
+    $uninstaller = Join-Path $InstallDirectory "unins000.exe"
+    if (-not (Test-Path $uninstaller)) { throw "Uninstaller wurde nicht gefunden: $uninstaller" }
+    $process = Start-Process $uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "Deinstallation schlug mit Exitcode $($process.ExitCode) fehl." }
 }
 
 function Start-Application {
@@ -45,6 +62,7 @@ function Snapshot {
 Remove-Item $DataDirectory -Recurse -Force -ErrorAction SilentlyContinue
 try {
     Install-Version $InstallerA
+    Assert-MachineInstallation
     Start-Application
     $trade = Api-Post "/api/trades" @{ name = "Upgrade-Abnahme"; color = "#a13579" }
     Api-Post "/api/companies" @{
@@ -57,13 +75,18 @@ try {
     Stop-Application
 
     Install-Version $InstallerB
+    Assert-MachineInstallation
     Start-Application
     $after = Snapshot
     if ($before -cne $after) {
         throw "Stammdaten unterscheiden sich nach dem Upgrade.`nVorher: $before`nNachher: $after"
     }
     if (-not (Test-Path (Join-Path $DataDirectory "plz_map.sqlite3"))) { throw "Die erwartete SQLite-Datei fehlt." }
-    Write-Host "Upgrade-Abnahme erfolgreich: Unternehmen, Gewerke, Gebiete, Bauleiter und Unternehmensinformationen sind unverändert."
+    Stop-Application
+    Uninstall-Application
+    if (Test-Path $Executable) { throw "Die Anwendung ist nach der Deinstallation noch vorhanden: $Executable" }
+    if (-not (Test-Path (Join-Path $DataDirectory "plz_map.sqlite3"))) { throw "Die SQLite-Datei wurde bei der Deinstallation entfernt." }
+    Write-Host "Systeminstallation, Startmenü, Upgrade, Deinstallation und Erhalt der SQLite-Datei erfolgreich geprüft."
 } finally {
     try { Stop-Application } catch { }
 }
