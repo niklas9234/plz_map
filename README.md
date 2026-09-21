@@ -99,3 +99,16 @@ für die noch ausstehende Backend- und Datenbankimplementierung.
 Das [Exportformat](docs/export-format.md) und die getrennte
 [SQLite-zu-PostgreSQL-Anleitung](docs/sqlite-to-postgresql.md) beschreiben die
 portable Datensicherung und den Systemumzug.
+
+### Stammdaten auf ein anderes Gerät übertragen
+
+1. Auf Gerät A unter **Daten verwalten** die Aktion **Daten exportieren** wählen.
+2. Die heruntergeladene JSON-Datei auf Gerät B übertragen.
+3. Auf einer frischen Installation mit vollständig leerer Datenbank auf Gerät B
+   **Daten importieren** wählen und die Datei öffnen.
+4. Die angezeigten Anzahlen für Gewerke, Unternehmen und Bauleiter prüfen und
+   den Import ausdrücklich bestätigen.
+
+Der Import ergänzt keine bestehende Datenbank: Sobald Stammdaten vorhanden
+sind, wird er abgelehnt. Validieren lässt sich die Datei bereits vor der
+Bestätigung, ohne Daten zu schreiben.

@@ -38,3 +38,20 @@ def test_import_api_explains_incompatible_schema(database_engine):
 
     assert response["status"] == "422 Unprocessable Entity"
     assert "inkompatibel" in json.loads(body)["fields"][0]
+
+
+def test_import_api_rejects_non_empty_database_without_partial_changes(database_engine):
+    app = create_application(database_engine)
+    first = document()
+    response, _ = request(app, "/api/admin/import?mode=empty", "POST", first)
+    assert response["status"] == "200 OK"
+
+    second = document()
+    second["companies"][0]["name"] = "Darf nicht geschrieben werden"
+    response, body = request(app, "/api/admin/import?mode=empty", "POST", second)
+
+    assert response["status"] == "422 Unprocessable Entity"
+    assert "nicht vollständig leer" in " ".join(json.loads(body)["fields"])
+    response, body = request(app, "/api/admin/export")
+    exported = json.loads(body)
+    assert [company["name"] for company in exported["companies"]] == [first["companies"][0]["name"]]

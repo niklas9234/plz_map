@@ -97,6 +97,8 @@
       </div>
       <div class="management-dialog__header-actions">
         <a id="export-master-data" class="button button--secondary" href="/api/admin/export" download>Daten exportieren</a>
+        <button id="import-master-data" class="button button--secondary" type="button">Daten importieren</button>
+        <input id="import-master-data-file" class="visually-hidden" type="file" accept=".json,application/json" tabindex="-1">
         <button id="create-master-data-entry" class="button button--primary" type="button">+ Neues Unternehmen</button>
         <button id="close-company-management" class="icon-button" type="button" aria-label="Verwaltung schließen">&times;</button>
       </div>
@@ -176,6 +178,17 @@
     </section>
   </dialog>
 
+  <dialog id="import-master-data-confirmation" class="confirm-dialog" aria-labelledby="import-master-data-title">
+    <h2 id="import-master-data-title">Datenimport prüfen</h2>
+    <div id="import-master-data-status" class="import-status" role="status" aria-live="polite"></div>
+    <ul id="import-master-data-errors" class="import-errors" role="alert" hidden></ul>
+    <p id="import-master-data-warning" class="import-warning" hidden><strong>Achtung:</strong> Der Import ist nur in eine vollständig leere Datenbank möglich. Es werden keine vorhandenen Daten ergänzt oder überschrieben.</p>
+    <div class="dialog-actions">
+      <button id="cancel-master-data-import" class="button button--secondary" type="button">Abbrechen</button>
+      <button id="confirm-master-data-import" class="button button--primary" type="button" hidden>Jetzt importieren</button>
+    </div>
+  </dialog>
+
   <dialog id="delete-site-manager-confirmation" class="confirm-dialog" aria-labelledby="delete-site-manager-title" aria-describedby="delete-site-manager-description">
     <h2 id="delete-site-manager-title">Bauleiter löschen?</h2>
     <p id="delete-site-manager-description">Möchten Sie <strong id="delete-site-manager-name"></strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
@@ -212,6 +225,7 @@
 <script src="plz-layer.js"></script>
 <script src="lux-layer.js"></script>
 <script src="company-store.js"></script>
+<script src="import-management.js"></script>
 <script src="trade-store.js"></script>
 <script src="site-manager-store.js"></script>
 <script src="postal-code-selection.js"></script>
