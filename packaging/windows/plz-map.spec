@@ -1,7 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 from pathlib import Path
 
 root = Path(SPECPATH).parents[1]
+version_file = root / "build" / "windows" / "version-info.txt"
+
+if not os.environ.get("PLZ_MAP_VERSION"):
+    raise RuntimeError("PLZ_MAP_VERSION muss vom Windows-Build gesetzt werden.")
+if not version_file.is_file():
+    raise RuntimeError(f"Windows-Versionsdatei fehlt: {version_file}")
 
 a = Analysis(
     [str(root / "server" / "run.py")],
@@ -34,5 +41,6 @@ exe = EXE(
     upx=True,
     console=False,
     icon=str(root / "PLZ-Karte.ico"),
+    version=str(version_file),
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=True, name="PLZ-Karte")

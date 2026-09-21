@@ -8,7 +8,7 @@
 AppId={{702FD881-85A7-4DB8-A28F-A8070BCF77B9}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-DefaultDirName={localappdata}\Programs\PLZ-Karte
+DefaultDirName={autopf}\PLZ-Karte
 DefaultGroupName=PLZ-Karte
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
@@ -30,8 +30,8 @@ Source: "..\..\dist\PLZ-Karte\*"; DestDir: "{app}"; Flags: ignoreversion recurse
 Name: "C:\Logs\PLZ-Karte"; Permissions: users-modify
 
 [Icons]
-Name: "{group}\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{group}\PLZ-Karte beenden"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; WorkingDir: "{app}"
+Name: "{commonprograms}\PLZ-Karte\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
+Name: "{commonprograms}\PLZ-Karte\PLZ-Karte beenden"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; WorkingDir: "{app}"
 Name: "{autodesktop}\PLZ-Karte"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]
