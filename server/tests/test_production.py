@@ -639,6 +639,97 @@ def test_heartbeat_timeout_requests_controlled_shutdown(monkeypatch):
     assert stopped == [True]
 
 
+def test_surface_close_is_authenticated_and_rejects_unknown_surface(tmp_path):
+    lifecycle = production.BrowserLifecycle("secret", lambda: None)
+    app = static_application(tmp_path, "secret", lambda: None, lifecycle=lifecycle)
+    surface_id = lifecycle.register()
+
+    for payload in (
+        {"token": "wrong", "surfaceId": surface_id},
+        {"token": "secret", "surfaceId": "unknown"},
+    ):
+        response, _ = request(
+            app, "/api/system/session/close", "POST", payload=payload,
+        )
+        assert response["status"] == "403 Forbidden"
+    assert surface_id in lifecycle.surfaces
+
+
+def test_only_closing_last_surface_schedules_shutdown(tmp_path, monkeypatch):
+    timers = []
+
+    class FakeTimer:
+        def __init__(self, interval, function, args=()):
+            self.interval, self.function, self.args = interval, function, args
+            self.daemon = False
+            self.cancelled = False
+            timers.append(self)
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            self.cancelled = True
+
+        def fire(self):
+            self.function(*self.args)
+
+    monkeypatch.setattr(production.threading, "Timer", FakeTimer)
+    stopped = []
+    lifecycle = production.BrowserLifecycle("secret", lambda: stopped.append(True))
+    app = static_application(tmp_path, "secret", lambda: None, lifecycle=lifecycle)
+    first, second = lifecycle.register(), lifecycle.register()
+
+    response, _ = request(app, "/api/system/session/close", "POST", payload={
+        "token": "secret", "surfaceId": first,
+    })
+    assert response["status"] == "204 No Content"
+    assert list(lifecycle.surfaces) == [second]
+    assert timers == []
+
+    response, _ = request(app, "/api/system/session/close", "POST", payload={
+        "token": "secret", "surfaceId": second,
+    })
+    assert response["status"] == "204 No Content"
+    assert timers[0].interval == production.SURFACE_CLOSE_GRACE_SECONDS
+    assert not stopped
+    timers[0].fire()
+    assert stopped == [True]
+
+
+def test_reload_registers_during_close_grace_period(monkeypatch):
+    timers = []
+
+    class FakeTimer:
+        def __init__(self, _interval, function, args=()):
+            self.function, self.args = function, args
+            self.daemon = False
+            self.cancelled = False
+            timers.append(self)
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            self.cancelled = True
+
+        def fire(self):
+            self.function(*self.args)
+
+    monkeypatch.setattr(production.threading, "Timer", FakeTimer)
+    stopped = []
+    lifecycle = production.BrowserLifecycle("secret", lambda: stopped.append(True))
+    old_surface = lifecycle.register()
+
+    assert lifecycle.unregister(old_surface)
+    new_surface = lifecycle.register()
+    assert timers[0].cancelled
+    timers[0].fire()  # Simulate a timer callback already queued during reload.
+
+    assert new_surface in lifecycle.surfaces
+    assert stopped == []
+
+
 def test_frontend_log_endpoint_records_messages(tmp_path, monkeypatch):
     app = static_application(tmp_path, "secret", lambda: None)
     messages = []
