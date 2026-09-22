@@ -30,7 +30,7 @@ Bestätigung, ohne Daten zu schreiben.
 
 Für das schrittweise Ergänzen von Unternehmen gibt es unabhängig von der
 Oberfläche den Kommandozeilenimport im Verzeichnis
-[`unternehmensimport`](unternehmensimport/README.md). Er liest eine einfach
+[`tools/unternehmensimport`](tools/unternehmensimport/README.md). Er liest eine einfach
 bearbeitbare CSV-Datei, prüft sie zunächst vollständig und fügt ausschließlich
 neue Unternehmen hinzu. Bestehende Datensätze werden dabei weder geändert noch
 gelöscht.

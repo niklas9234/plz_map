@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.models import Company, Territory, Trade
 
 
-SCRIPT = Path(__file__).parents[2] / "unternehmensimport" / "import_companies.py"
+SCRIPT = Path(__file__).parents[2] / "tools" / "unternehmensimport" / "import_companies.py"
 SPEC = importlib.util.spec_from_file_location("company_csv_import", SCRIPT)
 company_csv_import = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = company_csv_import
