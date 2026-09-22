@@ -4,7 +4,6 @@ import os
 import socket
 import sys
 import threading
-import time
 from pathlib import Path
 
 from sqlalchemy import inspect, text
@@ -105,81 +104,79 @@ def test_local_server_can_leave_browser_closed(monkeypatch):
     assert production.run_local_server(open_browser=False) == 0
 
 
-def test_second_immediate_start_opens_running_instance_only(tmp_path, monkeypatch):
-    config = production.ProductionConfig(
-        "local-desktop", production.HOST, 0, "sqlite:///:memory:",
-        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
-    )
-    existing_url = "http://127.0.0.1:49152/"
-    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
-    monkeypatch.setattr(production, "_running_server_url", lambda _path: existing_url)
-    monkeypatch.setattr(
-        production, "prepare_server",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("zweiter Server gestartet")),
-    )
-    opened = []
-    monkeypatch.setattr(production.webbrowser, "open", opened.append)
-
-    assert production.run_local_server() == 0
-    assert opened == [existing_url]
-
-
-def test_stale_control_and_lock_files_are_replaced(tmp_path, monkeypatch):
-    token = "new-token"
-    (tmp_path / production.CONTROL_FILE_NAME).write_text(
-        json.dumps({"pid": 99999999, "port": 49152, "token": "old"}), encoding="utf-8",
-    )
-    (tmp_path / production.LOCK_FILE_NAME).write_text(
-        json.dumps({"pid": 99999999, "token": "old"}), encoding="utf-8",
-    )
-    monkeypatch.setattr(production, "_process_is_running", lambda pid: pid == os.getpid())
-
-    lock_file, url = production._acquire_instance_lock(tmp_path, token)
-
-    assert url is None
-    assert json.loads(lock_file.read_text(encoding="utf-8")) == {
-        "pid": os.getpid(), "token": token,
-    }
-
-
-def test_parallel_start_waits_for_first_instance_to_publish(tmp_path, monkeypatch):
-    control_file = tmp_path / production.CONTROL_FILE_NAME
-    expected_url = "http://127.0.0.1:49153/"
-    monkeypatch.setattr(
-        production, "_running_server_url",
-        lambda path: expected_url if path.exists() else None,
-    )
-    first_lock, first_url = production._acquire_instance_lock(tmp_path, "first")
-    result = []
-    waiter = threading.Thread(
-        target=lambda: result.append(production._acquire_instance_lock(tmp_path, "second"))
-    )
-    waiter.start()
-    time.sleep(0.1)
-    control_file.write_text("{}", encoding="utf-8")
-    waiter.join(timeout=2)
-
-    assert first_url is None
-    assert not waiter.is_alive()
-    assert result == [(first_lock, expected_url)]
-
-
-def test_default_start_opens_local_application_in_browser(monkeypatch):
+def test_default_start_opens_local_application_in_desktop_window(monkeypatch):
     calls = []
     monkeypatch.setattr(sys, "argv", ["run.py"])
     monkeypatch.setattr(
         production,
         "run_local_server",
-        lambda **options: calls.append(options) or 0,
+        lambda **_options: (_ for _ in ()).throw(AssertionError("Browser wurde geöffnet")),
     )
     monkeypatch.setattr(
         production,
         "run_desktop",
-        lambda: (_ for _ in ()).throw(AssertionError("Desktopfenster wurde geöffnet")),
+        lambda: calls.append("desktop") or 0,
     )
 
     assert production.main() == 0
-    assert calls == [{}]
+    assert calls == ["desktop"]
+
+
+def test_desktop_window_close_stops_server(monkeypatch):
+    stopped = threading.Event()
+    closed_handlers = []
+
+    class EventHook:
+        def __iadd__(self, handler):
+            closed_handlers.append(handler)
+            return self
+
+    class Events:
+        closed = EventHook()
+        loaded = EventHook()
+
+    class Window:
+        events = Events()
+
+        @staticmethod
+        def evaluate_js(_script):
+            pass
+
+    class Server:
+        server_address = ("127.0.0.1", 8080)
+
+        @staticmethod
+        def serve_forever():
+            stopped.wait(2)
+
+        @staticmethod
+        def shutdown():
+            stopped.set()
+
+        @staticmethod
+        def server_close():
+            pass
+
+    class Engine:
+        @staticmethod
+        def dispose():
+            pass
+
+    class Webview:
+        @staticmethod
+        def create_window(*_args, **_kwargs):
+            return Window()
+
+        @staticmethod
+        def start(**_kwargs):
+            closed_handlers[0]()
+
+    monkeypatch.setitem(sys.modules, "webview", Webview)
+    monkeypatch.setattr(production, "local_desktop_config", lambda: object())
+    monkeypatch.setattr(production, "prepare_server", lambda _config: (Server(), None, Engine()))
+
+    assert production.run_desktop() == 0
+    assert stopped.is_set()
 
 
 def test_prepare_server_disposes_engine_when_port_binding_fails(monkeypatch):
@@ -428,7 +425,7 @@ def test_initialize_database_does_not_seed_server_profile(monkeypatch):
     engine.dispose()
 
 
-def request(app, path, method="GET", range_header=None, payload=None):
+def request(app, path, method="GET", range_header=None, payload=None, headers=None):
     response = {}
 
     def start_response(status, headers):
@@ -444,6 +441,8 @@ def request(app, path, method="GET", range_header=None, payload=None):
     }
     if range_header is not None:
         environ["HTTP_RANGE"] = range_header
+    for name, value in (headers or {}).items():
+        environ[f"HTTP_{name.upper().replace('-', '_')}"] = value
     body = b"".join(app(environ, start_response))
     return response, body
 
@@ -584,6 +583,60 @@ def test_shutdown_requires_token(tmp_path):
     response, _ = request(app, "/api/system/shutdown", "POST")
     assert response["status"] == "403 Forbidden"
     assert not called
+
+
+def test_authenticated_shutdown_stops_server(tmp_path):
+    called = threading.Event()
+    app = static_application(tmp_path, "secret", called.set)
+
+    response, _ = request(
+        app, "/api/system/shutdown", "POST",
+        headers={"X-PLZ-Map-Token": "secret"},
+    )
+
+    assert response["status"] == "204 No Content"
+    assert called.wait(1)
+
+
+def test_heartbeat_is_authenticated_and_refreshes_surface(tmp_path):
+    now = [100.0]
+    lifecycle = production.BrowserLifecycle(
+        "secret", lambda: None, clock=lambda: now[0],
+    )
+    app = static_application(tmp_path, "secret", lambda: None, lifecycle=lifecycle)
+    response, body = request(app, "/api/system/session", "POST")
+    session = json.loads(body)
+    assert response["status"] == "200 OK"
+
+    now[0] = 200.0
+    response, _ = request(app, "/api/system/heartbeat", "POST", headers={
+        "X-PLZ-Map-Token": "wrong",
+        "X-PLZ-Map-Surface": session["surfaceId"],
+    })
+    assert response["status"] == "403 Forbidden"
+    response, _ = request(app, "/api/system/heartbeat", "POST", headers={
+        "X-PLZ-Map-Token": "secret",
+        "X-PLZ-Map-Surface": session["surfaceId"],
+    })
+    assert response["status"] == "204 No Content"
+    assert lifecycle.surfaces[session["surfaceId"]] == 200.0
+
+
+def test_heartbeat_timeout_requests_controlled_shutdown(monkeypatch):
+    now = [0.0]
+    stopped = []
+    lifecycle = production.BrowserLifecycle(
+        "secret", lambda: stopped.append(True), clock=lambda: now[0],
+    )
+    lifecycle.register()
+
+    def advance(_interval):
+        now[0] = production.HEARTBEAT_TIMEOUT_SECONDS
+
+    monkeypatch.setattr(production.time, "sleep", advance)
+    lifecycle.monitor()
+
+    assert stopped == [True]
 
 
 def test_frontend_log_endpoint_records_messages(tmp_path, monkeypatch):

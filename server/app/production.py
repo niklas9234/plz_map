@@ -34,11 +34,51 @@ HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
 BYTE_RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
 MAX_FRONTEND_LOG_SIZE = 16 * 1024
+HEARTBEAT_TIMEOUT_SECONDS = 15 * 60
+HEARTBEAT_CHECK_INTERVAL_SECONDS = 30
 frontend_logger = logging.getLogger("plz_map.frontend")
 backend_logger = logging.getLogger("plz_map.backend")
 general_logger = logging.getLogger("plz_map.general")
 CONTROL_FILE_NAME = "server.token"
 LOCK_FILE_NAME = "server.lock"
+
+
+class BrowserLifecycle:
+    """Track authenticated browser surfaces and stop after a generous timeout."""
+
+    def __init__(self, shutdown_token: str, request_shutdown, *, clock=time.monotonic):
+        self.shutdown_token = shutdown_token
+        self.request_shutdown = request_shutdown
+        self.clock = clock
+        self.surfaces: dict[str, float] = {}
+        self.lock = threading.Lock()
+
+    def register(self) -> str:
+        surface_id = secrets.token_urlsafe(24)
+        with self.lock:
+            self.surfaces[surface_id] = self.clock()
+        return surface_id
+
+    def heartbeat(self, surface_id: str) -> bool:
+        with self.lock:
+            if surface_id not in self.surfaces:
+                return False
+            self.surfaces[surface_id] = self.clock()
+        return True
+
+    def all_surfaces_expired(self, timeout: float = HEARTBEAT_TIMEOUT_SECONDS) -> bool:
+        with self.lock:
+            return bool(self.surfaces) and all(
+                self.clock() - last_seen >= timeout
+                for last_seen in self.surfaces.values()
+            )
+
+    def monitor(self, *, timeout=HEARTBEAT_TIMEOUT_SECONDS,
+                interval=HEARTBEAT_CHECK_INTERVAL_SECONDS) -> None:
+        while not self.all_surfaces_expired(timeout):
+            time.sleep(interval)
+        general_logger.info("Kein Browser-Heartbeat mehr; Server wird beendet")
+        self.request_shutdown()
 
 
 @dataclass(frozen=True)
@@ -126,7 +166,9 @@ def parse_byte_range(value: str, size: int) -> tuple[int, int] | None:
         return None
 
 
-def static_application(frontend: Path, shutdown_token: str, request_shutdown, api_app=None):
+def static_application(
+    frontend: Path, shutdown_token: str, request_shutdown, api_app=None, lifecycle=None
+):
     frontend = frontend.resolve()
     development_icon = frontend.parents[1] / "PLZ-Karte.ico"
     configured_api = api_app or api_application
@@ -157,14 +199,26 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown, ap
                 start_response("400 Bad Request", [("Content-Length", "0")])
                 return [b""]
         if path.startswith("/api/"):
-            if path == "/api/system/status" and method == "GET":
+            if path == "/api/system/session" and method == "POST" and lifecycle:
+                payload = json.dumps({
+                    "surfaceId": lifecycle.register(),
+                    "token": shutdown_token,
+                    "heartbeatInterval": HEARTBEAT_CHECK_INTERVAL_SECONDS,
+                }).encode("utf-8")
+                start_response("200 OK", [
+                    ("Content-Type", "application/json"),
+                    ("Cache-Control", "no-store"),
+                    ("Content-Length", str(len(payload))),
+                ])
+                return [payload]
+            if path == "/api/system/heartbeat" and method == "POST" and lifecycle:
                 supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
-                status = (
-                    "204 No Content"
-                    if secrets.compare_digest(supplied, shutdown_token)
-                    else "403 Forbidden"
-                )
-                start_response(status, [("Content-Length", "0")])
+                surface_id = environ.get("HTTP_X_PLZ_MAP_SURFACE", "")
+                if (not secrets.compare_digest(supplied, shutdown_token)
+                        or not lifecycle.heartbeat(surface_id)):
+                    start_response("403 Forbidden", [("Content-Length", "0")])
+                    return [b""]
+                start_response("204 No Content", [("Content-Length", "0")])
                 return [b""]
             if path == "/api/system/shutdown" and method == "POST":
                 supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
@@ -229,6 +283,7 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown, ap
         start_response("200 OK", headers)
         return [] if method == "HEAD" else [candidate.read_bytes()]
 
+    app.browser_lifecycle = lifecycle
     return app
 
 
@@ -430,8 +485,12 @@ def initialize_logging(config: ProductionConfig) -> None:
 
 def create_wsgi_application(config: ProductionConfig, engine, shutdown_token: str, request_shutdown):
     """Build the shared static/API WSGI application."""
+    lifecycle = (
+        BrowserLifecycle(shutdown_token, request_shutdown) if config.data_paths else None
+    )
     return static_application(
-        frontend_directory(), shutdown_token, request_shutdown, create_application(engine)
+        frontend_directory(), shutdown_token, request_shutdown,
+        create_application(engine), lifecycle,
     )
 
 
@@ -453,8 +512,10 @@ def prepare_server(
         # binding fails for another reason).
         engine.dispose()
         raise
-    server.set_app(create_wsgi_application(config, engine, token, server.shutdown))
-    control_file = config.data_paths["root"] / CONTROL_FILE_NAME if config.data_paths else None
+    application = create_wsgi_application(config, engine, token, server.shutdown)
+    server.set_app(application)
+    server.browser_lifecycle = getattr(application, "browser_lifecycle", None)
+    control_file = config.data_paths["root"] / "server.token" if config.data_paths else None
     if control_file:
         _write_atomic(
             control_file,
@@ -518,6 +579,13 @@ def run_local_server(*, open_browser: bool = True) -> int:
     print("Zum Beenden Strg+C drücken.", flush=True)
     if open_browser:
         webbrowser.open(url)
+    lifecycle = getattr(server, "browser_lifecycle", None)
+    if lifecycle:
+        threading.Thread(
+            target=lifecycle.monitor,
+            name="plz-map-heartbeat-monitor",
+            daemon=True,
+        ).start()
     _serve(server, control_file, engine)
     return 0
 
@@ -601,10 +669,10 @@ def main() -> int:
     if args.local_server:
         return run_local_server(open_browser=not args.no_browser)
     # The installed Windows shortcut starts the executable without arguments.
-    # Keep that default aligned with the intended browser-based user experience;
-    # run_desktop remains available internally for now, but is not the packaged
-    # application's default entry point.
-    return run_local_server()
+    # A native window has a reliable close event and can therefore shut the
+    # local server down deterministically. Browser mode remains an explicit
+    # fallback for environments where WebView2 is unavailable.
+    return run_desktop()
 
 
 if __name__ == "__main__":

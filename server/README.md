@@ -3,7 +3,7 @@
 Das Backend hält die gemeinsam genutzten Stammdaten und liefert die API aus. Es
 unterstützt zwei bewusst getrennte Betriebsprofile.
 
-## Lokaler Pilotbetrieb im Browser
+## Lokaler Pilotbetrieb im Desktopfenster
 
 Der Standardstart ist für einen einzelnen Arbeitsplatz gedacht:
 
@@ -14,8 +14,9 @@ python server/run.py
 
 Dafür sind weder `.env` noch PostgreSQL oder eine manuell gesetzte
 `DATABASE_URL` erforderlich. Der Start verwendet SQLite und bindet den
-integrierten HTTP-Server fest und ausschließlich an `127.0.0.1:8080`.
-Die Anwendung öffnet sich automatisch im Standardbrowser. Daten, Sicherungen und Logs
+integrierten HTTP-Server ausschließlich an `127.0.0.1` und einen freien Port.
+Die Anwendung öffnet sich standardmäßig in einem nativen Desktopfenster. Dessen
+Schließen beendet den lokalen Server kontrolliert. Daten, Sicherungen und Logs
 werden über `prepare_data_directories()` in den plattformspezifischen lokalen
 Verzeichnissen angelegt. `--shutdown` beendet diese lokale Instanz kontrolliert.
 
@@ -37,12 +38,16 @@ pip install -r server/requirements.txt
 python server/run.py --local-server
 ```
 
-Danach öffnet sie automatisch `http://127.0.0.1:8080` im Standardbrowser und
-zeigt die Adresse im Terminal an. Für einen Start ohne automatisches Öffnen
+Danach öffnet sie automatisch die im Terminal angezeigte lokale Adresse im
+Standardbrowser. Für einen Start ohne automatisches Öffnen
 steht `python server/run.py --local-server --no-browser` bereit. Anders als ein reiner
 statischer Entwicklungsserver liefert dieser Prozess auch `/api/companies` und
 `/api/trades` aus. Statische Server wie `python -m http.server` oder
 `http-server` können diese API-Endpunkte nicht bedienen und liefern dort 404.
+Browseroberflächen senden einen authentifizierten Heartbeat. Erst wenn sämtliche
+geöffneten Oberflächen 15 Minuten lang nicht mehr erreichbar waren, wird der
+lokale Server beendet; zusätzlich steht im Verwaltungsmenü der Eintrag
+`PLZ-Karte beenden` für ein sofortiges kontrolliertes Herunterfahren bereit.
 Der Startbefehl funktioniert auch direkt in PowerShell; eine Unix-artige
 `PYTHONPATH=server`-Zuweisung ist weder erforderlich noch unter PowerShell
 gültig.
