@@ -55,3 +55,24 @@ def test_import_api_rejects_non_empty_database_without_partial_changes(database_
     response, body = request(app, "/api/admin/export")
     exported = json.loads(body)
     assert [company["name"] for company in exported["companies"]] == [first["companies"][0]["name"]]
+
+
+def test_replace_api_replaces_a_filled_database(database_engine):
+    app = create_application(database_engine)
+    old = document()
+    response, _ = request(app, "/api/admin/import?mode=empty", "POST", old)
+    assert response["status"] == "200 OK"
+
+    replacement = document()
+    replacement["trades"][0]["name"] = "Neues Gewerk"
+    replacement["companies"][0]["name"] = "Neues Unternehmen"
+    replacement["siteManagers"][0]["name"] = "Neue Bauleitung"
+    response, body = request(app, "/api/admin/import?mode=replace", "POST", replacement)
+    assert response["status"] == "200 OK"
+    assert json.loads(body)["written"] is True
+
+    response, body = request(app, "/api/admin/export")
+    assert response["status"] == "200 OK"
+    exported = json.loads(body)
+    for key in ("trades", "companies", "siteManagers"):
+        assert exported[key] == replacement[key]
