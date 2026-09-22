@@ -550,7 +550,7 @@ def _is_unchanged_legacy_demo(database: Path) -> bool:
         return False
     import sqlite3
     try:
-        with sqlite3.connect(database) as connection:
+        with closing(sqlite3.connect(database)) as connection:
             company_ids = {row[0] for row in connection.execute("SELECT id FROM companies")}
             manager_count = connection.execute("SELECT count(*) FROM site_managers").fetchone()[0]
         return company_ids == LEGACY_DEMO_COMPANY_IDS and manager_count == 0
