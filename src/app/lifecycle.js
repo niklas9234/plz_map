@@ -2,6 +2,31 @@
     let session;
     let heartbeatTimer;
 
+    function closeSurface() {
+        if (!session) return;
+        window.clearInterval(heartbeatTimer);
+        const closingSession = session;
+        session = undefined;
+        const body = JSON.stringify({
+            token: closingSession.token,
+            surfaceId: closingSession.surfaceId,
+        });
+        if (navigator.sendBeacon) {
+            const queued = navigator.sendBeacon(
+                "/api/system/session/close",
+                new Blob([body], {type: "application/json"}),
+            );
+            if (queued) return;
+        }
+        fetch("/api/system/session/close", {
+            method: "POST",
+            cache: "no-store",
+            keepalive: true,
+            headers: {"Content-Type": "application/json"},
+            body,
+        }).catch(() => {});
+    }
+
     async function sendHeartbeat() {
         if (!session) return;
         try {
@@ -49,6 +74,14 @@
                 "X-PLZ-Map-Surface": session.surfaceId,
             },
         }).catch(() => {});
+    });
+
+    // Reloads and short navigations register again before the server-side
+    // grace period expires. A page restored from the back-forward cache must
+    // explicitly obtain a fresh surface because its script is not reloaded.
+    window.addEventListener("pagehide", closeSurface);
+    window.addEventListener("pageshow", (event) => {
+        if (event.persisted && !session) startHeartbeat();
     });
 
     startHeartbeat();
