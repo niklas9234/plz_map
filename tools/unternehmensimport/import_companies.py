@@ -17,7 +17,7 @@ from sqlalchemy import Engine, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "server"))
 
 from app.database import create_database_engine  # noqa: E402
@@ -179,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "csv_file", nargs="?", type=Path,
         default=Path(__file__).with_name("unternehmen.csv"),
-        help="CSV-Datei (Standard: unternehmensimport/unternehmen.csv)",
+        help="CSV-Datei (Standard: tools/unternehmensimport/unternehmen.csv)",
     )
     parser.add_argument("--check", action="store_true", help="Nur prüfen, nichts schreiben")
     parser.add_argument(

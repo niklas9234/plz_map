@@ -42,6 +42,13 @@ Benutzer und legt über deren API Testdaten in
 dem Update auf Version B prüft er zusätzlich, dass die früheren Verknüpfungen
 `PLZ-Karte starten` und `PLZ-Karte beenden` entfernt wurden, und vergleicht
 Unternehmen, Gewerke, Gebiete, Bauleiter und Unternehmensinformationen vollständig.
+
+Die Desktop-Auslieferung enthält bereits eine vollständige SQLite-Datenbank in
+einem Git- und Build-kompatiblen, komprimierten Textformat. Sie
+wird nur bei einer Neuinstallation ohne lokale Datenbank oder als Ersatz für den
+unveränderten alten Demo-Bestand kopiert. Danach arbeitet die Anwendung immer
+direkt mit `%LOCALAPPDATA%\PLZ-Karte\plz_map.sqlite3`; Änderungen, Löschungen und
+neu angelegte Stammdaten bleiben deshalb bei Updates und Neustarts erhalten.
 Abschließend simuliert er die fehlende
 SYSTEM-Sicht auf die benutzerspezifische Steuerdatei, deinstalliert die noch laufende
 Anwendung und prüft, dass der Prozess beendet, die Programmdateien entfernt und die

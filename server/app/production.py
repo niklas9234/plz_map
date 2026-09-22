@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
 import json
 import logging
 import mimetypes
@@ -16,6 +18,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from contextlib import closing
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +31,6 @@ from sqlalchemy import inspect, text
 from .application import application as api_application, create_application
 from .database import create_database_engine, data_directory, initialize, prepare_data_directories
 from .logging_config import configure_logging
-from .initial_seed import INITIAL_SEED_ID, import_initial_seed
 
 HOST, PORT = "127.0.0.1", 8080
 URL = f"http://{HOST}:{PORT}/"
@@ -42,6 +44,12 @@ backend_logger = logging.getLogger("plz_map.backend")
 general_logger = logging.getLogger("plz_map.general")
 CONTROL_FILE_NAME = "server.token"
 LOCK_FILE_NAME = "server.lock"
+BUNDLED_DATABASE_ID = "bundled-database-2026-09-22-v1"
+LEGACY_DEMO_COMPANY_IDS = {
+    "e892a721-8890-504a-a8c7-27b9276e6e0b", "ee266c9f-afc6-5475-ade8-2bf6f373eb0e",
+    "a9559e54-f852-503b-a516-872d14b6e5e2", "99dc32a0-6ce2-5153-bed2-e210774df026",
+    "f7aadfa9-9ca4-57f7-b78e-f74313405425",
+}
 
 
 class BrowserLifecycle:
@@ -372,6 +380,7 @@ def static_application(
 def backup_database(database: Path, backup_dir: Path, keep: int = 10) -> None:
     if not database.is_file():
         return
+    backup_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     target = backup_dir / f"plz_map-{stamp}.sqlite3"
     import sqlite3
@@ -528,6 +537,60 @@ def run_database_migrations(database: str) -> None:
     command.upgrade(alembic_config, "head")
 
 
+def bundled_database_path() -> Path:
+    """Return the text-encoded SQLite database delivered with the desktop app."""
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS")) / "database" / "plz_map.sqlite3.gz.b64"
+    return Path(__file__).resolve().parents[1] / "data" / "plz_map.sqlite3.gz.b64"
+
+
+def _is_unchanged_legacy_demo(database: Path) -> bool:
+    """Recognize only the five untouched placeholder companies from old builds."""
+    if not database.is_file():
+        return False
+    import sqlite3
+    try:
+        with sqlite3.connect(database) as connection:
+            company_ids = {row[0] for row in connection.execute("SELECT id FROM companies")}
+            manager_count = connection.execute("SELECT count(*) FROM site_managers").fetchone()[0]
+        return company_ids == LEGACY_DEMO_COMPANY_IDS and manager_count == 0
+    except sqlite3.Error:
+        return False
+
+
+def install_bundled_database(database: Path) -> bool:
+    """Install the complete database for a new app or over the untouched demo DB."""
+    if database.exists() and not _is_unchanged_legacy_demo(database):
+        return False
+    source = bundled_database_path()
+    if not source.is_file():
+        raise FileNotFoundError(f"Gebündelte Datenbank fehlt: {source}")
+    database.parent.mkdir(parents=True, exist_ok=True)
+    temporary = database.with_suffix(database.suffix + ".new")
+    try:
+        temporary.write_bytes(gzip.decompress(base64.b64decode(source.read_bytes())))
+        import sqlite3
+        # sqlite3.Connection's context manager commits/rolls back but does not
+        # close the connection.  An explicitly closed handle is essential on
+        # Windows before os.replace() or unlink() can touch the file.
+        with closing(sqlite3.connect(temporary)) as connection:
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+            database_id = connection.execute(
+                "SELECT value FROM application_metadata WHERE key='initial_seed'"
+            ).fetchone()[0]
+        if integrity != "ok" or database_id != BUNDLED_DATABASE_ID:
+            raise RuntimeError("Die gebündelte Datenbank ist beschädigt oder hat die falsche Version.")
+        os.replace(temporary, database)
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            # Never hide the actual installation error with a secondary
+            # cleanup failure (notably WinError 32 from virus scanners).
+            backend_logger.warning("Temporäre Datenbank konnte nicht gelöscht werden: %s", temporary)
+    return True
+
+
 def initialize_database(config: ProductionConfig):
     """Run the shared database migration and schema initialization step."""
     if (config.data_paths and config.database_url.startswith("sqlite:///")
@@ -536,24 +599,10 @@ def initialize_database(config: ProductionConfig):
             Path(config.database_url.removeprefix("sqlite:///")),
             config.data_paths["backups"],
         )
+        install_bundled_database(Path(config.database_url.removeprefix("sqlite:///")))
     run_database_migrations(config.database_url)
     engine = create_database_engine(config.database_url)
     initialize(engine)
-    # The desktop edition starts with the bundled pilot data.  This step used
-    # to live in the old desktop-only startup function and was accidentally
-    # dropped when the desktop and server startup paths were merged.  Keep it
-    # deliberately limited to the managed local SQLite database: centrally
-    # operated databases are populated through the documented import process.
-    if (config.data_paths and config.database_url.startswith("sqlite:///")
-            and not config.database_url.endswith(":memory:")):
-        import sqlite3
-        database = Path(config.database_url.removeprefix("sqlite:///"))
-        seed_connection = sqlite3.connect(database)
-        try:
-            seed_connection.execute("PRAGMA foreign_keys = ON")
-            import_initial_seed(seed_connection)
-        finally:
-            seed_connection.close()
     return engine
 
 
