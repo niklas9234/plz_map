@@ -2,72 +2,95 @@
   "schemaVersion": 3,
   "trades": [
     {
-      "id": "5ee3bdcf-3f8a-5ff2-86c0-5a4d6d3d306f",
-      "name": "Elektro",
-      "color": "#72b788",
+      "id": "37898a03-0212-570d-8650-dce46f4ac784",
+      "name": "Erdsonden",
+      "color": "#147A50",
       "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "afab6d06-a971-5424-ba7e-d112ebfe2ecb",
-      "name": "Estrich",
-      "color": "#63b5ad",
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "e17741c8-e541-5859-923f-22d1f02e3f64",
-      "name": "Fliesenleger",
-      "color": "#68a9c7",
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "ab1db731-34c0-5259-b9f4-26e6514ee97b",
-      "name": "Maler",
-      "color": "#7898ca",
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z"
-    },
-    {
-      "id": "ab2eb52f-f400-5c38-948a-d689e9f5221c",
-      "name": "Trockenbau",
-      "color": "#938bc5",
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z"
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z"
     }
   ],
   "companies": [
     {
-      "id": "e892a721-8890-504a-a8c7-27b9276e6e0b",
-      "name": "Nordlicht Logistik GmbH",
-      "ppsNumber": "PPS-1001",
-      "information": [
-        {
-          "category": "address",
-          "value": "Hafenstraße 12, 20457 Hamburg"
-        },
-        {
-          "category": "phone",
-          "value": "+49 40 123456-0"
-        },
-        {
-          "category": "contact",
-          "value": "Mara Hansen"
-        }
-      ],
+      "id": "88e4a999-17e4-5ab0-96b0-8a4055c36bc5",
+      "name": "Protze",
+      "ppsNumber": "ERD-001",
+      "information": [],
       "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
       "tradeAssignments": [
         {
-          "tradeId": "e17741c8-e541-5859-923f-22d1f02e3f64",
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
           "territories": [
+            {
+              "postalCode": "01",
+              "role": "primary"
+            },
+            {
+              "postalCode": "02",
+              "role": "primary"
+            },
+            {
+              "postalCode": "03",
+              "role": "primary"
+            },
+            {
+              "postalCode": "04",
+              "role": "primary"
+            },
+            {
+              "postalCode": "05",
+              "role": "primary"
+            },
+            {
+              "postalCode": "06",
+              "role": "primary"
+            },
+            {
+              "postalCode": "07",
+              "role": "primary"
+            },
+            {
+              "postalCode": "08",
+              "role": "primary"
+            },
+            {
+              "postalCode": "09",
+              "role": "primary"
+            },
+            {
+              "postalCode": "98",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "99",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "90ba43e2-7595-538e-9b1e-8067c74d57be",
+      "name": "Erdwärmebohrer",
+      "ppsNumber": "ERD-002",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "18",
+              "role": "primary"
+            },
+            {
+              "postalCode": "19",
+              "role": "primary"
+            },
             {
               "postalCode": "20",
               "role": "primary"
@@ -91,32 +114,31 @@
             {
               "postalCode": "25",
               "role": "primary"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "ee266c9f-afc6-5475-ade8-2bf6f373eb0e",
-      "name": "Rheinland Versorgung AG",
-      "ppsNumber": "PPS-1002",
-      "information": [
-        {
-          "category": "address",
-          "value": "Rheinallee 8, 40213 Düsseldorf"
-        },
-        {
-          "category": "other",
-          "value": "Anlieferung werktags von 7 bis 16 Uhr"
-        }
-      ],
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z",
-      "tradeAssignments": [
-        {
-          "tradeId": "afab6d06-a971-5424-ba7e-d112ebfe2ecb",
-          "territories": [
+            },
+            {
+              "postalCode": "26",
+              "role": "primary"
+            },
+            {
+              "postalCode": "27",
+              "role": "primary"
+            },
+            {
+              "postalCode": "28",
+              "role": "primary"
+            },
+            {
+              "postalCode": "29",
+              "role": "primary"
+            },
+            {
+              "postalCode": "30",
+              "role": "primary"
+            },
+            {
+              "postalCode": "31",
+              "role": "primary"
+            },
             {
               "postalCode": "40",
               "role": "primary"
@@ -127,6 +149,14 @@
             },
             {
               "postalCode": "42",
+              "role": "primary"
+            },
+            {
+              "postalCode": "43",
+              "role": "primary"
+            },
+            {
+              "postalCode": "44",
               "role": "primary"
             },
             {
@@ -142,70 +172,437 @@
               "role": "primary"
             },
             {
+              "postalCode": "48",
+              "role": "primary"
+            },
+            {
+              "postalCode": "49",
+              "role": "primary"
+            },
+            {
+              "postalCode": "01",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "02",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "03",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "04",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "05",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "06",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "07",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "08",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "09",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "10",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "11",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "12",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "13",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "14",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "15",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "16",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "17",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "32",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "33",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "34",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "35",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "36",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "37",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "38",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "39",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "50",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "51",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "52",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "53",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "54",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "55",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "56",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "57",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "58",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "59",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f4a09462-ebe0-51e3-a2b8-1de35bffc29e",
+      "name": "Brück",
+      "ppsNumber": "ERD-003",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "10",
+              "role": "primary"
+            },
+            {
+              "postalCode": "11",
+              "role": "primary"
+            },
+            {
+              "postalCode": "12",
+              "role": "primary"
+            },
+            {
+              "postalCode": "13",
+              "role": "primary"
+            },
+            {
+              "postalCode": "14",
+              "role": "primary"
+            },
+            {
+              "postalCode": "15",
+              "role": "primary"
+            },
+            {
+              "postalCode": "16",
+              "role": "primary"
+            },
+            {
+              "postalCode": "17",
+              "role": "primary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "905fafea-362d-5c27-9670-7952f0c5504a",
+      "name": "Gross",
+      "ppsNumber": "ERD-004",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "18",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "19",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "20",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "21",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "25",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "26",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "27",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "28",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "29",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "30",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "31",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "32",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "33",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "38",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "39",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "94efff3f-c97b-509f-8686-3d2ed71d03cc",
+      "name": "B&B Nord",
+      "ppsNumber": "ERD-005",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "20",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "22",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "23",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "24",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "25",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ed415342-15b6-56dd-96fc-fd05ea80b0a3",
+      "name": "Sadurski",
+      "ppsNumber": "ERD-006",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "31",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "32",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "33",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "48",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "49",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "77533722-86d5-53c6-a6cb-0fa5303eee0e",
+      "name": "Bunse",
+      "ppsNumber": "ERD-007",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "32",
+              "role": "primary"
+            },
+            {
+              "postalCode": "33",
+              "role": "primary"
+            },
+            {
+              "postalCode": "34",
+              "role": "primary"
+            },
+            {
+              "postalCode": "35",
+              "role": "primary"
+            },
+            {
+              "postalCode": "36",
+              "role": "primary"
+            },
+            {
+              "postalCode": "37",
+              "role": "primary"
+            },
+            {
+              "postalCode": "38",
+              "role": "primary"
+            },
+            {
+              "postalCode": "39",
+              "role": "primary"
+            },
+            {
               "postalCode": "50",
               "role": "primary"
             },
             {
               "postalCode": "51",
               "role": "primary"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "a9559e54-f852-503b-a516-872d14b6e5e2",
-      "name": "Mainland Service KG",
-      "ppsNumber": "PPS-1003",
-      "information": [
-        {
-          "category": "phone",
-          "value": "+49 69 987654-0"
-        }
-      ],
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z",
-      "tradeAssignments": [
-        {
-          "tradeId": "ab1db731-34c0-5259-b9f4-26e6514ee97b",
-          "territories": [
+            },
             {
-              "postalCode": "60",
+              "postalCode": "52",
               "role": "primary"
             },
             {
-              "postalCode": "61",
+              "postalCode": "53",
               "role": "primary"
             },
             {
-              "postalCode": "63",
+              "postalCode": "54",
               "role": "primary"
             },
             {
-              "postalCode": "64",
+              "postalCode": "55",
               "role": "primary"
             },
             {
-              "postalCode": "65",
+              "postalCode": "56",
               "role": "primary"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "99dc32a0-6ce2-5153-bed2-e210774df026",
-      "name": "Südwest Partner GmbH",
-      "ppsNumber": "PPS-1004",
-      "information": [],
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z",
-      "tradeAssignments": [
-        {
-          "tradeId": "ab2eb52f-f400-5c38-948a-d689e9f5221c",
-          "territories": [
+            },
+            {
+              "postalCode": "57",
+              "role": "primary"
+            },
+            {
+              "postalCode": "58",
+              "role": "primary"
+            },
+            {
+              "postalCode": "59",
+              "role": "primary"
+            },
             {
               "postalCode": "66",
               "role": "primary"
@@ -223,33 +620,33 @@
               "role": "primary"
             },
             {
-              "postalCode": "70",
-              "role": "primary"
-            },
-            {
-              "postalCode": "71",
-              "role": "primary"
-            },
-            {
               "postalCode": "72",
               "role": "primary"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "f7aadfa9-9ca4-57f7-b78e-f74313405425",
-      "name": "Isar Handel SE",
-      "ppsNumber": "PPS-1005",
-      "information": [],
-      "status": "active",
-      "createdAt": "2026-09-01T00:00:00.000Z",
-      "updatedAt": "2026-09-01T00:00:00.000Z",
-      "tradeAssignments": [
-        {
-          "tradeId": "5ee3bdcf-3f8a-5ff2-86c0-5a4d6d3d306f",
-          "territories": [
+            },
+            {
+              "postalCode": "73",
+              "role": "primary"
+            },
+            {
+              "postalCode": "74",
+              "role": "primary"
+            },
+            {
+              "postalCode": "76",
+              "role": "primary"
+            },
+            {
+              "postalCode": "77",
+              "role": "primary"
+            },
+            {
+              "postalCode": "78",
+              "role": "primary"
+            },
+            {
+              "postalCode": "79",
+              "role": "primary"
+            },
             {
               "postalCode": "80",
               "role": "primary"
@@ -277,10 +674,667 @@
             {
               "postalCode": "86",
               "role": "primary"
+            },
+            {
+              "postalCode": "87",
+              "role": "primary"
+            },
+            {
+              "postalCode": "88",
+              "role": "primary"
+            },
+            {
+              "postalCode": "89",
+              "role": "primary"
+            },
+            {
+              "postalCode": "90",
+              "role": "primary"
+            },
+            {
+              "postalCode": "91",
+              "role": "primary"
+            },
+            {
+              "postalCode": "92",
+              "role": "primary"
+            },
+            {
+              "postalCode": "93",
+              "role": "primary"
+            },
+            {
+              "postalCode": "94",
+              "role": "primary"
+            },
+            {
+              "postalCode": "95",
+              "role": "primary"
+            },
+            {
+              "postalCode": "96",
+              "role": "primary"
+            },
+            {
+              "postalCode": "97",
+              "role": "primary"
+            },
+            {
+              "postalCode": "98",
+              "role": "primary"
+            },
+            {
+              "postalCode": "99",
+              "role": "primary"
+            },
+            {
+              "postalCode": "40",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "41",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "42",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "43",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "44",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "45",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "46",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "47",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "48",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "49",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "60",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "61",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "62",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "63",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "64",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "65",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "70",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "71",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "92773abb-77b2-56d3-9040-5f98b11cfcba",
+      "name": "Geo-Bohrtechnik",
+      "ppsNumber": "ERD-008",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "60",
+              "role": "primary"
+            },
+            {
+              "postalCode": "61",
+              "role": "primary"
+            },
+            {
+              "postalCode": "62",
+              "role": "primary"
+            },
+            {
+              "postalCode": "63",
+              "role": "primary"
+            },
+            {
+              "postalCode": "64",
+              "role": "primary"
+            },
+            {
+              "postalCode": "65",
+              "role": "primary"
+            },
+            {
+              "postalCode": "34",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "35",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "36",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6b25b5d0-080c-5478-b52a-6d721ed6e56c",
+      "name": "Knüsting",
+      "ppsNumber": "ERD-009",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "40",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "41",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "42",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "43",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "44",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "45",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "46",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "47",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "48",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "306d4d5a-e1c4-56c0-a886-12faa7a642d1",
+      "name": "Hölker",
+      "ppsNumber": "ERD-010",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "54",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "55",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "66",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "67",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9cc88826-54b8-5464-8a55-267cef6c184b",
+      "name": "Kunkel",
+      "ppsNumber": "ERD-011",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "60",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "61",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "62",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "63",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "64",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "65",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "68",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "69",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b9df765a-9aef-5221-85b6-4db26a076c33",
+      "name": "Handke",
+      "ppsNumber": "ERD-012",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "60",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "61",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "62",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "63",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "64",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "65",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b884aef4-d2e1-5f5b-83a6-3db772bdcda0",
+      "name": "BTR Roßwag",
+      "ppsNumber": "ERD-013",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "70",
+              "role": "primary"
+            },
+            {
+              "postalCode": "71",
+              "role": "primary"
+            },
+            {
+              "postalCode": "75",
+              "role": "primary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "805ecf52-4b88-5616-94b9-0770dbf4a679",
+      "name": "Koch",
+      "ppsNumber": "ERD-014",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "72",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "78",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e0b55266-8b18-5c57-88d8-ca950d2f4cf7",
+      "name": "Engel",
+      "ppsNumber": "ERD-015",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "80",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "81",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "84",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "85",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "86",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "89",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "90",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "92",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "93",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "95",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "833400dd-b2b8-5b64-b9f8-fe43a3e16ced",
+      "name": "Mayer",
+      "ppsNumber": "ERD-016",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "80",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "81",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "82",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "83",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b7a6d052-5aac-55dc-a48e-7f88ea826445",
+      "name": "Vögerl & Wilks",
+      "ppsNumber": "ERD-017",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "80",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "81",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "82",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "83",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "84",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "85",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "86",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "87",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "88",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "89",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "90",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "91",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "92",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "93",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "94",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "95",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "96",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2cdb8a4b-1e4d-5c77-820f-d95ab357d129",
+      "name": "Sinvelop",
+      "ppsNumber": "ERD-018",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "82",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "83",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5657da43-5726-5f22-b4da-91e04180578a",
+      "name": "Kern",
+      "ppsNumber": "ERD-019",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "90",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "91",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "92",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "95",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "96",
+              "role": "alternative"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d18bfbd6-6d40-56c8-9f92-b3ac10c61043",
+      "name": "Kosak",
+      "ppsNumber": "ERD-020",
+      "information": [],
+      "status": "active",
+      "createdAt": "2026-09-22T00:00:00.000Z",
+      "updatedAt": "2026-09-22T00:00:00.000Z",
+      "tradeAssignments": [
+        {
+          "tradeId": "37898a03-0212-570d-8650-dce46f4ac784",
+          "territories": [
+            {
+              "postalCode": "93",
+              "role": "alternative"
+            },
+            {
+              "postalCode": "94",
+              "role": "alternative"
             }
           ]
         }
       ]
     }
-  ]
+  ],
+  "siteManagers": []
 }

@@ -50,7 +50,7 @@ def test_initial_seed_normalizes_names_and_generates_stable_ids(tmp_path):
     import_initial_seed(second, path)
     second_company = second.execute("SELECT companies.id, company_trades.trade_id FROM companies JOIN company_trades ON companies.id=company_trades.company_id").fetchone()
 
-    assert result == {"written": True, "seedId": INITIAL_SEED_ID, "trades": 1,
+    assert result == {"written": True, "upgradedDemo": False, "seedId": INITIAL_SEED_ID, "trades": 1,
                       "companies": 1, "siteManagers": 1, "rejected": 0}
     assert trade["name"] == "Elektro"
     assert company["trade_id"] == trade["id"]
@@ -115,3 +115,37 @@ def test_interrupted_write_rolls_back_every_seed_row(tmp_path, monkeypatch):
 
     assert db.execute("SELECT count(*) FROM trades").fetchone()[0] == 0
     assert db.execute("SELECT count(*) FROM application_metadata").fetchone()[0] == 0
+
+
+def test_unchanged_legacy_demo_is_replaced_by_current_seed(tmp_path):
+    db = connection()
+    timestamp = "2026-09-01T00:00:00Z"
+    db.execute("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?)",
+               ("legacy-trade", "Demo", "active", None, timestamp, timestamp))
+    db.executemany(
+        "INSERT INTO companies VALUES (?, ?, ?, ?, ?, ?)",
+        [(identifier, f"Demo {index}", f"PPS-{index}", "active", timestamp, timestamp)
+         for index, identifier in enumerate(initial_seed.LEGACY_DEMO_COMPANY_IDS)],
+    )
+    db.execute("INSERT INTO application_metadata VALUES (?, ?, ?)",
+               (initial_seed.INITIAL_SEED_KEY, "companies-json-2026-09-21-v3", timestamp))
+    db.commit()
+
+    result = import_initial_seed(db, write_seed(tmp_path, legacy_seed()))
+
+    assert result["written"] is True
+    assert result["upgradedDemo"] is True
+    assert db.execute("SELECT count(*) FROM companies").fetchone()[0] == 1
+    assert db.execute("SELECT name FROM companies").fetchone()[0] == "Firma"
+    assert db.execute("SELECT value FROM application_metadata").fetchone()[0] == INITIAL_SEED_ID
+
+
+def test_bundled_seed_contains_production_companies_instead_of_demo_data():
+    document = json.loads(initial_seed.seed_file().read_text(encoding="utf-8"))
+
+    assert document["schemaVersion"] == 3
+    assert len(document["companies"]) == 20
+    assert {company["name"] for company in document["companies"]} >= {
+        "Protze", "Erdwärmebohrer", "Bunse", "Geo-Bohrtechnik", "Vögerl & Wilks", "Kosak",
+    }
+    assert not {company["id"] for company in document["companies"]} & initial_seed.LEGACY_DEMO_COMPANY_IDS

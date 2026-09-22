@@ -14,9 +14,32 @@ from uuid import UUID, uuid5
 from .transfer import FORMAT, ImportValidationError, validate_import, write_validated_data
 
 
-INITIAL_SEED_ID = "companies-json-2026-09-21-v3"
+INITIAL_SEED_ID = "companies-json-2026-09-22-v4"
 INITIAL_SEED_KEY = "initial_seed"
 STABLE_ID_NAMESPACE = UUID("f90d8dca-2db4-4d17-8380-d94275ae563e")
+LEGACY_DEMO_COMPANY_IDS = {
+    "e892a721-8890-504a-a8c7-27b9276e6e0b",
+    "ee266c9f-afc6-5475-ade8-2bf6f373eb0e",
+    "a9559e54-f852-503b-a516-872d14b6e5e2",
+    "99dc32a0-6ce2-5153-bed2-e210774df026",
+    "f7aadfa9-9ca4-57f7-b78e-f74313405425",
+}
+
+
+def _contains_unchanged_legacy_demo(connection: sqlite3.Connection) -> bool:
+    """Identify only the exact, unedited demo company set shipped previously."""
+    company_ids = {row[0] for row in connection.execute("SELECT id FROM companies")}
+    manager_count = connection.execute("SELECT count(*) FROM site_managers").fetchone()[0]
+    return company_ids == LEGACY_DEMO_COMPANY_IDS and manager_count == 0
+
+
+def _clear_master_data(connection: sqlite3.Connection) -> None:
+    """Clear an identified demo seed in foreign-key-safe dependency order."""
+    for table in (
+        "site_manager_territories", "site_managers", "company_information",
+        "territories", "company_trades", "companies", "trades",
+    ):
+        connection.execute(f"DELETE FROM {table}")
 
 
 def seed_file() -> Path:
@@ -104,9 +127,16 @@ def import_initial_seed(connection: sqlite3.Connection, path: Path | None = None
         previous = connection.execute(
             "SELECT value FROM application_metadata WHERE key=?", (INITIAL_SEED_KEY,)
         ).fetchone()
-        if previous:
+        if previous and not (
+            previous[0] != INITIAL_SEED_ID
+            and _contains_unchanged_legacy_demo(connection)
+        ):
             connection.rollback()
             return {"written": False, "reason": "already-initialized", "seedId": previous[0]}
+
+        replacing_demo = bool(previous)
+        if replacing_demo:
+            _clear_master_data(connection)
 
         has_data = any(connection.execute(f"SELECT EXISTS(SELECT 1 FROM {table})").fetchone()[0]
                        for table in ("trades", "companies", "site_managers"))
@@ -120,12 +150,18 @@ def import_initial_seed(connection: sqlite3.Connection, path: Path | None = None
 
         data = _normalize(json.loads((path or seed_file()).read_text(encoding="utf-8")))
         write_validated_data(connection, data)
-        connection.execute("INSERT INTO application_metadata VALUES (?, ?, ?)",
-                           (INITIAL_SEED_KEY, INITIAL_SEED_ID, now))
+        if replacing_demo:
+            connection.execute(
+                "UPDATE application_metadata SET value=?, created_at=? WHERE key=?",
+                (INITIAL_SEED_ID, now, INITIAL_SEED_KEY),
+            )
+        else:
+            connection.execute("INSERT INTO application_metadata VALUES (?, ?, ?)",
+                               (INITIAL_SEED_KEY, INITIAL_SEED_ID, now))
         connection.commit()
         log.info("Initialimport %s abgeschlossen: %d Gewerke, %d Unternehmen, %d Bauleiter, 0 abgelehnt",
                  INITIAL_SEED_ID, len(data["trades"]), len(data["companies"]), len(data["siteManagers"]))
-        return {"written": True, "seedId": INITIAL_SEED_ID,
+        return {"written": True, "upgradedDemo": replacing_demo, "seedId": INITIAL_SEED_ID,
                 "trades": len(data["trades"]), "companies": len(data["companies"]),
                 "siteManagers": len(data["siteManagers"]), "rejected": 0}
     except Exception as error:
