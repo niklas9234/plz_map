@@ -392,7 +392,7 @@ body {
   transform: rotate(180deg);
 }
 
-.company-search__postal-codes {
+.company-search__expanded-details {
   margin-top: 6px;
   padding: 6px 8px;
   border: 1px solid #c7d5cb;
@@ -402,8 +402,27 @@ body {
   font-size: 13px;
 }
 
-.company-search__postal-codes[hidden] {
+.company-search__expanded-details[hidden] {
   display: none;
+}
+
+.company-search__information {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px 8px;
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid #c7d5cb;
+}
+
+.company-search__information dt {
+  font-weight: 600;
+}
+
+.company-search__information dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .button,
