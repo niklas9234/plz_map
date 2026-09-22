@@ -20,9 +20,15 @@ function Install-Version([string] $Installer) {
 
 function Assert-MachineInstallation {
     if (-not (Test-Path $Executable)) { throw "Die Anwendung wurde nicht unter Program Files installiert: $Executable" }
-    foreach ($shortcut in "PLZ-Karte starten.lnk", "PLZ-Karte beenden.lnk") {
-        $shortcutPath = Join-Path $StartMenuDirectory $shortcut
-        if (-not (Test-Path $shortcutPath)) { throw "Die gemeinsame Startmenüverknüpfung fehlt: $shortcutPath" }
+}
+
+function Assert-UpgradedStartMenu {
+    $shortcutPath = Join-Path $StartMenuDirectory "PLZ-Karte.lnk"
+    if (-not (Test-Path $shortcutPath)) { throw "Die gemeinsame Startmenüverknüpfung fehlt: $shortcutPath" }
+
+    foreach ($legacyShortcut in "PLZ-Karte starten.lnk", "PLZ-Karte beenden.lnk") {
+        $legacyShortcutPath = Join-Path $StartMenuDirectory $legacyShortcut
+        if (Test-Path $legacyShortcutPath) { throw "Die alte Startmenüverknüpfung wurde beim Upgrade nicht entfernt: $legacyShortcutPath" }
     }
 }
 
@@ -76,6 +82,7 @@ try {
 
     Install-Version $InstallerB
     Assert-MachineInstallation
+    Assert-UpgradedStartMenu
     Start-Application
     $after = Snapshot
     if ($before -cne $after) {

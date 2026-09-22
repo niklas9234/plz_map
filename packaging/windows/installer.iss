@@ -34,9 +34,13 @@ Name: "C:\Logs\PLZ-Karte"; Permissions: users-modify
 [Icons]
 ; SYSTEM has no interactive user's profile. Put Start menu entries in the
 ; shared Programs folder so that every intended user can see them.
-Name: "{commonprograms}\PLZ-Karte\PLZ-Karte starten"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{commonprograms}\PLZ-Karte\PLZ-Karte beenden"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--shutdown"; WorkingDir: "{app}"
+Name: "{commonprograms}\PLZ-Karte\PLZ-Karte"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{autodesktop}\PLZ-Karte"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[InstallDelete]
+; Remove shortcuts created by releases that exposed start and shutdown separately.
+Type: files; Name: "{commonprograms}\PLZ-Karte\PLZ-Karte starten.lnk"
+Type: files; Name: "{commonprograms}\PLZ-Karte\PLZ-Karte beenden.lnk"
 
 [Tasks]
 Name: "desktopicon"; Description: "Desktop-Verknüpfung erstellen"; GroupDescription: "Zusätzliche Symbole:"; Flags: unchecked
