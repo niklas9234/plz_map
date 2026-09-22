@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import socket
 import sys
 import threading
@@ -307,8 +308,8 @@ def test_shutdown_uses_port_and_token_of_selected_user(tmp_path, monkeypatch):
     second_control = tmp_path / "user-b" / "server.token"
     first_control.parent.mkdir()
     second_control.parent.mkdir()
-    first_control.write_text(json.dumps({"port": 49101, "token": "first"}), encoding="utf-8")
-    second_control.write_text(json.dumps({"port": 49102, "token": "second"}), encoding="utf-8")
+    first_control.write_text(json.dumps({"pid": os.getpid(), "port": 49101, "token": "first"}), encoding="utf-8")
+    second_control.write_text(json.dumps({"pid": os.getpid(), "port": 49102, "token": "second"}), encoding="utf-8")
     calls = []
 
     class Response:
