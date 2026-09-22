@@ -115,6 +115,35 @@ class BrowserLifecycle:
         self.request_shutdown()
 
 
+class DesktopActivation:
+    """Bridge authenticated HTTP activation requests to the desktop window."""
+
+    def __init__(self):
+        self._window = None
+        self._lock = threading.Lock()
+
+    def set_window(self, window) -> None:
+        with self._lock:
+            self._window = window
+
+    def activate(self) -> None:
+        with self._lock:
+            window = self._window
+        if window is None:
+            return
+        # pywebview implements these operations on its GUI thread.  Different
+        # backends expose focus differently, so restoring/showing the native
+        # window and focusing its document gives both EdgeChromium and the
+        # fallback backends a chance to bring it forward.
+        for method_name in ("restore", "show"):
+            method = getattr(window, method_name, None)
+            if callable(method):
+                method()
+        evaluate_js = getattr(window, "evaluate_js", None)
+        if callable(evaluate_js):
+            evaluate_js("window.focus()")
+
+
 @dataclass(frozen=True)
 class ProductionConfig:
     """Complete configuration for one explicit production start profile."""
@@ -201,7 +230,8 @@ def parse_byte_range(value: str, size: int) -> tuple[int, int] | None:
 
 
 def static_application(
-    frontend: Path, shutdown_token: str, request_shutdown, api_app=None, lifecycle=None
+    frontend: Path, shutdown_token: str, request_shutdown, api_app=None, lifecycle=None,
+    activation=None,
 ):
     frontend = frontend.resolve()
     development_icon = frontend.parents[1] / "PLZ-Karte.ico"
@@ -233,6 +263,21 @@ def static_application(
                 start_response("400 Bad Request", [("Content-Length", "0")])
                 return [b""]
         if path.startswith("/api/"):
+            if path == "/api/system/status" and method == "GET":
+                supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
+                if not secrets.compare_digest(supplied, shutdown_token):
+                    start_response("403 Forbidden", [("Content-Length", "0")])
+                    return [b""]
+                start_response("204 No Content", [("Content-Length", "0")])
+                return [b""]
+            if path == "/api/system/activate" and method == "POST" and activation:
+                supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
+                if not secrets.compare_digest(supplied, shutdown_token):
+                    start_response("403 Forbidden", [("Content-Length", "0")])
+                    return [b""]
+                threading.Thread(target=activation.activate, daemon=True).start()
+                start_response("204 No Content", [("Content-Length", "0")])
+                return [b""]
             if path == "/api/system/session" and method == "POST" and lifecycle:
                 payload = json.dumps({
                     "surfaceId": lifecycle.register(),
@@ -535,14 +580,17 @@ def initialize_logging(config: ProductionConfig) -> None:
         logging.basicConfig(level=logging.INFO)
 
 
-def create_wsgi_application(config: ProductionConfig, engine, shutdown_token: str, request_shutdown):
+def create_wsgi_application(
+    config: ProductionConfig, engine, shutdown_token: str, request_shutdown,
+    activation=None,
+):
     """Build the shared static/API WSGI application."""
     lifecycle = (
         BrowserLifecycle(shutdown_token, request_shutdown) if config.data_paths else None
     )
     return static_application(
         frontend_directory(), shutdown_token, request_shutdown,
-        create_application(engine), lifecycle,
+        create_application(engine), lifecycle, activation,
     )
 
 
@@ -554,6 +602,7 @@ def prepare_server(
     engine = initialize_database(config)
 
     token = token or secrets.token_urlsafe(32)
+    activation = DesktopActivation() if config.data_paths else None
     try:
         server = make_server(
             config.host, config.port, lambda *_: [], handler_class=WSGIRequestHandler
@@ -564,7 +613,9 @@ def prepare_server(
         # binding fails for another reason).
         engine.dispose()
         raise
-    application = create_wsgi_application(config, engine, token, server.shutdown)
+    application = create_wsgi_application(
+        config, engine, token, server.shutdown, activation,
+    )
     server.set_app(application)
     server.browser_lifecycle = getattr(application, "browser_lifecycle", None)
     control_file = config.data_paths["root"] / "server.token" if config.data_paths else None
@@ -575,6 +626,7 @@ def prepare_server(
         )
     server._plz_instance_token = token
     server._plz_lock_file = lock_file
+    server.desktop_activation = activation
     actual_url = f"http://{server.server_address[0]}:{server.server_address[1]}/"
     general_logger.info("Anwendung gestartet; Server: %s", actual_url)
 
@@ -644,24 +696,55 @@ def run_local_server(*, open_browser: bool = True) -> int:
 
 def run_desktop() -> int:
     """Run the local server inside a native Windows webview window."""
-    import webview
-
     config = local_desktop_config()
-    server, control_file, engine = prepare_server(config)
+    if config.data_paths is None:
+        raise RuntimeError("Das Desktopprofil benötigt ein benutzerspezifisches Datenverzeichnis")
+    token = secrets.token_urlsafe(32)
+    root = config.data_paths["root"]
+    lock_file, existing_url = _acquire_instance_lock(root, token)
+    if existing_url:
+        control = _read_json_file(root / CONTROL_FILE_NAME)
+        if control:
+            _request_control_endpoint(control, "/api/system/activate", "POST", timeout=3)
+        return 0
+    try:
+        server, control_file, engine = prepare_server(
+            config, token=token, lock_file=lock_file,
+        )
+    except Exception:
+        _remove_owned(lock_file, os.getpid(), token)
+        raise
+
+    try:
+        import webview
+    except Exception:
+        server.server_close()
+        engine.dispose()
+        _remove_owned(control_file, os.getpid(), token)
+        _remove_owned(lock_file, os.getpid(), token)
+        raise
     server_thread = threading.Thread(
         target=_serve, args=(server, control_file, engine), name="plz-map-server", daemon=True
     )
     server_thread.start()
 
-    window = webview.create_window(
-        "PLZ-Karte",
-        f"http://{server.server_address[0]}:{server.server_address[1]}/?desktop=1",
-        width=1440,
-        height=900,
-        min_size=(1024, 700),
-        maximized=True,
-        frameless=False,
-    )
+    try:
+        window = webview.create_window(
+            "PLZ-Karte",
+            f"http://{server.server_address[0]}:{server.server_address[1]}/?desktop=1",
+            width=1440,
+            height=900,
+            min_size=(1024, 700),
+            maximized=True,
+            frameless=False,
+        )
+    except Exception:
+        server.shutdown()
+        server_thread.join(timeout=5)
+        raise
+    activation = getattr(server, "desktop_activation", None)
+    if activation:
+        activation.set_window(window)
 
     def stop_server():
         if server_thread.is_alive():
