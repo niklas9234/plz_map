@@ -50,12 +50,12 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
     function selectSiteManager(siteManager) {
         const postalCodes = siteManagerPostalCodes(siteManager.territories);
         selectedSiteManager = siteManager;
-        input.value = "";
-        closeSuggestions();
+        input.value = siteManager.name;
         setVisiblePostalCodes(map, postalCodes);
         zoomToPostalCodes(map, postalCodes, postalCodeData);
         status.textContent = `${siteManager.name}: ${postalCodes.join(", ") || "Keine PLZ-Gebiete"}`;
         input.focus();
+        closeSuggestions();
     }
 
     function renderSuggestions() {
@@ -73,7 +73,7 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
             return;
         }
 
-        status.replaceChildren();
+        if (!selectedSiteManager) status.replaceChildren();
         matches.forEach((siteManager, index) => {
             const item = document.createElement("li");
             const button = document.createElement("button");
@@ -116,7 +116,10 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
 
     input.disabled = true;
     status.textContent = "Aktive Bauleiter werden geladen …";
-    input.addEventListener("input", renderSuggestions);
+    input.addEventListener("input", () => {
+        selectedSiteManager = null;
+        renderSuggestions();
+    });
     input.addEventListener("focus", renderSuggestions);
     input.addEventListener("keydown", (event) => {
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {

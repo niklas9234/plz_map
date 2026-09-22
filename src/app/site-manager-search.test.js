@@ -59,6 +59,10 @@ function harness(siteManagers) {
     return { initialize: context.initialize, input, suggestions, status };
 }
 
+function click(element) {
+    element.listeners.click.forEach((listener) => listener({ target: element }));
+}
+
 test('aktive Bauleiter werden nach dem Laden als Vorschlaege angezeigt', async () => {
     const ui = harness([{ id: 'manager-1', name: 'Ackermann', territories: [{ postalCode: '08' }] }]);
 
@@ -70,4 +74,15 @@ test('aktive Bauleiter werden nach dem Laden als Vorschlaege angezeigt', async (
     assert.equal(ui.suggestions.children.length, 1);
     assert.equal(ui.suggestions.children[0].children[0].textContent, 'Ackermann');
     assert.equal(ui.input.attributes['aria-expanded'], 'true');
+});
+
+test('ausgewaehlter Bauleiter bleibt mit seinem Namen im Suchfeld sichtbar', async () => {
+    const ui = harness([{ id: 'manager-1', name: 'Ackermann', territories: [{ postalCode: '08' }] }]);
+
+    await ui.initialize({}, []);
+    click(ui.suggestions.children[0].children[0]);
+
+    assert.equal(ui.input.value, 'Ackermann');
+    assert.equal(ui.suggestions.hidden, true);
+    assert.equal(ui.status.textContent, 'Ackermann: Keine PLZ-Gebiete');
 });
