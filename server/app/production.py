@@ -36,6 +36,7 @@ BYTE_RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
 MAX_FRONTEND_LOG_SIZE = 16 * 1024
 HEARTBEAT_TIMEOUT_SECONDS = 15 * 60
 HEARTBEAT_CHECK_INTERVAL_SECONDS = 30
+SURFACE_CLOSE_GRACE_SECONDS = 2
 frontend_logger = logging.getLogger("plz_map.frontend")
 backend_logger = logging.getLogger("plz_map.backend")
 general_logger = logging.getLogger("plz_map.general")
@@ -52,12 +53,45 @@ class BrowserLifecycle:
         self.clock = clock
         self.surfaces: dict[str, float] = {}
         self.lock = threading.Lock()
+        self.close_timer: threading.Timer | None = None
+        self.close_generation = 0
 
     def register(self) -> str:
         surface_id = secrets.token_urlsafe(24)
         with self.lock:
+            if self.close_timer is not None:
+                self.close_timer.cancel()
+                self.close_timer = None
+            self.close_generation += 1
             self.surfaces[surface_id] = self.clock()
         return surface_id
+
+    def unregister(self, surface_id: str) -> bool:
+        """Remove one surface and defer shutdown if it was the last one."""
+        with self.lock:
+            if surface_id not in self.surfaces:
+                return False
+            del self.surfaces[surface_id]
+            if not self.surfaces:
+                self.close_generation += 1
+                generation = self.close_generation
+                timer = threading.Timer(
+                    SURFACE_CLOSE_GRACE_SECONDS,
+                    self._shutdown_if_still_empty,
+                    args=(generation,),
+                )
+                timer.daemon = True
+                self.close_timer = timer
+                timer.start()
+        return True
+
+    def _shutdown_if_still_empty(self, generation: int) -> None:
+        with self.lock:
+            if self.surfaces or generation != self.close_generation:
+                return
+            self.close_timer = None
+        general_logger.info("Letzte Browser-Surface geschlossen; Server wird beendet")
+        self.request_shutdown()
 
     def heartbeat(self, surface_id: str) -> bool:
         with self.lock:
@@ -216,6 +250,24 @@ def static_application(
                 surface_id = environ.get("HTTP_X_PLZ_MAP_SURFACE", "")
                 if (not secrets.compare_digest(supplied, shutdown_token)
                         or not lifecycle.heartbeat(surface_id)):
+                    start_response("403 Forbidden", [("Content-Length", "0")])
+                    return [b""]
+                start_response("204 No Content", [("Content-Length", "0")])
+                return [b""]
+            if path == "/api/system/session/close" and method == "POST" and lifecycle:
+                try:
+                    length = int(environ.get("CONTENT_LENGTH") or 0)
+                    body = json.loads(environ["wsgi.input"].read(length)) if length else {}
+                    supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", body.get("token", ""))
+                    surface_id = environ.get(
+                        "HTTP_X_PLZ_MAP_SURFACE", body.get("surfaceId", "")
+                    )
+                except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+                    supplied = surface_id = ""
+                if (not isinstance(supplied, str)
+                        or not secrets.compare_digest(supplied, shutdown_token)
+                        or not isinstance(surface_id, str)
+                        or not lifecycle.unregister(surface_id)):
                     start_response("403 Forbidden", [("Content-Length", "0")])
                     return [b""]
                 start_response("204 No Content", [("Content-Length", "0")])
