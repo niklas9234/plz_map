@@ -18,6 +18,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from contextlib import closing
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -569,7 +570,10 @@ def install_bundled_database(database: Path) -> bool:
     try:
         temporary.write_bytes(gzip.decompress(base64.b64decode(source.read_bytes())))
         import sqlite3
-        with sqlite3.connect(temporary) as connection:
+        # sqlite3.Connection's context manager commits/rolls back but does not
+        # close the connection.  An explicitly closed handle is essential on
+        # Windows before os.replace() or unlink() can touch the file.
+        with closing(sqlite3.connect(temporary)) as connection:
             integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
             database_id = connection.execute(
                 "SELECT value FROM application_metadata WHERE key='initial_seed'"
@@ -578,7 +582,12 @@ def install_bundled_database(database: Path) -> bool:
             raise RuntimeError("Die gebündelte Datenbank ist beschädigt oder hat die falsche Version.")
         os.replace(temporary, database)
     finally:
-        temporary.unlink(missing_ok=True)
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            # Never hide the actual installation error with a secondary
+            # cleanup failure (notably WinError 32 from virus scanners).
+            backend_logger.warning("Temporäre Datenbank konnte nicht gelöscht werden: %s", temporary)
     return True
 
 

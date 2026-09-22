@@ -2,6 +2,7 @@ import io
 import json
 import os
 import socket
+import sqlite3
 import sys
 import threading
 from pathlib import Path
@@ -472,6 +473,35 @@ def test_corrupt_text_bundle_is_rejected_without_installing_database(tmp_path, m
 
     assert not database.exists()
     assert not database.with_suffix(".sqlite3.new").exists()
+
+
+def test_bundle_validation_closes_sqlite_before_atomic_replace(tmp_path, monkeypatch):
+    database = tmp_path / "plz-map.sqlite3"
+    real_connect = sqlite3.connect
+    real_replace = production.os.replace
+    state = {"closed": False}
+
+    class ConnectionSpy:
+        def __init__(self, path):
+            self.connection = real_connect(path)
+
+        def execute(self, *args, **kwargs):
+            return self.connection.execute(*args, **kwargs)
+
+        def close(self):
+            self.connection.close()
+            state["closed"] = True
+
+    monkeypatch.setattr(sqlite3, "connect", ConnectionSpy)
+
+    def replace_after_close(source, target):
+        assert state["closed"] is True
+        real_replace(source, target)
+
+    monkeypatch.setattr(production.os, "replace", replace_after_close)
+
+    assert production.install_bundled_database(database) is True
+    assert database.is_file()
 
 
 def test_existing_database_changes_deletions_and_creations_survive_later_starts(tmp_path):
