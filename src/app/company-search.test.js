@@ -120,6 +120,7 @@ test('zeigt Unternehmensinformationen beim Ausklappen der Details', async () => 
     assert.equal(detailsArea.hidden, false);
     const information = detailsArea.children[1];
     assert.equal(information.className, 'company-search__information');
+    assert.equal(detailsArea.children[0].className, 'company-search__postal-codes');
     assert.deepEqual(information.children.map((child) => child.textContent), [
         'Telefon', '0323 123 1231', 'Ansprechpartner', 'Max Mustermann'
     ]);

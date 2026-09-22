@@ -394,6 +394,9 @@ body {
 
 .company-search__expanded-details {
   margin-top: 6px;
+}
+
+.company-search__postal-codes {
   padding: 6px 8px;
   border: 1px solid #c7d5cb;
   border-radius: 4px;
@@ -409,10 +412,15 @@ body {
 .company-search__information {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: 3px 8px;
+  gap: 6px 12px;
   margin: 6px 0 0;
-  padding-top: 6px;
-  border-top: 1px solid #c7d5cb;
+  padding: 10px 12px;
+  border: 1px solid #9aaba0;
+  border-radius: 4px;
+  background: #fff;
+  color: #263b2d;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .company-search__information dt {
