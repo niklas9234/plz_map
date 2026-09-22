@@ -172,11 +172,99 @@ def test_desktop_window_close_stops_server(monkeypatch):
             closed_handlers[0]()
 
     monkeypatch.setitem(sys.modules, "webview", Webview)
-    monkeypatch.setattr(production, "local_desktop_config", lambda: object())
-    monkeypatch.setattr(production, "prepare_server", lambda _config: (Server(), None, Engine()))
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 0, "sqlite:///:memory:",
+        {"root": Path("/unused"), "backups": Path("/unused"), "logs": Path("/unused")},
+    )
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(
+        production, "_acquire_instance_lock",
+        lambda *_args: (Path("/unused/server.lock"), None),
+    )
+    monkeypatch.setattr(
+        production, "prepare_server",
+        lambda _config, **_kwargs: (Server(), None, Engine()),
+    )
 
     assert production.run_desktop() == 0
     assert stopped.is_set()
+
+
+def test_two_default_starts_reuse_desktop_instance(tmp_path, monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 0, "sqlite:///:memory:",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+    calls = {"prepare": 0, "window": 0, "activate": 0}
+    acquisitions = iter(((tmp_path / "server.lock", None),
+                         (tmp_path / "server.lock", "http://127.0.0.1:49123/")))
+
+    class Events:
+        class Hook:
+            def __iadd__(self, _handler):
+                return self
+        closed = Hook()
+        loaded = Hook()
+
+    class Window:
+        events = Events()
+
+    class Server:
+        server_address = ("127.0.0.1", 49123)
+        desktop_activation = production.DesktopActivation()
+        shutdown = staticmethod(lambda: None)
+
+    class Webview:
+        @staticmethod
+        def create_window(*_args, **_kwargs):
+            calls["window"] += 1
+            return Window()
+
+        start = staticmethod(lambda **_kwargs: None)
+
+    def prepare(value, *, token, lock_file):
+        assert value is config
+        assert token
+        assert lock_file == tmp_path / "server.lock"
+        calls["prepare"] += 1
+        return Server(), tmp_path / "server.token", object()
+
+    monkeypatch.setitem(sys.modules, "webview", Webview)
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(production, "_acquire_instance_lock", lambda *_args: next(acquisitions))
+    monkeypatch.setattr(production, "prepare_server", prepare)
+    monkeypatch.setattr(production, "_serve", lambda *_args: None)
+    monkeypatch.setattr(production, "_read_json_file", lambda _path: {
+        "pid": os.getpid(), "port": 49123, "token": "existing",
+    })
+    monkeypatch.setattr(
+        production, "_request_control_endpoint",
+        lambda *_args, **_kwargs: calls.__setitem__("activate", calls["activate"] + 1) or True,
+    )
+
+    assert production.run_desktop() == 0
+    assert production.run_desktop() == 0
+    assert calls == {"prepare": 1, "window": 1, "activate": 1}
+
+
+def test_desktop_initialization_failure_removes_instance_lock(tmp_path, monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 0, "sqlite:///:memory:",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(
+        production, "prepare_server",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("initialization failed")),
+    )
+
+    try:
+        production.run_desktop()
+    except RuntimeError as error:
+        assert str(error) == "initialization failed"
+    else:
+        raise AssertionError("initialization failure was swallowed")
+    assert not (tmp_path / production.LOCK_FILE_NAME).exists()
 
 
 def test_prepare_server_disposes_engine_when_port_binding_fails(monkeypatch):
@@ -596,6 +684,27 @@ def test_authenticated_shutdown_stops_server(tmp_path):
 
     assert response["status"] == "204 No Content"
     assert called.wait(1)
+
+
+def test_authenticated_activation_brings_desktop_window_forward(tmp_path):
+    activated = threading.Event()
+
+    class Activation:
+        activate = staticmethod(activated.set)
+
+    app = static_application(
+        tmp_path, "secret", lambda: None, activation=Activation(),
+    )
+    response, _ = request(app, "/api/system/activate", "POST")
+    assert response["status"] == "403 Forbidden"
+
+    response, _ = request(
+        app, "/api/system/activate", "POST",
+        headers={"X-PLZ-Map-Token": "secret"},
+    )
+
+    assert response["status"] == "204 No Content"
+    assert activated.wait(1)
 
 
 def test_heartbeat_is_authenticated_and_refreshes_surface(tmp_path):
