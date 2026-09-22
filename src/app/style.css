@@ -1118,6 +1118,10 @@ dialog::backdrop {
   font-size: 13px;
 }
 
+.postal-code-section {
+  display: block;
+}
+
 .postal-code-picker {
   overflow-x: auto;
   padding: 3px;
