@@ -44,10 +44,10 @@ steht `python server/run.py --local-server --no-browser` bereit. Anders als ein 
 statischer Entwicklungsserver liefert dieser Prozess auch `/api/companies` und
 `/api/trades` aus. Statische Server wie `python -m http.server` oder
 `http-server` können diese API-Endpunkte nicht bedienen und liefern dort 404.
-Browseroberflächen senden einen authentifizierten Heartbeat. Erst wenn sämtliche
-geöffneten Oberflächen 15 Minuten lang nicht mehr erreichbar waren, wird der
-lokale Server beendet; zusätzlich steht im Verwaltungsmenü der Eintrag
-`PLZ-Karte beenden` für ein sofortiges kontrolliertes Herunterfahren bereit.
+Browseroberflächen senden einen authentifizierten Heartbeat. Beim Schließen des
+letzten Tabs wird der lokale Server nach einer kurzen Kulanzzeit kontrolliert
+beendet. Falls der Browser den Schließvorgang nicht melden kann, beendet der
+Heartbeat-Timeout den Server nach 15 Minuten.
 Der Startbefehl funktioniert auch direkt in PowerShell; eine Unix-artige
 `PYTHONPATH=server`-Zuweisung ist weder erforderlich noch unter PowerShell
 gültig.

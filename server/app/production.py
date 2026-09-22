@@ -36,7 +36,7 @@ BYTE_RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
 MAX_FRONTEND_LOG_SIZE = 16 * 1024
 HEARTBEAT_TIMEOUT_SECONDS = 15 * 60
 HEARTBEAT_CHECK_INTERVAL_SECONDS = 30
-SURFACE_CLOSE_GRACE_SECONDS = 2
+TAB_CLOSE_GRACE_SECONDS = 2
 frontend_logger = logging.getLogger("plz_map.frontend")
 backend_logger = logging.getLogger("plz_map.backend")
 general_logger = logging.getLogger("plz_map.general")
@@ -47,14 +47,15 @@ LOCK_FILE_NAME = "server.lock"
 class BrowserLifecycle:
     """Track authenticated browser surfaces and stop after a generous timeout."""
 
-    def __init__(self, shutdown_token: str, request_shutdown, *, clock=time.monotonic):
+    def __init__(self, shutdown_token: str, request_shutdown, *, clock=time.monotonic,
+                 close_grace=TAB_CLOSE_GRACE_SECONDS):
         self.shutdown_token = shutdown_token
         self.request_shutdown = request_shutdown
         self.clock = clock
         self.surfaces: dict[str, float] = {}
         self.lock = threading.Lock()
+        self.close_grace = close_grace
         self.close_timer: threading.Timer | None = None
-        self.close_generation = 0
 
     def register(self) -> str:
         surface_id = secrets.token_urlsafe(24)
@@ -62,35 +63,28 @@ class BrowserLifecycle:
             if self.close_timer is not None:
                 self.close_timer.cancel()
                 self.close_timer = None
-            self.close_generation += 1
             self.surfaces[surface_id] = self.clock()
         return surface_id
 
-    def unregister(self, surface_id: str) -> bool:
-        """Remove one surface and defer shutdown if it was the last one."""
+    def close(self, surface_id: str) -> bool:
+        """Forget one browser tab and stop shortly after the last tab closes."""
         with self.lock:
-            if surface_id not in self.surfaces:
+            if self.surfaces.pop(surface_id, None) is None:
                 return False
-            del self.surfaces[surface_id]
-            if not self.surfaces:
-                self.close_generation += 1
-                generation = self.close_generation
-                timer = threading.Timer(
-                    SURFACE_CLOSE_GRACE_SECONDS,
-                    self._shutdown_if_still_empty,
-                    args=(generation,),
-                )
-                timer.daemon = True
-                self.close_timer = timer
-                timer.start()
+            if self.surfaces:
+                return True
+            timer = threading.Timer(self.close_grace, self._shutdown_if_still_empty)
+            timer.daemon = True
+            self.close_timer = timer
+            timer.start()
         return True
 
-    def _shutdown_if_still_empty(self, generation: int) -> None:
+    def _shutdown_if_still_empty(self) -> None:
         with self.lock:
-            if self.surfaces or generation != self.close_generation:
+            if self.surfaces:
                 return
             self.close_timer = None
-        general_logger.info("Letzte Browser-Surface geschlossen; Server wird beendet")
+        general_logger.info("Letzter Browsertab geschlossen; Server wird beendet")
         self.request_shutdown()
 
     def heartbeat(self, surface_id: str) -> bool:
@@ -300,19 +294,10 @@ def static_application(
                 start_response("204 No Content", [("Content-Length", "0")])
                 return [b""]
             if path == "/api/system/session/close" and method == "POST" and lifecycle:
-                try:
-                    length = int(environ.get("CONTENT_LENGTH") or 0)
-                    body = json.loads(environ["wsgi.input"].read(length)) if length else {}
-                    supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", body.get("token", ""))
-                    surface_id = environ.get(
-                        "HTTP_X_PLZ_MAP_SURFACE", body.get("surfaceId", "")
-                    )
-                except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
-                    supplied = surface_id = ""
-                if (not isinstance(supplied, str)
-                        or not secrets.compare_digest(supplied, shutdown_token)
-                        or not isinstance(surface_id, str)
-                        or not lifecycle.unregister(surface_id)):
+                supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
+                surface_id = environ.get("HTTP_X_PLZ_MAP_SURFACE", "")
+                if (not secrets.compare_digest(supplied, shutdown_token)
+                        or not lifecycle.close(surface_id)):
                     start_response("403 Forbidden", [("Content-Length", "0")])
                     return [b""]
                 start_response("204 No Content", [("Content-Length", "0")])
