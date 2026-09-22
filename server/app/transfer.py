@@ -240,25 +240,37 @@ def validate_import(document: Any) -> dict[str, Any]:
 
 
 def import_data(connection: Connection, document: Any, mode: str = "empty") -> dict[str, int | bool]:
-    if mode not in {"empty", "validate"}:
-        raise ImportValidationError(["mode: erlaubt sind 'empty' und 'validate'"])
+    if mode not in {"empty", "replace", "validate"}:
+        raise ImportValidationError(["mode: erlaubt sind 'empty', 'replace' und 'validate'"])
+    # Validation deliberately happens before opening the write transaction.  In
+    # particular, a malformed replacement must never get as far as the DELETEs.
     data = validate_import(document)
     counts = {"trades": len(data["trades"]), "companies": len(data["companies"]),
               "siteManagers": len(data["siteManagers"])}
     if mode == "validate": return {**counts, "written": False}
+    transaction = None
     try:
         if connection.in_transaction():
             connection.commit()
         transaction = connection.begin()
-        occupied_tables = [
-            table for table in MUTABLE_TABLES
-            if connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table})")).scalar()
-        ]
-        if occupied_tables:
-            raise ImportValidationError([
-                "Die Zieldatenbank ist nicht vollständig leer (Daten in: "
-                f"{', '.join(occupied_tables)})."
-            ])
+        if mode == "empty":
+            occupied_tables = [
+                table for table in MUTABLE_TABLES
+                if connection.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table})")).scalar()
+            ]
+            if occupied_tables:
+                raise ImportValidationError([
+                    "Die Zieldatenbank ist nicht vollständig leer (Daten in: "
+                    f"{', '.join(occupied_tables)})."
+                ])
+        else:
+            # Children must be removed before their parents.  Installation and
+            # schema metadata are intentionally not part of the transfer data.
+            for table in (
+                "site_manager_territories", "territories", "company_information",
+                "company_trades", "site_managers", "companies", "trades",
+            ):
+                connection.execute(text(f"DELETE FROM {table}"))
         for trade in data["trades"]:
             connection.execute(text("INSERT INTO trades (id, name, status, color, created_at, updated_at) VALUES (:id, :name, :status, :color, :created_at, :updated_at)"), {
                 "id": trade["id"], "name": trade["name"],
@@ -290,7 +302,8 @@ def import_data(connection: Connection, document: Any, mode: str = "empty") -> d
             ])
         transaction.commit()
     except Exception:
-        connection.rollback()
+        if transaction is not None and transaction.is_active:
+            transaction.rollback()
         raise
     return {**counts, "written": True}
 

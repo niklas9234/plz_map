@@ -57,11 +57,26 @@ test('CompanyStore sendet Dokument und Modus an den Import-Endpunkt', async () =
     assert.equal(requests[0].options.body, '{"schemaVersion":1}');
 });
 
+test('CompanyStore löst nach erfolgreichem Ersatz alle Änderungsereignisse aus', async () => {
+    const events = [];
+    const context = {
+        fetch: async () => ({ ok: true, status: 200, json: async () => ({ written: true }) }),
+        window: { dispatchEvent: (event) => events.push(event.type) },
+        CustomEvent: class { constructor(type) { this.type = type; } }
+    };
+    const source = `${readFileSync(`${__dirname}/company-store.js`, 'utf8')}\nthis.store = companyStore;`;
+    vm.runInNewContext(source, context);
+
+    await context.store.importData({}, 'replace');
+
+    assert.deepEqual(events, ['companies:changed', 'trades:changed', 'site-managers:changed']);
+});
+
 test('Dateiauswahl validiert zuerst und importiert erst nach Bestätigung', async () => {
     const calls = [];
     const ui = harness(async (document, mode) => {
         calls.push([document, mode]);
-        return { trades: 2, companies: 3, siteManagers: 4, written: mode === 'empty' };
+        return { trades: 2, companies: 3, siteManagers: 4, written: mode === 'replace' };
     });
     ui.elements['import-master-data-file'].files = [{ text: async () => '{"schemaVersion":1}' }];
     await ui.elements['import-master-data-file'].emit('change');
@@ -69,7 +84,7 @@ test('Dateiauswahl validiert zuerst und importiert erst nach Bestätigung', asyn
     assert.match(ui.elements['import-master-data-status'].textContent, /2 Gewerke, 3 Unternehmen und 4 Bauleiter/);
     assert.equal(ui.elements['confirm-master-data-import'].hidden, false);
     await ui.elements['confirm-master-data-import'].emit('click');
-    assert.deepEqual(calls.map((call) => call[1]), ['validate', 'empty']);
+    assert.deepEqual(calls.map((call) => call[1]), ['validate', 'replace']);
     assert.deepEqual(ui.dispatched, ['site-manager-management:open', 'trade-management:open']);
 });
 

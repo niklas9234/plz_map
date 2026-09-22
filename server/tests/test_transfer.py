@@ -2,7 +2,7 @@ import copy
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
@@ -102,6 +102,83 @@ def test_invalid_late_record_is_atomic_on_every_database(database_engine):
         with pytest.raises(ImportValidationError):
             import_data(db, invalid)
         assert db.execute(text("SELECT count(*) FROM trades")).scalar_one() == 0
+
+
+def test_replace_swaps_all_master_data_on_every_database(database_engine):
+    old = document()
+    replacement = document()
+    replacement["trades"][0]["name"] = "Sanitär"
+    replacement["companies"][0]["name"] = "Neue Firma"
+    replacement["siteManagers"][0]["name"] = "Neue Bauleitung"
+
+    with database_engine.connect() as db:
+        import_data(db, old)
+        assert import_data(db, replacement, "replace")["written"] is True
+        exported = export_data(db)
+
+    for key in ("trades", "companies", "siteManagers"):
+        assert exported[key] == replacement[key]
+    assert old["trades"][0]["id"] not in {item["id"] for item in exported["trades"]}
+    assert old["companies"][0]["id"] not in {item["id"] for item in exported["companies"]}
+    assert old["siteManagers"][0]["id"] not in {item["id"] for item in exported["siteManagers"]}
+
+
+def test_invalid_replace_does_not_change_existing_data(database_engine):
+    old = document()
+    invalid = document()
+    invalid["companies"][0]["tradeAssignments"][0]["tradeId"] = str(uuid4())
+    with database_engine.connect() as db:
+        import_data(db, old)
+        before = export_data(db)
+        with pytest.raises(ImportValidationError):
+            import_data(db, invalid, "replace")
+        after = export_data(db)
+    for key in ("trades", "companies", "siteManagers"):
+        assert after[key] == before[key]
+
+
+def test_replace_write_failure_rolls_back_deletions(database_engine):
+    old = document()
+    replacement = document()
+    with database_engine.connect() as db:
+        import_data(db, old)
+        before = export_data(db)
+
+        def fail_company_insert(_conn, _cursor, statement, _parameters, _context, _many):
+            if statement.lstrip().upper().startswith("INSERT INTO COMPANIES"):
+                raise RuntimeError("simulierter Schreibfehler")
+
+        event.listen(database_engine, "before_cursor_execute", fail_company_insert)
+        try:
+            with pytest.raises(RuntimeError, match="simulierter Schreibfehler"):
+                import_data(db, replacement, "replace")
+        finally:
+            event.remove(database_engine, "before_cursor_execute", fail_company_insert)
+        after = export_data(db)
+    for key in ("trades", "companies", "siteManagers"):
+        assert after[key] == before[key]
+
+
+def test_replace_preserves_application_and_schema_metadata(database_engine):
+    with database_engine.connect() as db:
+        with db.begin():
+            db.execute(text(
+                "INSERT INTO application_metadata (key, value, created_at) "
+                "VALUES ('local-setting', 'bleibt', '2026-01-01T00:00:00Z')"
+            ))
+            db.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY)"))
+            db.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0006')"))
+        try:
+            import_data(db, document(), "replace")
+            assert db.execute(text(
+                "SELECT value FROM application_metadata WHERE key='local-setting'"
+            )).scalar_one() == "bleibt"
+            assert db.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0006"
+        finally:
+            if db.in_transaction():
+                db.commit()
+            with db.begin():
+                db.execute(text("DROP TABLE alembic_version"))
 
 
 def test_database_enforces_case_insensitive_trade_names(database_engine):

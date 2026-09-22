@@ -47,7 +47,7 @@ const companyStore = (() => {
     }
 
     async function importData(document, mode) {
-        if (!['validate', 'empty'].includes(mode)) throw new Error('Unbekannter Importmodus.');
+        if (!['validate', 'empty', 'replace'].includes(mode)) throw new Error('Unbekannter Importmodus.');
         let response;
         try {
             response = await fetch(`/api/admin/import?mode=${mode}`, {
@@ -67,7 +67,7 @@ const companyStore = (() => {
             error.fields = Array.isArray(data.fields) ? data.fields : [];
             throw error;
         }
-        if (mode === 'empty') {
+        if (mode === 'empty' || mode === 'replace') {
             ['companies:changed', 'trades:changed', 'site-managers:changed'].forEach((name) =>
                 window.dispatchEvent(new CustomEvent(name)));
         }

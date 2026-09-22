@@ -74,7 +74,8 @@ Beide Profile verwenden dieselben Funktionen zur Logging-Konfiguration,
 Datenbank-/Schema-Initialisierung und Erstellung der WSGI-Anwendung in
 `app/production.py`. Das Frontend liegt weiterhin getrennt in `src/app/`.
 API-Endpunkte sind unter anderem `GET /api/admin/export` und
-`POST /api/admin/import?mode=validate|empty`.
+`POST /api/admin/import?mode=validate|empty|replace`. `replace` ersetzt die transportierten
+Stammdaten atomar; installationsbezogene Metadaten und die Alembic-Version bleiben erhalten.
 
 Beim ersten Start einer leeren Datenbank werden die gebündelten Stammdaten aus
 `src/app/companies.json` importiert. Import und Versionsmarkierung erfolgen in

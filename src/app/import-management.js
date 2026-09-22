@@ -85,7 +85,7 @@ function initializeDataImport() {
         status.textContent = 'Daten werden importiert …';
         errors.hidden = true;
         try {
-            const result = await companyStore.importData(pendingDocument, 'empty');
+            const result = await companyStore.importData(pendingDocument, 'replace');
             status.textContent = `Import erfolgreich: ${result.trades} Gewerke, ${result.companies} Unternehmen und ${result.siteManagers} Bauleiter.`;
             warning.hidden = true;
             confirmButton.hidden = true;
