@@ -622,6 +622,57 @@ def test_heartbeat_is_authenticated_and_refreshes_surface(tmp_path):
     assert lifecycle.surfaces[session["surfaceId"]] == 200.0
 
 
+def test_closing_last_browser_surface_requests_shutdown(tmp_path):
+    stopped = threading.Event()
+    lifecycle = production.BrowserLifecycle(
+        "secret", stopped.set, close_grace=0.01,
+    )
+    app = static_application(tmp_path, "secret", stopped.set, lifecycle=lifecycle)
+    first = json.loads(request(app, "/api/system/session", "POST")[1])
+    second = json.loads(request(app, "/api/system/session", "POST")[1])
+
+    response, _ = request(app, "/api/system/session/close", "POST", headers={
+        "X-PLZ-Map-Token": "secret",
+        "X-PLZ-Map-Surface": first["surfaceId"],
+    })
+    assert response["status"] == "204 No Content"
+    assert not stopped.wait(0.03)
+
+    response, _ = request(app, "/api/system/session/close", "POST", headers={
+        "X-PLZ-Map-Token": "secret",
+        "X-PLZ-Map-Surface": second["surfaceId"],
+    })
+    assert response["status"] == "204 No Content"
+    assert stopped.wait(1)
+
+
+def test_new_browser_surface_cancels_pending_shutdown():
+    stopped = threading.Event()
+    lifecycle = production.BrowserLifecycle(
+        "secret", stopped.set, close_grace=0.05,
+    )
+    surface = lifecycle.register()
+
+    assert lifecycle.close(surface)
+    lifecycle.register()
+
+    assert not stopped.wait(0.1)
+
+
+def test_closing_browser_surface_requires_valid_credentials(tmp_path):
+    lifecycle = production.BrowserLifecycle("secret", lambda: None)
+    app = static_application(tmp_path, "secret", lambda: None, lifecycle=lifecycle)
+    surface = lifecycle.register()
+
+    response, _ = request(app, "/api/system/session/close", "POST", headers={
+        "X-PLZ-Map-Token": "wrong",
+        "X-PLZ-Map-Surface": surface,
+    })
+
+    assert response["status"] == "403 Forbidden"
+    assert surface in lifecycle.surfaces
+
+
 def test_heartbeat_timeout_requests_controlled_shutdown(monkeypatch):
     now = [0.0]
     stopped = []
