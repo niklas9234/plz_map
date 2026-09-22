@@ -17,7 +17,7 @@ class Element {
         this.classList = { toggle() {} };
     }
     addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
-    append(child) { this.children.push(child); }
+    append(...children) { this.children.push(...children); }
     replaceChildren(...children) { this.children = children; this.textContent = ''; }
     setAttribute(name, value) { this.attributes[name] = value; }
     removeAttribute(name) { delete this.attributes[name]; }
@@ -50,7 +50,7 @@ function harness(siteManagers) {
         document,
         window,
         siteManagerStore: { listActive: async () => siteManagers },
-        siteManagerPostalCodes: () => [],
+        siteManagerPostalCodes: (territories) => territories.map((territory) => territory.postalCode),
         setVisiblePostalCodes() {},
         zoomToPostalCodes() {}
     };
@@ -76,13 +76,16 @@ test('aktive Bauleiter werden nach dem Laden als Vorschlaege angezeigt', async (
     assert.equal(ui.input.attributes['aria-expanded'], 'true');
 });
 
-test('ausgewaehlter Bauleiter bleibt mit seinem Namen im Suchfeld sichtbar', async () => {
+test('ausgewaehlter Bauleiter wird wie ein Unternehmen unter dem Suchfeld angezeigt', async () => {
     const ui = harness([{ id: 'manager-1', name: 'Ackermann', territories: [{ postalCode: '08' }] }]);
 
     await ui.initialize({}, []);
     click(ui.suggestions.children[0].children[0]);
 
-    assert.equal(ui.input.value, 'Ackermann');
+    assert.equal(ui.input.value, '');
     assert.equal(ui.suggestions.hidden, true);
-    assert.equal(ui.status.textContent, 'Ackermann: Keine PLZ-Gebiete');
+    const details = ui.status.children[0];
+    assert.equal(details.className, 'company-search__company-details');
+    assert.equal(details.children[0].children[0].textContent, 'Ackermann');
+    assert.equal(details.children[1].textContent, 'PLZ-Gebiete: 08');
 });

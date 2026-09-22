@@ -50,10 +50,27 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
     function selectSiteManager(siteManager) {
         const postalCodes = siteManagerPostalCodes(siteManager.territories);
         selectedSiteManager = siteManager;
-        input.value = siteManager.name;
+        input.value = "";
         setVisiblePostalCodes(map, postalCodes);
         zoomToPostalCodes(map, postalCodes, postalCodeData);
-        status.textContent = `${siteManager.name}: ${postalCodes.join(", ") || "Keine PLZ-Gebiete"}`;
+
+        const siteManagerDetails = document.createElement("div");
+        siteManagerDetails.className = "company-search__company-details";
+
+        const siteManagerSummary = document.createElement("div");
+        siteManagerSummary.className = "company-search__company-summary";
+
+        const siteManagerName = document.createElement("strong");
+        siteManagerName.className = "company-search__company-identity";
+        siteManagerName.textContent = siteManager.name;
+
+        const postalCodeArea = document.createElement("div");
+        postalCodeArea.className = "company-search__postal-codes";
+        postalCodeArea.textContent = `PLZ-Gebiete: ${postalCodes.join(", ") || "Keine"}`;
+
+        siteManagerSummary.append(siteManagerName);
+        siteManagerDetails.append(siteManagerSummary, postalCodeArea);
+        status.replaceChildren(siteManagerDetails);
         input.focus();
         closeSuggestions();
     }
