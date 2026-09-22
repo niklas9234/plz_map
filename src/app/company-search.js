@@ -76,6 +76,30 @@ function formatCompanyTerritories(territories) {
     return `Vorzug: ${primaryCodes.join(", ") || "–"} · Alternative: ${alternativeCodes.join(", ") || "–"}`;
 }
 
+const COMPANY_INFORMATION_LABELS = {
+    address: "Adresse",
+    phone: "Telefon",
+    contact: "Ansprechpartner",
+    other: "Sonstiges"
+};
+
+function createCompanyInformation(information = []) {
+    if (!information.length) return null;
+
+    const list = document.createElement("dl");
+    list.className = "company-search__information";
+
+    information.forEach(({ category, value }) => {
+        const label = document.createElement("dt");
+        label.textContent = COMPANY_INFORMATION_LABELS[category] || category;
+        const content = document.createElement("dd");
+        content.textContent = value;
+        list.append(label, content);
+    });
+
+    return list;
+}
+
 function findCompany(companies, searchValue) {
     const query = normalizeSearchValue(searchValue);
     if (!query) return null;
@@ -189,22 +213,28 @@ async function initializeCompanySearch(map, postalCodeData) {
               <path d="m5 9 7 7 7-7"></path>
             </svg>`;
 
+        const detailsArea = document.createElement("div");
+        detailsArea.className = "company-search__expanded-details";
+        detailsArea.id = detailsId;
+        detailsArea.hidden = true;
+
         const postalCodeArea = document.createElement("div");
         postalCodeArea.className = "company-search__postal-codes";
-        postalCodeArea.id = detailsId;
-        postalCodeArea.hidden = true;
         postalCodeArea.textContent = company.tradeAssignments.map((assignment) => formatCompanyTerritories(assignment.territories)).join(" | ");
+        const information = createCompanyInformation(company.information);
+        detailsArea.append(postalCodeArea);
+        if (information) detailsArea.append(information);
 
         detailsButton.addEventListener("click", () => {
             const isOpen = detailsButton.getAttribute("aria-expanded") === "true";
             detailsButton.setAttribute("aria-expanded", String(!isOpen));
             detailsButton.setAttribute("aria-label", `Details zu ${company.name} ${isOpen ? "anzeigen" : "ausblenden"}`);
             detailsButton.title = isOpen ? "Details anzeigen" : "Details ausblenden";
-            postalCodeArea.hidden = isOpen;
+            detailsArea.hidden = isOpen;
         });
 
         companySummary.append(companyIdentity, centerButton, detailsButton);
-        companyDetails.append(companySummary, postalCodeArea);
+        companyDetails.append(companySummary, detailsArea);
         status.replaceChildren(companyDetails);
         input.focus();
     }
