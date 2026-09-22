@@ -12,6 +12,7 @@ import secrets
 import signal
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
 import webbrowser
@@ -36,6 +37,8 @@ MAX_FRONTEND_LOG_SIZE = 16 * 1024
 frontend_logger = logging.getLogger("plz_map.frontend")
 backend_logger = logging.getLogger("plz_map.backend")
 general_logger = logging.getLogger("plz_map.general")
+CONTROL_FILE_NAME = "server.token"
+LOCK_FILE_NAME = "server.lock"
 
 
 @dataclass(frozen=True)
@@ -154,6 +157,15 @@ def static_application(frontend: Path, shutdown_token: str, request_shutdown, ap
                 start_response("400 Bad Request", [("Content-Length", "0")])
                 return [b""]
         if path.startswith("/api/"):
+            if path == "/api/system/status" and method == "GET":
+                supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
+                status = (
+                    "204 No Content"
+                    if secrets.compare_digest(supplied, shutdown_token)
+                    else "403 Forbidden"
+                )
+                start_response(status, [("Content-Length", "0")])
+                return [b""]
             if path == "/api/system/shutdown" and method == "POST":
                 supplied = environ.get("HTTP_X_PLZ_MAP_TOKEN", "")
                 if not secrets.compare_digest(supplied, shutdown_token):
@@ -238,24 +250,117 @@ def backup_database(database: Path, backup_dir: Path, keep: int = 10) -> None:
     general_logger.info("Datenbanksicherung erstellt: %s", target)
 
 
-def request_running_server_stop(control_file: Path) -> bool:
+def _read_json_file(path: Path) -> dict | None:
+    """Read a file which is replaced atomically by its writer."""
     try:
-        control = json.loads(control_file.read_text(encoding="utf-8"))
-        token = control["token"]
-        port = control["port"]
-        if (not isinstance(token, str) or not token
-                or not isinstance(port, int) or isinstance(port, bool)
-                or not 1 <= port <= 65535):
-            return False
-        request = urllib.request.Request(
-            f"http://{HOST}:{port}/api/system/shutdown", method="POST",
-            headers={"X-PLZ-Map-Token": token}, data=b"",
-        )
-        with urllib.request.urlopen(request, timeout=3) as response:
-            return response.status == 204
-    except (KeyError, TypeError, ValueError, OSError, urllib.error.URLError,
-            json.JSONDecodeError):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else None
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _valid_control(control: dict | None) -> bool:
+    return bool(
+        control
+        and isinstance(control.get("pid"), int)
+        and not isinstance(control.get("pid"), bool)
+        and control["pid"] > 0
+        and isinstance(control.get("token"), str)
+        and control["token"]
+        and isinstance(control.get("port"), int)
+        and not isinstance(control.get("port"), bool)
+        and 1 <= control["port"] <= 65535
+    )
+
+
+def _process_is_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except (OSError, ValueError):
         return False
+
+
+def _request_control_endpoint(
+    control: dict, path: str, method: str, *, timeout: float = 1
+) -> bool:
+    try:
+        request = urllib.request.Request(
+            f"http://{HOST}:{control['port']}{path}", method=method,
+            headers={"X-PLZ-Map-Token": control["token"]},
+            data=b"" if method == "POST" else None,
+        )
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status == 204
+    except (KeyError, TypeError, ValueError, OSError, urllib.error.URLError):
+        return False
+
+
+def _running_server_url(control_file: Path) -> str | None:
+    control = _read_json_file(control_file)
+    if (_valid_control(control) and _process_is_running(control["pid"])
+            and _request_control_endpoint(control, "/api/system/status", "GET")):
+        return f"http://{HOST}:{control['port']}/"
+    return None
+
+
+def request_running_server_stop(control_file: Path) -> bool:
+    control = _read_json_file(control_file)
+    return bool(
+        _valid_control(control)
+        and _process_is_running(control["pid"])
+        and _request_control_endpoint(control, "/api/system/shutdown", "POST", timeout=3)
+    )
+
+
+def _write_atomic(path: Path, value: dict) -> None:
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp")
+    try:
+        temporary.write_text(json.dumps(value), encoding="utf-8")
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _remove_owned(path: Path | None, pid: int, token: str) -> None:
+    if path is not None:
+        value = _read_json_file(path)
+        if value and value.get("pid") == pid and value.get("token") == token:
+            path.unlink(missing_ok=True)
+
+
+def _acquire_instance_lock(root: Path, token: str) -> tuple[Path, str | None]:
+    """Serialize local starts and return either our lock or an existing URL."""
+    lock_file = root / LOCK_FILE_NAME
+    control_file = root / CONTROL_FILE_NAME
+    deadline = time.monotonic() + 5
+    payload = {"pid": os.getpid(), "token": token}
+    while True:
+        existing_url = _running_server_url(control_file)
+        if existing_url:
+            return lock_file, existing_url
+        try:
+            descriptor = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                json.dump(payload, stream)
+            # The previous owner may have vanished just before our create.
+            existing_url = _running_server_url(control_file)
+            if existing_url:
+                _remove_owned(lock_file, os.getpid(), token)
+            return lock_file, existing_url
+        except FileExistsError:
+            owner = _read_json_file(lock_file)
+            if (not owner or not isinstance(owner.get("pid"), int)
+                    or not _process_is_running(owner["pid"])):
+                # Unlink only if the observed owner has not changed meanwhile.
+                if _read_json_file(lock_file) == owner:
+                    lock_file.unlink(missing_ok=True)
+                continue
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Eine lokale PLZ-Karte wird bereits gestartet")
+            time.sleep(0.05)
 
 
 def run_database_migrations(database: str) -> None:
@@ -330,12 +435,14 @@ def create_wsgi_application(config: ProductionConfig, engine, shutdown_token: st
     )
 
 
-def prepare_server(config: ProductionConfig):
+def prepare_server(
+    config: ProductionConfig, *, token: str | None = None, lock_file: Path | None = None
+):
     """Initialize logging, database and WSGI, then bind the configured server."""
     initialize_logging(config)
     engine = initialize_database(config)
 
-    token = secrets.token_urlsafe(32)
+    token = token or secrets.token_urlsafe(32)
     try:
         server = make_server(
             config.host, config.port, lambda *_: [], handler_class=WSGIRequestHandler
@@ -347,12 +454,14 @@ def prepare_server(config: ProductionConfig):
         engine.dispose()
         raise
     server.set_app(create_wsgi_application(config, engine, token, server.shutdown))
-    control_file = config.data_paths["root"] / "server.token" if config.data_paths else None
+    control_file = config.data_paths["root"] / CONTROL_FILE_NAME if config.data_paths else None
     if control_file:
-        control_file.write_text(
-            json.dumps({"port": server.server_address[1], "token": token}),
-            encoding="utf-8",
+        _write_atomic(
+            control_file,
+            {"pid": os.getpid(), "port": server.server_address[1], "token": token},
         )
+    server._plz_instance_token = token
+    server._plz_lock_file = lock_file
     actual_url = f"http://{server.server_address[0]}:{server.server_address[1]}/"
     general_logger.info("Anwendung gestartet; Server: %s", actual_url)
 
@@ -369,8 +478,9 @@ def _serve(server, control_file: Path | None, engine) -> None:
         server.serve_forever()
     finally:
         server.server_close()
-        if control_file:
-            control_file.unlink(missing_ok=True)
+        token = getattr(server, "_plz_instance_token", "")
+        _remove_owned(control_file, os.getpid(), token)
+        _remove_owned(getattr(server, "_plz_lock_file", None), os.getpid(), token)
         engine.dispose()
         general_logger.info("Server sauber beendet")
 
@@ -384,7 +494,25 @@ def run_server() -> int:
 
 def run_local_server(*, open_browser: bool = True) -> int:
     """Serve the complete local application in the user's browser."""
-    server, control_file, engine = prepare_server(local_desktop_config())
+    config = local_desktop_config()
+    if config.data_paths is None:
+        server, control_file, engine = prepare_server(config)
+        url = f"http://{server.server_address[0]}:{server.server_address[1]}/"
+        if open_browser:
+            webbrowser.open(url)
+        _serve(server, control_file, engine)
+        return 0
+    token = secrets.token_urlsafe(32)
+    lock_file, existing_url = _acquire_instance_lock(config.data_paths["root"], token)
+    if existing_url:
+        if open_browser:
+            webbrowser.open(existing_url)
+        return 0
+    try:
+        server, control_file, engine = prepare_server(config, token=token, lock_file=lock_file)
+    except Exception:
+        _remove_owned(lock_file, os.getpid(), token)
+        raise
     url = f"http://{server.server_address[0]}:{server.server_address[1]}/"
     print(f"PLZ-Karte läuft unter {url}", flush=True)
     print("Zum Beenden Strg+C drücken.", flush=True)
