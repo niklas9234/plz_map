@@ -650,26 +650,6 @@ dialog::backdrop {
   outline: 3px solid rgba(20, 107, 55, 0.16);
 }
 
-.form-field .trade-multiselect {
-  height: 142px;
-  padding: 5px;
-  overflow-x: hidden;
-  scrollbar-color: #87968b transparent;
-  scrollbar-width: thin;
-}
-
-.trade-multiselect option {
-  margin: 1px 0;
-  padding: 6px 8px;
-  border-radius: 4px;
-  white-space: normal;
-}
-
-.trade-multiselect option:checked {
-  background: linear-gradient(#287a45, #287a45);
-  color: #fff;
-}
-
 .form-field small {
   color: #68786d;
   font-weight: 400;
