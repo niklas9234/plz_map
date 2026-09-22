@@ -36,10 +36,13 @@ Installer. Er ist **ausschließlich auf einer Wegwerf-Windows-VM** und für die
 Intune-Abnahme in einem Benutzerkontext nach einer Bereitstellung mit dem
 Installationsverhalten **System** auszuführen, da er `%LOCALAPPDATA%\PLZ-Karte`
 löscht. Der Test prüft die Installation unter `%ProgramFiles%\PLZ-Karte` und die
-gemeinsamen Startmenüverknüpfungen, startet Version A als angemeldeter Benutzer und
-legt über deren API Testdaten in `%LOCALAPPDATA%\PLZ-Karte\plz_map.sqlite3` an. Nach
-dem Update auf Version B vergleicht er Unternehmen, Gewerke, Gebiete, Bauleiter und
-Unternehmensinformationen vollständig. Abschließend simuliert er die fehlende
+gemeinsame Startmenüverknüpfung `PLZ-Karte`, startet Version A als angemeldeter
+Benutzer und legt über deren API Testdaten in
+`%LOCALAPPDATA%\PLZ-Karte\plz_map.sqlite3` an. Nach
+dem Update auf Version B prüft er zusätzlich, dass die früheren Verknüpfungen
+`PLZ-Karte starten` und `PLZ-Karte beenden` entfernt wurden, und vergleicht
+Unternehmen, Gewerke, Gebiete, Bauleiter und Unternehmensinformationen vollständig.
+Abschließend simuliert er die fehlende
 SYSTEM-Sicht auf die benutzerspezifische Steuerdatei, deinstalliert die noch laufende
 Anwendung und prüft, dass der Prozess beendet, die Programmdateien entfernt und die
 benutzerspezifische SQLite-Datei erhalten bleibt:
