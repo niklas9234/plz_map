@@ -23,6 +23,7 @@ a = Analysis(
         # package is collected.
         (str(root / "server" / "alembic.ini"), "."),
         (str(root / "server" / "migrations"), "migrations"),
+        (str(root / "server" / "data" / "plz_map.sqlite3.gz.b64"), "database"),
     ],
     # Alembic loads migrations/env.py dynamically, so PyInstaller cannot see
     # imports that are only referenced from that file during static analysis.

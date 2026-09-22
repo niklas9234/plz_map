@@ -13,26 +13,26 @@ Die Befehle werden im Stammverzeichnis des Projekts ausgeführt:
 python -m pip install -r server/requirements.txt
 
 # Vorlage kopieren (Linux/macOS)
-cp unternehmensimport/unternehmen.csv.example unternehmensimport/unternehmen.csv
+cp tools/unternehmensimport/unternehmen.csv.example tools/unternehmensimport/unternehmen.csv
 ```
 
 Unter Windows kann die Vorlage im Explorer kopiert oder in PowerShell mit
 folgendem Befehl angelegt werden:
 
 ```powershell
-Copy-Item unternehmensimport/unternehmen.csv.example unternehmensimport/unternehmen.csv
+Copy-Item tools/unternehmensimport/unternehmen.csv.example tools/unternehmensimport/unternehmen.csv
 ```
 
-Danach `unternehmensimport/unternehmen.csv` bearbeiten. Vor dem Prüfen und
+Danach `tools/unternehmensimport/unternehmen.csv` bearbeiten. Vor dem Prüfen und
 Importieren muss die lokale Anwendung beendet werden, damit sie nicht
 gleichzeitig auf die SQLite-Datei schreibt.
 
 ```sh
 # Erst nur prüfen; die Datenbank bleibt unverändert.
-python unternehmensimport/import_companies.py --check
+python tools/unternehmensimport/import_companies.py --check
 
 # Nur nach erfolgreicher Prüfung tatsächlich importieren.
-python unternehmensimport/import_companies.py
+python tools/unternehmensimport/import_companies.py
 ```
 
 Eine erfolgreiche Ausführung endet zum Beispiel mit
@@ -76,19 +76,19 @@ werden bei diesem vereinfachten Import nicht angelegt.
 ## Eine andere CSV-Datei verwenden
 
 Ohne weitere Angaben liest das Programm
-`unternehmensimport/unternehmen.csv` und verwendet dieselbe lokale Datenbank
+`tools/unternehmensimport/unternehmen.csv` und verwendet dieselbe lokale Datenbank
 wie die Desktopanwendung. Ein anderer Dateipfad kann als Argument angegeben
 werden:
 
 ```sh
-python unternehmensimport/import_companies.py pfad/meine-unternehmen.csv
+python tools/unternehmensimport/import_companies.py pfad/meine-unternehmen.csv
 ```
 
 Für den Serverbetrieb wird wie bei der Anwendung `DATABASE_URL` verwendet.
 Alternativ lässt sich die Zieladresse ausdrücklich übergeben:
 
 ```sh
-python unternehmensimport/import_companies.py --database-url \
+python tools/unternehmensimport/import_companies.py --database-url \
   'postgresql+psycopg://USER:PASSWORT@HOST/DATENBANK'
 ```
 

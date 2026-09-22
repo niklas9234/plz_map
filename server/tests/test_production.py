@@ -6,6 +6,7 @@ import sys
 import threading
 from pathlib import Path
 
+import pytest
 from sqlalchemy import inspect, text
 
 from app import production
@@ -419,26 +420,23 @@ def test_shutdown_uses_port_and_token_of_selected_user(tmp_path, monkeypatch):
     assert calls == [("http://127.0.0.1:49102/api/system/shutdown", "second", 3)]
 
 
-def test_initialize_database_imports_seed_for_desktop_profile(tmp_path, monkeypatch):
+def test_initialize_database_installs_bundled_database_for_desktop_profile(tmp_path, monkeypatch):
     database = tmp_path / "plz-map.sqlite3"
     config = production.ProductionConfig(
         "local-desktop", "127.0.0.1", 8080, f"sqlite:///{database}",
         {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
     )
-    imported = []
+    installed = []
     monkeypatch.setattr(production, "run_database_migrations", lambda _url: None)
     monkeypatch.setattr(
-        production,
-        "import_initial_seed",
-        lambda connection: imported.append(
-            connection.execute("PRAGMA foreign_keys").fetchone()[0]
-        ),
+        production, "install_bundled_database",
+        lambda path: installed.append(path) or False,
     )
 
     engine = production.initialize_database(config)
 
     try:
-        assert imported == [1]
+        assert installed == [database]
     finally:
         engine.dispose()
 
@@ -456,11 +454,59 @@ def test_initialize_database_creates_seed_metadata_and_imports_bundled_data(tmp_
         with engine.connect() as connection:
             assert connection.exec_driver_sql(
                 "SELECT value FROM application_metadata WHERE key = 'initial_seed'"
-            ).scalar_one() == production.INITIAL_SEED_ID
-            assert connection.exec_driver_sql("SELECT count(*) FROM trades").scalar_one() > 0
-            assert connection.exec_driver_sql("SELECT count(*) FROM companies").scalar_one() > 0
+            ).scalar_one() == production.BUNDLED_DATABASE_ID
+            assert connection.exec_driver_sql("SELECT count(*) FROM trades").scalar_one() == 1
+            assert connection.exec_driver_sql("SELECT count(*) FROM companies").scalar_one() == 20
     finally:
         engine.dispose()
+
+
+def test_corrupt_text_bundle_is_rejected_without_installing_database(tmp_path, monkeypatch):
+    bundle = tmp_path / "broken.sqlite3.gz.b64"
+    bundle.write_text("kein gueltiges base64", encoding="ascii")
+    database = tmp_path / "plz-map.sqlite3"
+    monkeypatch.setattr(production, "bundled_database_path", lambda: bundle)
+
+    with pytest.raises(Exception):
+        production.install_bundled_database(database)
+
+    assert not database.exists()
+    assert not database.with_suffix(".sqlite3.new").exists()
+
+
+def test_existing_database_changes_deletions_and_creations_survive_later_starts(tmp_path):
+    database = tmp_path / "plz-map.sqlite3"
+    config = production.ProductionConfig(
+        "local-desktop", "127.0.0.1", 8080, f"sqlite:///{database}",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+    engine = production.initialize_database(config)
+    with engine.begin() as connection:
+        deleted_id = connection.exec_driver_sql("SELECT id FROM companies ORDER BY id LIMIT 1").scalar_one()
+        connection.exec_driver_sql("DELETE FROM companies WHERE id=?", (deleted_id,))
+        connection.exec_driver_sql(
+            "UPDATE companies SET name='Dauerhaft geändert' WHERE id=(SELECT id FROM companies LIMIT 1)"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO companies (id,name,pps_number,status,created_at,updated_at) "
+            "VALUES ('persistent-new','Dauerhaft neu','NEU-1','active','now','now')"
+        )
+    engine.dispose()
+
+    restarted = production.initialize_database(config)
+    try:
+        with restarted.connect() as connection:
+            assert connection.exec_driver_sql(
+                "SELECT count(*) FROM companies WHERE name='Dauerhaft geändert'"
+            ).scalar_one() == 1
+            assert connection.exec_driver_sql(
+                "SELECT count(*) FROM companies WHERE id='persistent-new'"
+            ).scalar_one() == 1
+            assert connection.exec_driver_sql(
+                "SELECT count(*) FROM companies WHERE id=?", (deleted_id,)
+            ).scalar_one() == 0
+    finally:
+        restarted.dispose()
 
 
 def test_migrations_adopt_an_unversioned_legacy_schema(tmp_path):
@@ -498,14 +544,14 @@ def test_migrations_adopt_an_unversioned_legacy_schema(tmp_path):
         migrated_engine.dispose()
 
 
-def test_initialize_database_does_not_seed_server_profile(monkeypatch):
+def test_initialize_database_does_not_install_bundled_database_for_server_profile(monkeypatch):
     config = production.ProductionConfig(
         "server", "0.0.0.0", 8000, "sqlite:///:memory:", None,
     )
     monkeypatch.setattr(production, "run_database_migrations", lambda _url: None)
     monkeypatch.setattr(
-        production, "import_initial_seed",
-        lambda _connection: (_ for _ in ()).throw(AssertionError("server profile was seeded")),
+        production, "install_bundled_database",
+        lambda _path: (_ for _ in ()).throw(AssertionError("server profile received desktop data")),
     )
 
     engine = production.initialize_database(config)
