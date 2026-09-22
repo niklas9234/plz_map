@@ -1,7 +1,10 @@
 import io
 import json
+import os
 import socket
 import sys
+import threading
+import time
 from pathlib import Path
 
 from sqlalchemy import inspect, text
@@ -100,6 +103,65 @@ def test_local_server_can_leave_browser_closed(monkeypatch):
     )
 
     assert production.run_local_server(open_browser=False) == 0
+
+
+def test_second_immediate_start_opens_running_instance_only(tmp_path, monkeypatch):
+    config = production.ProductionConfig(
+        "local-desktop", production.HOST, 0, "sqlite:///:memory:",
+        {"root": tmp_path, "backups": tmp_path / "backups", "logs": tmp_path / "logs"},
+    )
+    existing_url = "http://127.0.0.1:49152/"
+    monkeypatch.setattr(production, "local_desktop_config", lambda: config)
+    monkeypatch.setattr(production, "_running_server_url", lambda _path: existing_url)
+    monkeypatch.setattr(
+        production, "prepare_server",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("zweiter Server gestartet")),
+    )
+    opened = []
+    monkeypatch.setattr(production.webbrowser, "open", opened.append)
+
+    assert production.run_local_server() == 0
+    assert opened == [existing_url]
+
+
+def test_stale_control_and_lock_files_are_replaced(tmp_path, monkeypatch):
+    token = "new-token"
+    (tmp_path / production.CONTROL_FILE_NAME).write_text(
+        json.dumps({"pid": 99999999, "port": 49152, "token": "old"}), encoding="utf-8",
+    )
+    (tmp_path / production.LOCK_FILE_NAME).write_text(
+        json.dumps({"pid": 99999999, "token": "old"}), encoding="utf-8",
+    )
+    monkeypatch.setattr(production, "_process_is_running", lambda pid: pid == os.getpid())
+
+    lock_file, url = production._acquire_instance_lock(tmp_path, token)
+
+    assert url is None
+    assert json.loads(lock_file.read_text(encoding="utf-8")) == {
+        "pid": os.getpid(), "token": token,
+    }
+
+
+def test_parallel_start_waits_for_first_instance_to_publish(tmp_path, monkeypatch):
+    control_file = tmp_path / production.CONTROL_FILE_NAME
+    expected_url = "http://127.0.0.1:49153/"
+    monkeypatch.setattr(
+        production, "_running_server_url",
+        lambda path: expected_url if path.exists() else None,
+    )
+    first_lock, first_url = production._acquire_instance_lock(tmp_path, "first")
+    result = []
+    waiter = threading.Thread(
+        target=lambda: result.append(production._acquire_instance_lock(tmp_path, "second"))
+    )
+    waiter.start()
+    time.sleep(0.1)
+    control_file.write_text("{}", encoding="utf-8")
+    waiter.join(timeout=2)
+
+    assert first_url is None
+    assert not waiter.is_alive()
+    assert result == [(first_lock, expected_url)]
 
 
 def test_default_start_opens_local_application_in_browser(monkeypatch):
@@ -249,8 +311,8 @@ def test_shutdown_uses_port_and_token_of_selected_user(tmp_path, monkeypatch):
     second_control = tmp_path / "user-b" / "server.token"
     first_control.parent.mkdir()
     second_control.parent.mkdir()
-    first_control.write_text(json.dumps({"port": 49101, "token": "first"}), encoding="utf-8")
-    second_control.write_text(json.dumps({"port": 49102, "token": "second"}), encoding="utf-8")
+    first_control.write_text(json.dumps({"pid": os.getpid(), "port": 49101, "token": "first"}), encoding="utf-8")
+    second_control.write_text(json.dumps({"pid": os.getpid(), "port": 49102, "token": "second"}), encoding="utf-8")
     calls = []
 
     class Response:
