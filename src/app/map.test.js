@@ -40,6 +40,7 @@ function runMap({ withLibraries = false } = {}) {
                 constructor(options) { this.options = options; context.map = this; this.listeners = {}; }
                 on(name, callback) { this.listeners[name] = callback; }
                 getZoom() { return 5; }
+                isSourceLoaded() { return this.sourceLoaded === true; }
             }
         };
     }
@@ -72,12 +73,42 @@ test('zeigt und protokolliert eine fehlende Kartenbibliothek', () => {
     assert.ok(logMessages.some((message) => message.includes('Datei fehlt')));
 });
 
-test('zeigt und protokolliert einen Ladefehler der PMTiles-Quelle', () => {
+test('protokolliert einen einzelnen Basemap-Fehler ohne dauerhafte Warnung', () => {
     const { context, elements, logMessages } = runMap({ withLibraries: true });
 
     context.map.listeners.error({ sourceId: 'basemap', error: new Error('HTTP 500') });
 
+    assert.equal(elements['map-load-error'].hidden, true);
+    assert.ok(logMessages.some((message) => message.includes('HTTP 500')));
+});
+
+test('zeigt einen fatalen PMTiles-Headerfehler sofort an', () => {
+    const { context, elements } = runMap({ withLibraries: true });
+
+    context.map.listeners.error({ sourceId: 'basemap', error: new Error('Invalid PMTiles header') });
+
     assert.equal(elements['map-load-error'].hidden, false);
     assert.match(elements['map-load-error'].textContent, /Kartenarchiv/);
-    assert.ok(logMessages.some((message) => message.includes('HTTP 500')));
+});
+
+test('zeigt wiederholte Basemap-Abruffehler an', () => {
+    const { context, elements } = runMap({ withLibraries: true });
+
+    context.map.listeners.error({ sourceId: 'basemap', error: new Error('HTTP 500') });
+    context.map.listeners.error({ sourceId: 'basemap', error: new Error('HTTP 500') });
+
+    assert.equal(elements['map-load-error'].hidden, false);
+    assert.match(elements['map-load-error'].textContent, /Kartenarchiv/);
+});
+
+test('blendet die Warnung nach erfolgreichem Laden der Basemap wieder aus', () => {
+    const { context, elements } = runMap({ withLibraries: true });
+    context.map.listeners.error({ sourceId: 'basemap', error: new Error('HTTP 500') });
+    context.map.listeners.error({ sourceId: 'basemap', error: new Error('HTTP 500') });
+
+    context.map.sourceLoaded = true;
+    context.map.listeners.sourcedata({ sourceId: 'basemap' });
+
+    assert.equal(elements['map-load-error'].hidden, true);
+    assert.equal(elements['map-load-error'].textContent, '');
 });
