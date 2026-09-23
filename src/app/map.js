@@ -5,6 +5,7 @@
     let map = null;
     let mapStarted = false;
     const postalCodeData = [];
+    const errorElement = document.getElementById("map-load-error");
     const mapBridge = {
         setFilter(...args) { map?.setFilter(...args); },
         setPaintProperty(...args) { map?.setPaintProperty(...args); },
@@ -14,6 +15,17 @@
     initializeCompanySearch(mapBridge, postalCodeData);
     initializeSiteManagerSearch(mapBridge, postalCodeData);
     initializeAreaSearch(mapBridge, postalCodeData);
+
+    function reportMapError(message, error) {
+        if (errorElement) {
+            errorElement.hidden = false;
+            errorElement.textContent = message;
+        }
+        const detail = error?.message || error?.error?.message || error || "unbekannter Fehler";
+        const logMessage = `${message} (${detail})`;
+        console.error(logMessage);
+        window.plzLog?.error(logMessage);
+    }
 
     function startMap() {
         if (mapStarted || typeof maplibregl === "undefined" || typeof pmtiles === "undefined") return;
@@ -41,11 +53,21 @@
             const luxembourgPostalCodes = await addLuxembourgLayers(map);
             postalCodeData.push(germanyPostalCodes, luxembourgPostalCodes);
         });
+        map.on("error", (event) => {
+            const sourceId = event.sourceId || event.source?.id || event.tile?.source;
+            if (sourceId === "basemap" || String(event.error?.message || "").toLowerCase().includes("pmtiles")) {
+                reportMapError("Das Kartenarchiv konnte nicht geladen werden.", event);
+            }
+        });
         map.on("zoom", () => console.log("Zoom:", map.getZoom()));
     }
 
-    ["maplibre-script", "pmtiles-script"].forEach((id) => {
-        document.getElementById(id)?.addEventListener("load", startMap);
+    [["maplibre-script", "MapLibre GL JS"], ["pmtiles-script", "PMTiles"]].forEach(([id, name]) => {
+        const script = document.getElementById(id);
+        script?.addEventListener("load", startMap);
+        script?.addEventListener("error", (event) => {
+            reportMapError(`${name} konnte nicht geladen werden.`, event);
+        });
     });
     startMap();
 })();
