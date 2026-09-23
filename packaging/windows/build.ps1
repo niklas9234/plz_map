@@ -86,6 +86,18 @@ VSVersionInfo(
 $env:PLZ_MAP_VERSION = $Version
 Invoke-CheckedPython @("-m", "PyInstaller", "--noconfirm", "--clean", "packaging\windows\plz-map.spec")
 
+$RequiredFrontendVendorFiles = @(
+    "maplibre-gl-5.0.0\maplibre-gl.js",
+    "maplibre-gl-5.0.0\maplibre-gl.css",
+    "pmtiles-4.0.1\pmtiles.js"
+)
+foreach ($RelativePath in $RequiredFrontendVendorFiles) {
+    $BundledPath = Join-Path $Root "dist\PLZ-Karte\_internal\frontend\vendor\$RelativePath"
+    if (-not (Test-Path -PathType Leaf $BundledPath)) {
+        throw "Frontend-Vendor-Datei fehlt im Windows-Paket: $BundledPath"
+    }
+}
+
 function Invoke-SignTool {
     param([string] $Path)
     if (-not $SigningCertificate) { return }
