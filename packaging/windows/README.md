@@ -8,6 +8,34 @@ das führende `v` und definiert damit `MyAppVersion` für Inno Setup. Ein Build 
 gültige Version bricht ab. Lokal kann derselbe Build an einem ausgecheckten Tag oder
 explizit mit `./packaging/windows/build.ps1 -Version 1.2.3` ausgeführt werden.
 
+## Nicht versioniertes Kartenarchiv bereitstellen
+
+Das für die Offline-Basiskarte benötigte Archiv wird wegen seiner Größe nicht in
+Git versioniert. Vor jedem lokalen Build und bevor ein Release-Tag beziehungsweise
+manueller Release-Workflow gestartet wird, muss die freigegebene Datei aus dem
+internen Release-Speicher nach
+`src/app/data/pmtiles/germany-luxembourg.pmtiles` kopiert werden. Beispiel:
+
+```powershell
+New-Item -ItemType Directory -Force src/app/data/pmtiles | Out-Null
+Copy-Item C:\Release-Daten\germany-luxembourg.pmtiles `
+  src/app/data/pmtiles/germany-luxembourg.pmtiles
+```
+
+Dieselbe Datei ist auch beim manuellen Entwicklungsstart mit
+`python server/run.py --local-server` erforderlich. Der lokale Static-File-Server
+liefert ausschließlich Dateien unterhalb von `src/app` aus; ein Archiv im
+Repository-Wurzelverzeichnis oder in einem Download-Verzeichnis wird daher nicht
+automatisch gefunden.
+
+Für den GitHub-Release-Runner muss das Archiv entsprechend in einem vorgelagerten,
+zugriffsgeschützten Schritt aus dem Release-Speicher an genau diesen Pfad geladen
+werden. Es darf weder als Repository-Datei noch als öffentliches Workflow-Artefakt
+veröffentlicht werden. Die Erstellung des reduzierten Archivs ist unter
+`tools/basemap/README.md` beschrieben. `build.ps1` bricht vor PyInstaller ab, wenn
+die Datei fehlt oder leer ist. Nach dem Packen prüft der Build zusätzlich, dass die
+Datei im Paket liegt und der Static-File-Server sie per HTTP-Range-Request ausliefert.
+
 Das Ergebnis liegt in `dist-installer/`. Neben dem Installer wird dort
 `SHA256SUMS.txt` erzeugt. Der GitHub-Workflow veröffentlicht beide Dateien gemeinsam
 als Workflow-Artefakt.
