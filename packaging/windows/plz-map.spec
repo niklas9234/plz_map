@@ -16,6 +16,10 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(root / "src" / "app"), "frontend"),
+        (
+            str(root / "src" / "app" / "data" / "pmtiles" / "germany-luxembourg.pmtiles"),
+            "frontend/data/pmtiles",
+        ),
         (str(root / "PLZ-Karte.ico"), "frontend"),
         # production.run_database_migrations() resolves these paths relative
         # to the bundled server root (sys._MEIPASS in a PyInstaller build).

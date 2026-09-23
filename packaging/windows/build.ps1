@@ -84,7 +84,15 @@ VSVersionInfo(
 )
 
 $env:PLZ_MAP_VERSION = $Version
+$PmtilesArchive = Join-Path $Root "src\app\data\pmtiles\germany-luxembourg.pmtiles"
+if (-not (Test-Path -LiteralPath $PmtilesArchive -PathType Leaf)) {
+    throw "PMTiles-Archiv fehlt: $PmtilesArchive. Hinweise zur Bereitstellung stehen in packaging\windows\README.md."
+}
+if ((Get-Item -LiteralPath $PmtilesArchive).Length -eq 0) {
+    throw "PMTiles-Archiv ist leer: $PmtilesArchive. Bitte vor dem Build ein vollständiges Archiv bereitstellen."
+}
 Invoke-CheckedPython @("-m", "PyInstaller", "--noconfirm", "--clean", "packaging\windows\plz-map.spec")
+Invoke-CheckedPython @("packaging\windows\test_packaged_pmtiles.py", "dist\PLZ-Karte")
 
 function Invoke-SignTool {
     param([string] $Path)
