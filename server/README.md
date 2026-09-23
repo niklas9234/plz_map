@@ -31,7 +31,15 @@ erhalten.
 ### Expliziter lokaler Browserbetrieb
 
 Für Entwicklung und Skripte kann der Browserbetrieb auch ausdrücklich
-gestartet werden:
+gestartet werden. Das große Kartenarchiv gehört absichtlich nicht zum
+Git-Checkout. Vor dem ersten Start muss deshalb
+`src/app/data/pmtiles/germany-luxembourg.pmtiles` wie unter
+[`src/app/data/pmtiles/README.md`](../src/app/data/pmtiles/README.md) beschrieben
+bereitgestellt werden. Andernfalls ist die Anwendung selbst erreichbar, die
+Anfrage an `/data/pmtiles/germany-luxembourg.pmtiles` antwortet aber erwartungsgemäß
+mit `404 Not Found` und die Basiskarte kann nicht geladen werden.
+
+Anschließend kann der Browserbetrieb gestartet werden:
 
 ```sh
 pip install -r server/requirements.txt

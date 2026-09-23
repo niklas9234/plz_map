@@ -22,6 +22,12 @@ Copy-Item C:\Release-Daten\germany-luxembourg.pmtiles `
   src/app/data/pmtiles/germany-luxembourg.pmtiles
 ```
 
+Dieselbe Datei ist auch beim manuellen Entwicklungsstart mit
+`python server/run.py --local-server` erforderlich. Der lokale Static-File-Server
+liefert ausschließlich Dateien unterhalb von `src/app` aus; ein Archiv im
+Repository-Wurzelverzeichnis oder in einem Download-Verzeichnis wird daher nicht
+automatisch gefunden.
+
 Für den GitHub-Release-Runner muss das Archiv entsprechend in einem vorgelagerten,
 zugriffsgeschützten Schritt aus dem Release-Speicher an genau diesen Pfad geladen
 werden. Es darf weder als Repository-Datei noch als öffentliches Workflow-Artefakt
