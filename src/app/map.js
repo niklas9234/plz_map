@@ -4,6 +4,7 @@
     // firewalled desktop clients). The bridge becomes a real map later.
     let map = null;
     let mapStarted = false;
+    let consecutiveBasemapErrors = 0;
     const postalCodeData = [];
     const errorElement = document.getElementById("map-load-error");
     const mapBridge = {
@@ -16,15 +17,30 @@
     initializeSiteManagerSearch(mapBridge, postalCodeData);
     initializeAreaSearch(mapBridge, postalCodeData);
 
-    function reportMapError(message, error) {
+    function showMapError(message) {
         if (errorElement) {
             errorElement.hidden = false;
             errorElement.textContent = message;
         }
+    }
+
+    function hideMapError() {
+        if (errorElement) {
+            errorElement.hidden = true;
+            errorElement.textContent = "";
+        }
+    }
+
+    function logMapError(message, error) {
         const detail = error?.message || error?.error?.message || error || "unbekannter Fehler";
         const logMessage = `${message} (${detail})`;
         console.error(logMessage);
         window.plzLog?.error(logMessage);
+    }
+
+    function reportMapError(message, error) {
+        showMapError(message);
+        logMapError(message, error);
     }
 
     function startMap() {
@@ -55,8 +71,24 @@
         });
         map.on("error", (event) => {
             const sourceId = event.sourceId || event.source?.id || event.tile?.source;
-            if (sourceId === "basemap" || String(event.error?.message || "").toLowerCase().includes("pmtiles")) {
-                reportMapError("Das Kartenarchiv konnte nicht geladen werden.", event);
+            const detail = String(event.error?.message || event.message || "");
+            const isBasemapError = sourceId === "basemap" || detail.toLowerCase().includes("pmtiles");
+            if (!isBasemapError) return;
+
+            logMapError("Fehler beim Laden der Basemap.", event);
+            consecutiveBasemapErrors += 1;
+
+            // A bad archive header/metadata prevents PMTiles from being initialized at
+            // all. Individual tile requests, on the other hand, can fail temporarily.
+            const isFatalArchiveError = /(?:header|metadata)/i.test(detail);
+            if (isFatalArchiveError || consecutiveBasemapErrors >= 2) {
+                showMapError("Das Kartenarchiv konnte nicht geladen werden.");
+            }
+        });
+        map.on("sourcedata", (event) => {
+            if (event.sourceId === "basemap" && map.isSourceLoaded("basemap")) {
+                consecutiveBasemapErrors = 0;
+                hideMapError();
             }
         });
         map.on("zoom", () => console.log("Zoom:", map.getZoom()));
