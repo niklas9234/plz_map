@@ -16,6 +16,12 @@ const tradeStore = (() => {
         listCache.clear();
     }
 
+    // Trades can also be changed outside this store, most notably when a data
+    // import replaces the complete database.  Invalidate before the other
+    // trades:changed listeners render companies so imported trade IDs are
+    // resolved against the new names and colors instead of the cached list.
+    window.addEventListener("trades:changed", invalidateListCache);
+
     async function request(path = "", options = {}) {
         const response = await fetch(`${TRADE_API_URL}${path}`, {
             ...options,
