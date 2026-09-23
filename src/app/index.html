@@ -7,9 +7,9 @@
 
   <title>PLZ Karte Deutschland</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
+  <link rel="stylesheet" href="vendor/maplibre-gl-5.0.0/maplibre-gl.css"
     media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"></noscript>
+  <noscript><link rel="stylesheet" href="vendor/maplibre-gl-5.0.0/maplibre-gl.css"></noscript>
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -74,6 +74,7 @@
   </aside>
 
   <div id="map"></div>
+  <div id="map-load-error" class="map-load-error" role="alert" hidden></div>
 
   <dialog id="administration-page" class="administration-page" aria-labelledby="administration-page-title">
     <div class="administration-page__header">
@@ -222,11 +223,11 @@
 
 <!--
   Kartendarstellung ist eine optionale Erweiterung der Stammdatenoberflaeche.
-  Die CDN-Dateien duerfen den Start der installierten Anwendung deshalb nicht
-  blockieren, wenn das Endgeraet keinen Internetzugang hat.
+  Die lokalen, fest versionierten Dateien blockieren die Stammdatenoberflaeche
+  auch dann nicht, wenn eine Installation unvollstaendig ist.
 -->
-<script id="maplibre-script" async src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-<script id="pmtiles-script" async src="https://unpkg.com/pmtiles@4/dist/pmtiles.js"></script>
+<script id="maplibre-script" async src="vendor/maplibre-gl-5.0.0/maplibre-gl.js"></script>
+<script id="pmtiles-script" async src="vendor/pmtiles-4.0.1/pmtiles.js"></script>
 
 <script src="logging.js"></script>
 <script src="lifecycle.js"></script>
