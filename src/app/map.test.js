@@ -3,7 +3,16 @@ const { readFileSync } = require('node:fs');
 const test = require('node:test');
 const vm = require('node:vm');
 
-function runMap({ withLibraries = false } = {}) {
+test('lädt die Kartenbibliotheken beim lokalen Start weiterhin über das CDN', () => {
+    const html = readFileSync(`${__dirname}/index.html`, 'utf8');
+
+    assert.match(html, /https:\/\/unpkg\.com\/maplibre-gl@5\/dist\/maplibre-gl\.js/);
+    assert.match(html, /https:\/\/unpkg\.com\/maplibre-gl@5\/dist\/maplibre-gl\.css/);
+    assert.match(html, /https:\/\/unpkg\.com\/pmtiles@4\/dist\/pmtiles\.js/);
+    assert.doesNotMatch(html, /id="map-load-error"/);
+});
+
+test('Suche startet auch ohne geladene Kartenbibliotheken', async () => {
     const initialized = [];
     const elements = {
         'map-load-error': { hidden: true, textContent: '' },
