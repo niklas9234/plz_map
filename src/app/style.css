@@ -1317,6 +1317,10 @@ dialog::backdrop {
   padding: 26px 28px 8px;
 }
 
+.confirm-dialog [hidden] {
+  display: none !important;
+}
+
 .confirm-dialog p {
   margin: 14px 0 4px;
   color: #526158;

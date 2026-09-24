@@ -37,6 +37,7 @@ function initializeDataImport() {
     function resetSelection() {
         pendingDocument = null;
         fileInput.value = '';
+        cancelButton.textContent = 'Abbrechen';
     }
 
     chooseButton.addEventListener('click', () => { if (!busy) fileInput.click(); });
@@ -50,6 +51,7 @@ function initializeDataImport() {
     fileInput.addEventListener('change', async () => {
         const file = fileInput.files?.[0];
         if (!file || busy) return;
+        cancelButton.textContent = 'Abbrechen';
         dialog.showModal();
         showErrors('Datei wird gelesen und validiert …');
         setBusy(true);
@@ -90,12 +92,14 @@ function initializeDataImport() {
             warning.hidden = true;
             confirmButton.hidden = true;
             pendingDocument = null;
+            fileInput.value = '';
+            cancelButton.textContent = 'OK';
             document.dispatchEvent(new CustomEvent('site-manager-management:open'));
             document.dispatchEvent(new CustomEvent('trade-management:open'));
         } catch (error) {
             showErrors(error.code === 'network_error' ? error.message : (error.message || 'Der Import ist fehlgeschlagen.'), error.fields || []);
-        } finally {
             resetSelection();
+        } finally {
             setBusy(false);
         }
     });
