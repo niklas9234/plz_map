@@ -86,6 +86,29 @@ test('Dateiauswahl validiert zuerst und importiert erst nach Bestätigung', asyn
     await ui.elements['confirm-master-data-import'].emit('click');
     assert.deepEqual(calls.map((call) => call[1]), ['validate', 'replace']);
     assert.deepEqual(ui.dispatched, ['site-manager-management:open', 'trade-management:open']);
+    assert.equal(ui.elements['confirm-master-data-import'].hidden, true);
+    assert.equal(ui.elements['import-master-data-warning'].hidden, true);
+    assert.equal(ui.elements['cancel-master-data-import'].textContent, 'OK');
+});
+
+test('erneute Dateiauswahl stellt den Bestätigungsdialog zurück', async () => {
+    const ui = harness(async (_document, mode) => ({
+        trades: 2, companies: 3, siteManagers: 4, written: mode === 'replace'
+    }));
+    const fileInput = ui.elements['import-master-data-file'];
+    const confirmButton = ui.elements['confirm-master-data-import'];
+    const cancelButton = ui.elements['cancel-master-data-import'];
+
+    fileInput.files = [{ text: async () => '{"schemaVersion":1}' }];
+    await fileInput.emit('change');
+    await confirmButton.emit('click');
+    assert.equal(cancelButton.textContent, 'OK');
+
+    fileInput.files = [{ text: async () => '{"schemaVersion":1}' }];
+    await fileInput.emit('change');
+
+    assert.equal(cancelButton.textContent, 'Abbrechen');
+    assert.equal(confirmButton.hidden, false);
 });
 
 test('ungültiges JSON wird ohne API-Aufruf getrennt angezeigt', async () => {
