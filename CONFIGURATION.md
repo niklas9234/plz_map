@@ -2,8 +2,8 @@
 
 Die Darstellung der Webkarte wird zentral in `src/app/settings.js` konfiguriert.
 Dort lassen sich unter anderem Farben, Linienbreiten, Kartenposition sowie
-Schriftart, dynamische Schriftgrößen und die Mindest-Zoomstufe der Städtenamen
-ändern. Die Einstellungen unter
+Schriftart, dynamische Schriftgrößen und die Sichtbarkeit der Ortsnamen nach
+Zoomstufe und Einwohner-Rang ändern. Die Einstellungen unter
 `postalCodes` werden gemeinsam für die deutschen und luxemburgischen
 Postleitzahl-Layer verwendet; dadurch haben beide immer dieselbe Füllung,
 Umrandung, Mindest-Zoomstufe und Schriftgrößen-Skalierung.
@@ -11,6 +11,27 @@ Umrandung, Mindest-Zoomstufe und Schriftgrößen-Skalierung.
 Eine `.env`-Datei ist dafür nicht erforderlich, weil diese Werte öffentlich im
 Browser verwendet werden und die Anwendung keinen Build-Schritt benötigt.
 Änderungen an `settings.js` werden nach einem Neuladen der Seite sichtbar.
+
+## Ortsnamen nach Zoomstufe
+
+`basemap.placeLabel.zoomLevels` legt fest, ab wann Orte einer bestimmten
+Größenklasse erscheinen. Ein höherer `minPopulationRank` steht für größere bzw.
+bedeutendere Orte, ein kleinerer Wert schließt zunehmend kleinere Städte und
+Dörfer ein. Die Einträge werden vom höchsten zum niedrigsten Rang angegeben:
+
+```js
+zoomLevels: [
+    { minZoom: 5, minPopulationRank: 12 }, // nur die größten Städte
+    { minZoom: 6.5, minPopulationRank: 10 },
+    { minZoom: 8, minPopulationRank: 0 }   // danach alle gelieferten Orte
+]
+```
+
+Um große Städte beim weiteren Herauszoomen sichtbar zu machen, wird deren
+`minZoom` verkleinert. `unrankedMinZoom` gilt nur für alte oder fremde
+PMTiles-Archive, deren Orte kein `population_rank`-Attribut besitzen. Welche Orte
+grundsätzlich vorhanden sind, bestimmt weiterhin das Quellarchiv; die
+Konfiguration kann keine in einer Zoomstufe fehlenden Features ergänzen.
 
 ## PMTiles-Basiskarte
 

@@ -19,7 +19,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 LAYERS = ("earth", "water", "roads", "places")
 
 
@@ -97,7 +97,7 @@ def filter_layer(layer: bytes) -> tuple[str, bytes] | None:
     features = [v for n, w, v, _ in parsed if n == 2 and w == 2]
     keys = [v.decode() for n, w, v, _ in parsed if n == 3 and w == 2]
     values = [v for n, w, v, _ in parsed if n == 4 and w == 2]
-    wanted = {"places": {"name"}, "water": {"kind"}}.get(name, set())
+    wanted = {"places": {"name", "population_rank"}, "water": {"kind"}}.get(name, set())
     new_keys: list[str] = []
     new_values: list[bytes] = []
     key_indexes: dict[str, int] = {}
@@ -259,7 +259,8 @@ def metadata_from_archive(archive: Archive) -> dict[str, str]:
         "bounds": ",".join(str(value / 10_000_000) for value in archive.bounds),
         "json": json.dumps({"vector_layers": [
             {"id": "earth", "fields": {}}, {"id": "water", "fields": {"kind": "String"}},
-            {"id": "roads", "fields": {}}, {"id": "places", "fields": {"name": "String"}},
+            {"id": "roads", "fields": {}},
+            {"id": "places", "fields": {"name": "String", "population_rank": "Number"}},
         ]}, separators=(",", ":")),
     })
     return metadata

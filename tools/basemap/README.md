@@ -20,8 +20,8 @@ Das Eingabearchiv bleibt unangetastet. Ein temporäres MBTiles-Archiv wird in
 einem temporären Verzeichnis erzeugt und von `pmtiles convert` wieder als
 PMTiles geschrieben. Leere Layer und Kacheln werden ausgelassen. Der Prozess
 behält nur `earth`, `water`, `roads` und `places`; in `water` nur Features mit
-`kind=ocean`. `places` behält `name`, `water` behält `kind`, während `earth`
-und `roads` keine Attribute behalten.
+`kind=ocean`. `places` behält `name` und `population_rank`, `water` behält
+`kind`, während `earth` und `roads` keine Attribute behalten.
 
 Tests:
 
