@@ -18,6 +18,10 @@ def string_value(value):
     return field(1, value.encode())
 
 
+def int_value(value):
+    return module.encode_varint(4 << 3) + module.encode_varint(value)
+
+
 def feature(tags, geometry=b"\x09\x02\x04", feature_type=1):
     packed = b"".join(module.encode_varint(value) for value in tags)
     return field(2, packed) + module.encode_varint(3 << 3) + module.encode_varint(feature_type) + field(4, geometry)
@@ -42,8 +46,9 @@ class FilterTest(unittest.TestCase):
     def test_keeps_expected_layers_and_only_ocean(self):
         water = layer("water", [feature([0, 0]), feature([0, 1])], ["kind"],
                       [string_value("ocean"), string_value("lake")])
-        places = layer("places", [feature([0, 0, 1, 1])], ["name", "population"],
-                       [string_value("Berlin"), string_value("1")])
+        places = layer("places", [feature([0, 0, 1, 1, 2, 2])],
+                       ["name", "population_rank", "population"],
+                       [string_value("Berlin"), int_value(12), string_value("1")])
         tile = b"".join(field(3, item) for item in [water, places, layer("buildings", [feature([])])])
         output = module.filter_mvt(tile)
         layers = [value for number, wire, value, _ in module.fields(output) if number == 3]
@@ -51,7 +56,7 @@ class FilterTest(unittest.TestCase):
         water_features = [v for n, w, v, _ in module.fields(layers[0]) if n == 2]
         self.assertEqual(len(water_features), 1)
         place_keys = [v.decode() for n, w, v, _ in module.fields(layers[1]) if n == 3]
-        self.assertEqual(place_keys, ["name"])
+        self.assertEqual(place_keys, ["name", "population_rank"])
 
     def test_geometry_type_extent_and_version_are_byte_identical(self):
         geometry = b"\x09\xff\x01\x80\x02\x12\x06\x04"
