@@ -20,7 +20,16 @@ const MAP_SETTINGS = {
         roadColor: "#999999",
         roadWidths: [5, 0.5, 8, 1, 12, 2],
         placeLabel: {
-            minZoom: 8,
+            // Große Orte früher, kleinere Orte erst beim Hineinzoomen anzeigen.
+            // populationRank stammt aus der PMTiles-Basiskarte (größer = bedeutender).
+            zoomLevels: [
+                { minZoom: 5, minPopulationRank: 12 },
+                { minZoom: 6.5, minPopulationRank: 10 },
+                { minZoom: 8, minPopulationRank: 0 }
+            ],
+            // Das derzeit ausgelieferte Archiv enthält noch keinen Rang. Seine
+            // Kacheln liefern bei kleinen Zoomstufen von selbst nur große Orte.
+            unrankedMinZoom: 5,
             font: ["Noto Sans Regular"],
             sizes: [5, 10, 8, 13, 12, 16],
             color: "#222222",
