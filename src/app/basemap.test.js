@@ -25,7 +25,7 @@ test('place labels use separately configurable population-rank zoom levels', () 
         ['places-ranked-0', 5],
         ['places-ranked-1', 6.5],
         ['places-ranked-2', 8],
-        ['places-unranked', 8]
+        ['places-unranked', 5]
     ]);
     assert.deepEqual(local(placeLayers[0].filter), [
         'all', ['has', 'population_rank'], ['>=', ['get', 'population_rank'], 12]

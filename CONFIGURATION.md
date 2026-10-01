@@ -28,10 +28,13 @@ zoomLevels: [
 ```
 
 Um große Städte beim weiteren Herauszoomen sichtbar zu machen, wird deren
-`minZoom` verkleinert. `unrankedMinZoom` gilt nur für alte oder fremde
-PMTiles-Archive, deren Orte kein `population_rank`-Attribut besitzen. Welche Orte
-grundsätzlich vorhanden sind, bestimmt weiterhin das Quellarchiv; die
-Konfiguration kann keine in einer Zoomstufe fehlenden Features ergänzen.
+`minZoom` verkleinert. `unrankedMinZoom` gilt für das derzeit ausgelieferte sowie
+für alte oder fremde PMTiles-Archive, deren Orte kein `population_rank`-Attribut
+besitzen. Es steht standardmäßig ebenfalls auf 5. Solche Archive bestimmen durch
+den Inhalt ihrer einzelnen Zoomstufen selbst, welche großen Städte zunächst und
+welche kleineren Orte später erscheinen. Welche Orte grundsätzlich vorhanden
+sind, bestimmt weiterhin das Quellarchiv; die Konfiguration kann keine in einer
+Zoomstufe fehlenden Features ergänzen.
 
 ## PMTiles-Basiskarte
 

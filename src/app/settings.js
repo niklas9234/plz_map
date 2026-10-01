@@ -27,8 +27,9 @@ const MAP_SETTINGS = {
                 { minZoom: 6.5, minPopulationRank: 10 },
                 { minZoom: 8, minPopulationRank: 0 }
             ],
-            // Kompatibilität mit alten Archiven ohne population_rank.
-            unrankedMinZoom: 8,
+            // Das derzeit ausgelieferte Archiv enthält noch keinen Rang. Seine
+            // Kacheln liefern bei kleinen Zoomstufen von selbst nur große Orte.
+            unrankedMinZoom: 5,
             font: ["Noto Sans Regular"],
             sizes: [5, 10, 8, 13, 12, 16],
             color: "#222222",
