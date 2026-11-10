@@ -35,28 +35,39 @@ function harness(siteManagers) {
     const suggestions = new Element('ul');
     suggestions.hidden = true;
     const status = new Element();
+    const toggle = new Element('button');
+    const calls = [];
+    const listeners = {};
     const elements = {
         'site-manager-search-input': input,
         'site-manager-suggestions': suggestions,
-        'site-manager-search-status': status
+        'site-manager-search-status': status,
+        'site-manager-show-all': toggle
     };
     const document = {
         getElementById: (id) => elements[id],
         createElement: (tagName) => new Element(tagName),
         addEventListener() {}
     };
-    const window = { addEventListener() {} };
+    const window = { addEventListener(name, callback) { listeners[name] = callback; } };
     const context = {
         document,
         window,
         siteManagerStore: { listActive: async () => siteManagers },
         siteManagerPostalCodes: (territories) => territories.map((territory) => territory.postalCode),
-        setVisiblePostalCodes() {},
+        tradeStore: { colors: ['#72b788', '#63b5ad', '#68a9c7'] },
+        MAP_SETTINGS: { postalCodes: { fillColor: '#4caf50' } },
+        postalCodeFilter: (codes) => ['in', ['get', 'plz'], ['literal', codes]],
+        setPostalCodeColor(map, color) { calls.push(['color', color]); },
+        setVisiblePostalCodes(map, codes) { calls.push(['visible', [...codes]]); },
         zoomToPostalCodes() {}
     };
     const source = `${readFileSync(`${__dirname}/site-manager-search.js`, 'utf8')}\nthis.initialize = initializeSiteManagerSearch;`;
     vm.runInNewContext(source, context);
-    return { initialize: context.initialize, input, suggestions, status };
+    return { initialize: () => context.initialize({
+        setLayoutProperty(...args) { calls.push(['layout', ...args]); },
+        setFilter(...args) { calls.push(['filter', ...args]); }
+    }, []), input, suggestions, status, toggle, calls, listeners };
 }
 
 function click(element) {
@@ -88,4 +99,58 @@ test('ausgewaehlter Bauleiter wird wie ein Unternehmen unter dem Suchfeld angeze
     assert.equal(details.className, 'company-search__company-details');
     assert.equal(details.children[0].children[0].textContent, 'Ackermann');
     assert.equal(details.children[1].textContent, 'PLZ-Gebiete: 08');
+});
+
+const managers = [
+    { id: 'a', name: 'Anna', territories: [{ postalCode: '08' }, { postalCode: '09' }] },
+    { id: 'b', name: 'Bert', territories: [{ postalCode: 'LUX' }] }
+];
+
+test('Gesamtansicht zeigt zugeordnete Gebiete mit Namen und konsistenten Farben', async () => {
+    const ui = harness(managers);
+    await ui.initialize();
+    click(ui.toggle);
+    assert.equal(ui.toggle.attributes['aria-pressed'], 'true');
+    assert.deepEqual(ui.calls.find(call => call[0] === 'visible')[1], ['08', '09', 'LUX']);
+    const colors = ui.calls.find(call => call[0] === 'color')[1];
+    assert.equal(colors[3], colors[5]);
+    assert.notEqual(colors[3], colors[7]);
+    const names = ui.calls.find(call => call[0] === 'layout')[3];
+    assert.equal(names[3], 'Anna');
+    assert.equal(names[7], 'Bert');
+});
+
+test('Ausschalten stellt die Einzelauswahl wieder her; Suche beendet Gesamtansicht', async () => {
+    const ui = harness(managers);
+    await ui.initialize();
+    click(ui.suggestions.children[0].children[0]);
+    click(ui.toggle);
+    click(ui.toggle);
+    assert.deepEqual(ui.calls.filter(call => call[0] === 'visible').at(-1)[1], ['08', '09']);
+    click(ui.toggle);
+    ui.input.listeners.focus[0]();
+    click(ui.suggestions.children[1].children[0]);
+    assert.equal(ui.toggle.attributes['aria-pressed'], 'false');
+    assert.deepEqual(ui.calls.filter(call => call[0] === 'visible').at(-1)[1], ['LUX']);
+});
+
+test('Gesamtansicht aktualisiert sich nach Datenänderungen und Kartenstart', async () => {
+    const data = [...managers];
+    const ui = harness(data);
+    await ui.initialize();
+    click(ui.toggle);
+    data.pop();
+    await ui.listeners['site-managers:changed']();
+    ui.listeners['postal-code-layers:ready']();
+    assert.equal(ui.toggle.attributes['aria-pressed'], 'true');
+    assert.deepEqual(ui.calls.filter(call => call[0] === 'visible').at(-1)[1], ['08', '09']);
+});
+
+test('Leere Gesamtansicht und Ausschalten ohne Einzelauswahl zeigen keine Gebiete', async () => {
+    const ui = harness([]);
+    await ui.initialize();
+    click(ui.toggle);
+    assert.equal(ui.status.textContent, 'Keine aktiven Bauleiter verfügbar.');
+    click(ui.toggle);
+    assert.deepEqual(ui.calls.at(-1), ['visible', []]);
 });

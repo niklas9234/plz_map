@@ -1480,3 +1480,9 @@ dialog::backdrop {
   box-shadow: 0 0.2rem 0.8rem rgb(0 0 0 / 20%);
   font-weight: 600;
 }
+
+.site-manager-search__controls { display: flex; gap: 8px; }
+.site-manager-search__controls input { flex: 1; min-width: 0; width: 0; }
+.site-manager-show-all { flex: none; padding: 8px 10px; border: 1px solid #777; border-radius: 5px; background: #fff; color: #24452f; font: inherit; cursor: pointer; }
+.site-manager-show-all[aria-pressed="true"] { background: #146b37; border-color: #146b37; color: #fff; }
+.site-manager-show-all:disabled { opacity: .5; cursor: default; }
