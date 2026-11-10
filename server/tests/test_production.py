@@ -166,8 +166,10 @@ def test_desktop_window_close_stops_server(monkeypatch):
             pass
 
     class Webview:
+        settings = {"ALLOW_DOWNLOADS": False}
         @staticmethod
         def create_window(*_args, **_kwargs):
+            assert Webview.settings["ALLOW_DOWNLOADS"] is True
             return Window()
 
         @staticmethod
@@ -218,8 +220,10 @@ def test_two_default_starts_reuse_desktop_instance(tmp_path, monkeypatch):
         shutdown = staticmethod(lambda: None)
 
     class Webview:
+        settings = {"ALLOW_DOWNLOADS": False}
         @staticmethod
         def create_window(*_args, **_kwargs):
+            assert Webview.settings["ALLOW_DOWNLOADS"] is True
             calls["window"] += 1
             return Window()
 
