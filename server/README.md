@@ -88,3 +88,13 @@ Stammdaten atomar; installationsbezogene Metadaten und die Alembic-Version bleib
 Beim ersten Start einer leeren Datenbank werden die gebündelten Stammdaten aus
 `src/app/companies.json` importiert. Import und Versionsmarkierung erfolgen in
 einer Transaktion; eine bestehende Datenbank wird nicht erneut befüllt.
+
+## Speicherort von Datenexporten
+
+„Daten exportieren“ lädt eine JSON-Datei mit dem Namen
+`plz-map-export-JJJJ-MM-TT-schema-vN.json` herunter. Im Browser gelten dessen
+Download-Einstellungen (normalerweise der Downloads-Ordner oder ein
+Speicherdialog). Im Windows-Desktopfenster erscheint ein „Speichern unter“-Dialog,
+in dem der Zielordner gewählt werden kann; vorgeschlagen wird der
+Windows-Downloads-Ordner. Bei Abbruch wird keine Datei gespeichert.
+Der Export legt keine zusätzliche Datei im Datenbank- oder Backupverzeichnis an.

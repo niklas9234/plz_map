@@ -763,6 +763,9 @@ def run_desktop() -> int:
     server_thread.start()
 
     try:
+        # pywebview otherwise cancels attachment downloads, including JSON exports.
+        # EdgeChromium opens its native Save As dialog when downloads are enabled.
+        webview.settings["ALLOW_DOWNLOADS"] = True
         window = webview.create_window(
             "PLZ-Karte",
             f"http://{server.server_address[0]}:{server.server_address[1]}/?desktop=1",
