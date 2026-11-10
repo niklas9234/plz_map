@@ -7,10 +7,17 @@
     let consecutiveBasemapErrors = 0;
     const postalCodeData = [];
     const errorElement = document.getElementById("map-load-error");
+    let layersReady = false;
+    const pendingMapOperations = [];
+    function mapOperation(method, args) {
+        if (layersReady) map[method](...args);
+        else pendingMapOperations.push([method, args]);
+    }
     const mapBridge = {
-        setFilter(...args) { map?.setFilter(...args); },
-        setPaintProperty(...args) { map?.setPaintProperty(...args); },
-        fitBounds(...args) { map?.fitBounds(...args); }
+        setFilter(...args) { mapOperation("setFilter", args); },
+        setLayoutProperty(...args) { mapOperation("setLayoutProperty", args); },
+        setPaintProperty(...args) { mapOperation("setPaintProperty", args); },
+        fitBounds(...args) { mapOperation("fitBounds", args); }
     };
 
     initializeCompanySearch(mapBridge, postalCodeData);
@@ -68,6 +75,27 @@
             const germanyPostalCodes = await addGermanyPlzLayers(map);
             const luxembourgPostalCodes = await addLuxembourgLayers(map);
             postalCodeData.push(germanyPostalCodes, luxembourgPostalCodes);
+            map.addSource("site-manager-label-points", {
+                type: "geojson",
+                data: createPlzLabelData({ type: "FeatureCollection", features: [
+                    ...germanyPostalCodes.features, ...luxembourgPostalCodes.features
+                ] })
+            });
+            map.addLayer({
+                id: "site-manager-names", type: "symbol", source: "site-manager-label-points",
+                minzoom: MAP_SETTINGS.postalCodes.label.minZoom,
+                layout: {
+                    "text-field": "", "text-font": MAP_SETTINGS.postalCodes.label.font,
+                    "text-size": 12, "text-anchor": "top", "text-offset": [0, 1.2],
+                    "text-max-width": 12, "text-allow-overlap": true, "text-ignore-placement": true
+                },
+                paint: { "text-color": MAP_SETTINGS.postalCodes.label.color,
+                    "text-halo-color": "#ffffff", "text-halo-width": 2 },
+                filter: ["==", ["get", "plz"], ""]
+            });
+            layersReady = true;
+            pendingMapOperations.splice(0).forEach(([method, args]) => map[method](...args));
+            window.dispatchEvent(new Event("postal-code-layers:ready"));
         });
         map.on("error", (event) => {
             const sourceId = event.sourceId || event.source?.id || event.tile?.source;

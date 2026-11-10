@@ -13,6 +13,7 @@ function postalCodeFilter(postalCodes) {
 
 function setVisiblePostalCodes(map, postalCodes) {
     if (!map) return;
+    map.setFilter("site-manager-names", postalCodeFilter([]));
     const filter = postalCodeFilter(postalCodes);
     POSTAL_CODE_LAYER_IDS.forEach((layerId) => map.setFilter(layerId, filter));
 }

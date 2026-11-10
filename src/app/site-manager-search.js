@@ -14,6 +14,8 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
     const input = document.getElementById("site-manager-search-input");
     const suggestions = document.getElementById("site-manager-suggestions");
     const status = document.getElementById("site-manager-search-status");
+    const showAll = document.getElementById("site-manager-show-all");
+    let showingAll = false;
     let siteManagers = [];
     let selectedSiteManager = null;
     let activeSuggestionIndex = -1;
@@ -47,11 +49,58 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
         input.removeAttribute("aria-activedescendant");
     }
 
+    function managerColor(manager) {
+        const hash = [...manager.id].reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 0);
+        return manager.color || tradeStore.colors[hash % tradeStore.colors.length];
+    }
+
+    function renderAll(zoom = true) {
+        const codes = [...new Set(siteManagers.flatMap((manager) => siteManagerPostalCodes(manager.territories)))];
+        setVisiblePostalCodes(map, codes);
+        if (codes.length) {
+            const colors = ["match", ["get", "plz"]];
+            const names = ["match", ["get", "plz"]];
+            const seen = new Set();
+            siteManagers.forEach((manager) => siteManagerPostalCodes(manager.territories).forEach((code) => {
+                if (seen.has(code)) return;
+                seen.add(code);
+                colors.push(code, managerColor(manager));
+                names.push(code, manager.name);
+            }));
+            colors.push(MAP_SETTINGS.postalCodes.fillColor);
+            names.push("");
+            setPostalCodeColor(map, colors);
+            map.setLayoutProperty("site-manager-names", "text-field", names);
+            map.setFilter("site-manager-names", postalCodeFilter(codes));
+            if (zoom) zoomToPostalCodes(map, codes, postalCodeData);
+        }
+        status.textContent = siteManagers.length ? `Alle aktiven Bauleiter (${siteManagers.length})` : "Keine aktiven Bauleiter verfügbar.";
+    }
+
+    showAll?.addEventListener("click", () => {
+        showingAll = !showingAll;
+        showAll.setAttribute("aria-pressed", String(showingAll));
+        closeSuggestions();
+        if (showingAll) renderAll();
+        else if (selectedSiteManager) selectSiteManager(selectedSiteManager);
+        else {
+            setVisiblePostalCodes(map, []);
+            status.replaceChildren();
+        }
+    });
+    window.addEventListener("postal-code-layers:ready", () => {
+        if (showingAll) renderAll();
+        else if (selectedSiteManager) selectSiteManager(selectedSiteManager);
+    });
+
     function selectSiteManager(siteManager) {
+        showingAll = false;
+        showAll?.setAttribute("aria-pressed", "false");
         const postalCodes = siteManagerPostalCodes(siteManager.territories);
         selectedSiteManager = siteManager;
         input.value = "";
         setVisiblePostalCodes(map, postalCodes);
+        setPostalCodeColor(map, managerColor(siteManager));
         zoomToPostalCodes(map, postalCodes, postalCodeData);
 
         const siteManagerDetails = document.createElement("div");
@@ -113,17 +162,27 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
             siteManagers = await siteManagerStore.listActive();
             loadFailed = false;
             input.disabled = false;
+            if (showAll) showAll.disabled = false;
 
             const updatedSelection = selectedSiteManager &&
                 siteManagers.find((siteManager) => siteManager.id === selectedSiteManager.id);
+            if (showingAll) {
+                selectedSiteManager = updatedSelection || null;
+                renderAll(false);
+                closeSuggestions();
+                return;
+            }
             if (updatedSelection) selectSiteManager(updatedSelection);
             else if (selectedSiteManager) {
                 selectedSiteManager = null;
+                setVisiblePostalCodes(map, []);
                 status.textContent = "Der ausgewählte Bauleiter ist nicht mehr aktiv.";
             }
             renderSuggestions();
         } catch (error) {
             siteManagers = [];
+            if (showAll) showAll.disabled = true;
+            if (showingAll) setVisiblePostalCodes(map, []);
             loadFailed = true;
             closeSuggestions();
             status.textContent = `Aktive Bauleiter konnten nicht geladen werden: ${error.message}`;
@@ -134,7 +193,7 @@ async function initializeSiteManagerSearch(map, postalCodeData) {
     input.disabled = true;
     status.textContent = "Aktive Bauleiter werden geladen …";
     input.addEventListener("input", () => {
-        selectedSiteManager = null;
+        if (!showingAll) selectedSiteManager = null;
         renderSuggestions();
     });
     input.addEventListener("focus", renderSuggestions);

@@ -26,10 +26,12 @@ function runMap({ withLibraries = false } = {}) {
         initializeSiteManagerSearch: (map, data) => initialized.push(['site-manager', map, data]),
         initializeAreaSearch: (map, data) => initialized.push(['area', map, data]),
         addBaseMapLayers() {},
-        addGermanyPlzLayers: async () => [],
-        addLuxembourgLayers: async () => [],
-        MAP_SETTINGS: { map: { center: [10, 51], zoom: 5, glyphsUrl: '/glyphs', basemapUrl: 'pmtiles:///map.pmtiles' } },
-        window: { plzLog: { error: (message) => logMessages.push(message) } },
+        addGermanyPlzLayers: async () => ({ features: [] }),
+        addLuxembourgLayers: async () => ({ features: [] }),
+        createPlzLabelData: (data) => data,
+        Event: class { constructor(type) { this.type = type; } },
+        MAP_SETTINGS: { postalCodes: { label: { minZoom: 4, font: ['Noto Sans Regular'], color: '#111' } }, map: { center: [10, 51], zoom: 5, glyphsUrl: '/glyphs', basemapUrl: 'pmtiles:///map.pmtiles' } },
+        window: { dispatchEvent() {}, plzLog: { error: (message) => logMessages.push(message) } },
         console: { log() {}, error: (message) => logMessages.push(message) }
     };
     if (withLibraries) {
@@ -39,6 +41,11 @@ function runMap({ withLibraries = false } = {}) {
             Map: class {
                 constructor(options) { this.options = options; context.map = this; this.listeners = {}; }
                 on(name, callback) { this.listeners[name] = callback; }
+                addSource(id, source) { (this.sources ||= {})[id] = source; }
+                addLayer(layer) { (this.layers ||= []).push(layer); }
+                setFilter(...args) { (this.filters ||= []).push(args); }
+                setPaintProperty() {}
+                setLayoutProperty(...args) { (this.layouts ||= []).push(args); }
                 getZoom() { return 5; }
                 isSourceLoaded() { return this.sourceLoaded === true; }
             }
@@ -111,4 +118,19 @@ test('blendet die Warnung nach erfolgreichem Laden der Basemap wieder aus', () =
 
     assert.equal(elements['map-load-error'].hidden, true);
     assert.equal(elements['map-load-error'].textContent, '');
+});
+
+
+test('fruehe Gesamtansicht wartet auf Kartenlayer und ergaenzt separate Namen', async () => {
+    const { context, initialized } = runMap({ withLibraries: true });
+    const bridge = initialized[1][1];
+    bridge.setFilter('site-manager-names', ['in', ['get', 'plz'], ['literal', ['08']]]);
+    bridge.setLayoutProperty('site-manager-names', 'text-field', 'Anna');
+    assert.equal(context.map.filters, undefined);
+    await context.map.listeners.load();
+    assert.equal(context.map.filters[0][0], 'site-manager-names');
+    assert.equal(context.map.layouts[0][2], 'Anna');
+    const names = context.map.layers.find(layer => layer.id === 'site-manager-names');
+    assert.equal(names.layout['text-anchor'], 'top');
+    assert.equal(names.layout['text-offset'][1], 1.2);
 });
